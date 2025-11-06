@@ -137,6 +137,9 @@ export default function PlatformDashboard() {
   const [expandedCategories, setExpandedCategories] = useState<Set<MacroCategory>>(
     new Set(['MONETARY_POLICY'])
   );
+  const [showAllVariables, setShowAllVariables] = useState<Set<MacroCategory>>(
+    new Set()
+  );
 
   const analysisTabs = ['Fundamental', 'Technical', 'Macro Impact'];
   const filteredCompanies = useMemo(() => companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.ticker.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
@@ -149,6 +152,16 @@ export default function PlatformDashboard() {
       newSet.add(category);
     }
     setExpandedCategories(newSet);
+  };
+
+  const toggleShowAllVariables = (category: MacroCategory) => {
+    const newSet = new Set(showAllVariables);
+    if (newSet.has(category)) {
+      newSet.delete(category);
+    } else {
+      newSet.add(category);
+    }
+    setShowAllVariables(newSet);
   };
 
   useEffect(() => {
@@ -423,7 +436,9 @@ export default function PlatformDashboard() {
               <div className="flex-1 overflow-y-auto pr-2 space-y-2">
                 {Object.entries(MACRO_CATEGORIES).map(([categoryKey, category]) => {
                   const isExpanded = expandedCategories.has(categoryKey as MacroCategory);
+                  const showAll = showAllVariables.has(categoryKey as MacroCategory);
                   const variables = getVariablesByCategory(categoryKey as MacroCategory);
+                  const displayedVariables = showAll ? variables : variables.slice(0, 5);
 
                   return (
                     <div key={categoryKey} className="border border-border-primary rounded-lg overflow-hidden">
@@ -441,7 +456,7 @@ export default function PlatformDashboard() {
 
                       {isExpanded && (
                         <div className="px-3 py-2 space-y-3 bg-[#0A0A0C]">
-                          {variables.slice(0, 5).map(variable => (
+                          {displayedVariables.map(variable => (
                             <div key={variable.id}>
                               <label className="text-text-secondary text-xs block mb-1 flex items-center justify-between">
                                 <span>{variable.name}</span>
@@ -466,9 +481,12 @@ export default function PlatformDashboard() {
                             </div>
                           ))}
                           {variables.length > 5 && (
-                            <div className="text-xs text-text-tertiary text-center pt-2 border-t border-border-primary">
-                              + {variables.length - 5} more variables
-                            </div>
+                            <button
+                              onClick={() => toggleShowAllVariables(categoryKey as MacroCategory)}
+                              className="w-full text-xs text-center pt-2 border-t border-border-primary text-accent-cyan hover:text-accent-cyan/80 transition-colors"
+                            >
+                              {showAll ? 'Show Less' : `Show ${variables.length - 5} More`}
+                            </button>
                           )}
                         </div>
                       )}
