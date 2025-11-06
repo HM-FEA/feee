@@ -253,8 +253,8 @@ export default function PlatformDashboard() {
 
         {/* CENTER (60%) - Main Analysis: Ontology-Focused */}
         <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Macro Impact Analysis (PRIMARY) - 30% */}
-          <div className="h-[30%] min-h-0">
+          {/* Macro Impact Analysis (PRIMARY) - flex-[3] ~30% */}
+          <div className="flex-[3] min-h-0">
             <Card className="h-full flex flex-col p-6">
               <h3 className="text-base font-semibold text-text-primary mb-4">
                 Macro Impact Analysis
@@ -327,8 +327,8 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Stock Chart (Secondary) - 35% */}
-          <div className="h-[35%] min-h-0">
+          {/* Stock Chart (Secondary) - flex-[4] ~36% */}
+          <div className="flex-[4] min-h-0">
             <Card className="h-full flex flex-col">
               <CardTitle className="text-sm">{selectedCompany.name} ({selectedCompany.ticker})</CardTitle>
               <div className="flex-1 min-h-0 -ml-4 -mr-4 -mb-4">
@@ -349,8 +349,8 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Fundamental & Technical Tabs (Supplementary) - 35% */}
-          <div className="h-[35%] min-h-0 overflow-hidden">
+          {/* Fundamental & Technical Tabs (Supplementary) - flex-[4] ~36% */}
+          <div className="flex-[4] min-h-0 overflow-hidden">
             <Card className="h-full flex flex-col overflow-hidden">
               <div className="flex gap-1 border-b border-border-primary pb-3 overflow-x-auto flex-shrink-0">
                 {['Fundamental', 'Technical'].map(tab => (
