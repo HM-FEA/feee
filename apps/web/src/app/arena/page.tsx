@@ -173,9 +173,142 @@ export default function ArenaPage() {
         <div className="px-6 py-6 h-[calc(100vh-260px)] overflow-y-auto">
           {activeTab === 'leaderboard' && (
             <div>
-              <div className="mb-4"><h2 className="text-lg font-semibold text-text-primary mb-2 flex items-center gap-2"><Trophy size={20}/>Global Leaderboard</h2><p className="text-sm text-text-secondary">Top performing bots ranked by 30-day returns</p></div>
-              <div className="grid grid-cols-2 gap-4">{filteredBots.map(bot => (<BotCard key={bot.id} bot={bot} onView={() => console.log('View bot:', bot.id)} />))}</div>
-              {filteredBots.length === 0 && <Card className="text-center py-12"><p className="text-sm text-text-secondary">No bots found. Try adjusting your filters.</p></Card>}
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-text-primary mb-2 flex items-center gap-2">
+                  <Trophy size={20}/>
+                  Global Leaderboard
+                </h2>
+                <p className="text-sm text-text-secondary">Top performing bots ranked by 30-day returns</p>
+              </div>
+
+              {/* Top 3 Podium */}
+              {filteredBots.length >= 3 && (
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  {/* 2nd Place */}
+                  <Card className="bg-gradient-to-br from-gray-500/10 to-gray-600/10 border-gray-400/30">
+                    <div className="text-center">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-400/20 mb-3">
+                        <Award size={24} className="text-gray-400" />
+                      </div>
+                      <div className="text-2xl font-bold text-gray-400 mb-1">#2</div>
+                      <div className="text-sm font-semibold text-text-primary mb-1">{filteredBots[1].name}</div>
+                      <div className="text-xs text-text-secondary mb-2">by {filteredBots[1].creator}</div>
+                      <div className="text-lg font-bold text-status-safe">+{filteredBots[1].returns30d.toFixed(1)}%</div>
+                      <div className="text-xs text-text-tertiary">30-day return</div>
+                    </div>
+                  </Card>
+
+                  {/* 1st Place */}
+                  <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/10 border-yellow-400/40 -mt-6">
+                    <div className="text-center">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-400/20 mb-3">
+                        <Crown size={32} className="text-yellow-400" />
+                      </div>
+                      <div className="text-3xl font-bold text-yellow-400 mb-1">#1</div>
+                      <div className="text-base font-semibold text-text-primary mb-1">{filteredBots[0].name}</div>
+                      <div className="text-xs text-text-secondary mb-2">by {filteredBots[0].creator}</div>
+                      <div className="text-2xl font-bold text-status-safe">+{filteredBots[0].returns30d.toFixed(1)}%</div>
+                      <div className="text-xs text-text-tertiary">30-day return</div>
+                    </div>
+                  </Card>
+
+                  {/* 3rd Place */}
+                  <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-400/30">
+                    <div className="text-center">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-orange-400/20 mb-3">
+                        <Award size={24} className="text-orange-400" />
+                      </div>
+                      <div className="text-2xl font-bold text-orange-400 mb-1">#3</div>
+                      <div className="text-sm font-semibold text-text-primary mb-1">{filteredBots[2].name}</div>
+                      <div className="text-xs text-text-secondary mb-2">by {filteredBots[2].creator}</div>
+                      <div className="text-lg font-bold text-status-safe">+{filteredBots[2].returns30d.toFixed(1)}%</div>
+                      <div className="text-xs text-text-tertiary">30-day return</div>
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {/* Full Leaderboard Table */}
+              <Card>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border-primary">
+                        <th className="text-left py-3 px-3 text-text-tertiary font-semibold text-xs">Rank</th>
+                        <th className="text-left py-3 px-3 text-text-tertiary font-semibold text-xs">Bot Name</th>
+                        <th className="text-left py-3 px-3 text-text-tertiary font-semibold text-xs">Creator</th>
+                        <th className="text-left py-3 px-3 text-text-tertiary font-semibold text-xs">Strategy</th>
+                        <th className="text-right py-3 px-3 text-text-tertiary font-semibold text-xs">30D Return</th>
+                        <th className="text-right py-3 px-3 text-text-tertiary font-semibold text-xs">Win Rate</th>
+                        <th className="text-right py-3 px-3 text-text-tertiary font-semibold text-xs">Sharpe</th>
+                        <th className="text-right py-3 px-3 text-text-tertiary font-semibold text-xs">Trades</th>
+                        <th className="text-center py-3 px-3 text-text-tertiary font-semibold text-xs">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredBots.map((bot, index) => {
+                        const isPositive = bot.returns30d >= 0;
+                        return (
+                          <tr
+                            key={bot.id}
+                            className="border-b border-border-primary hover:bg-background-secondary transition-colors cursor-pointer"
+                            onClick={() => console.log('View bot:', bot.id)}
+                          >
+                            <td className="py-3 px-3">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-text-primary">#{bot.rank + 1}</span>
+                                {bot.rank === 0 && <Crown size={16} className="text-yellow-400" />}
+                                {bot.rank === 1 && <Award size={16} className="text-gray-400" />}
+                                {bot.rank === 2 && <Award size={16} className="text-orange-400" />}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="font-semibold text-text-primary hover:text-accent-cyan transition-colors">
+                                {bot.name}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-text-secondary">{bot.creator}</td>
+                            <td className="py-3 px-3">
+                              <span className="text-xs px-2 py-1 bg-accent-cyan/10 text-accent-cyan rounded">
+                                {bot.strategy}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <span className={`font-bold ${isPositive ? 'text-status-safe' : 'text-status-danger'}`}>
+                                {isPositive ? '+' : ''}{bot.returns30d.toFixed(1)}%
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-right text-accent-cyan font-semibold">
+                              {bot.winRate.toFixed(1)}%
+                            </td>
+                            <td className="py-3 px-3 text-right text-accent-magenta font-semibold">
+                              {bot.sharpeRatio.toFixed(2)}
+                            </td>
+                            <td className="py-3 px-3 text-right text-text-secondary">
+                              {bot.trades}
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="flex justify-center">
+                                <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                                  bot.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+                                }`}>
+                                  {bot.status.charAt(0).toUpperCase() + bot.status.slice(1)}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
+              {filteredBots.length === 0 && (
+                <Card className="text-center py-12">
+                  <p className="text-sm text-text-secondary">No bots found. Try adjusting your filters.</p>
+                </Card>
+              )}
             </div>
           )}
           {activeTab === 'tournaments' && (

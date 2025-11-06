@@ -59,26 +59,30 @@ const FundamentalAnalysis = ({ company }: { company: Company }) => (
 const TechnicalAnalysis = ({ ticker }: { ticker: string }) => {
   const data = useMemo(() => Array.from({ length: 30 }, (_, i) => ({ name: `Day ${i}`, rsi: generateDeterministicMock(`${ticker}-rsi-${i}`, 30, 70), macd: generateDeterministicMock(`${ticker}-macd-${i}`, -0.5, 0.5) })), [ticker]);
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="h-40">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+      <div className="min-h-[180px]">
         <h4 className="text-sm text-text-secondary mb-2">RSI (14)</h4>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-            <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
-            <YAxis tick={{ fill: '#9CA3AF' }} tickLine={false} axisLine={false} domain={[0, 100]} />
-            <Area type="monotone" dataKey="rsi" stroke="#E6007A" fill="#E6007A" fillOpacity={0.2} strokeWidth={2} dot={false} />
-          </AreaChart>
-        </ResponsiveContainer>
+        <div className="h-[calc(100%-28px)]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+              <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
+              <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} domain={[0, 100]} />
+              <Area type="monotone" dataKey="rsi" stroke="#E6007A" fill="#E6007A" fillOpacity={0.2} strokeWidth={2} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </div>
-      <div className="h-40">
+      <div className="min-h-[180px]">
         <h4 className="text-sm text-text-secondary mb-2">MACD</h4>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-            <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
-            <YAxis tick={{ fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
-            <Area type="monotone" dataKey="macd" stroke="#39FF14" fill="#39FF14" fillOpacity={0.2} strokeWidth={2} dot={false} />
-          </AreaChart>
-        </ResponsiveContainer>
+        <div className="h-[calc(100%-28px)]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+              <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
+              <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} />
+              <Area type="monotone" dataKey="macd" stroke="#39FF14" fill="#39FF14" fillOpacity={0.2} strokeWidth={2} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
@@ -181,8 +185,8 @@ export default function PlatformDashboard() {
 
         {/* LEFT SIDEBAR (20%) - Company Selector + News + Community */}
         <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Trending */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          {/* Trending - 15% */}
+          <div className="h-[15%] min-h-0 overflow-hidden">
             <Card className="h-full flex flex-col">
               <CardTitle icon={<TrendingUp size={16}/>} className="text-xs">Trending</CardTitle>
               <div className="space-y-2 flex-1 overflow-y-auto pr-2">
@@ -205,8 +209,8 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Company List */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          {/* Company List - 35% */}
+          <div className="h-[35%] min-h-0 overflow-hidden">
             <Card className="h-full flex flex-col overflow-hidden">
               <CardTitle className="text-xs mb-2 flex-shrink-0">Company List</CardTitle>
               <div className="relative mb-2 flex-shrink-0">
@@ -236,21 +240,21 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* News Feed */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          {/* News Feed - 25% */}
+          <div className="h-[25%] min-h-0 overflow-hidden">
             <NewsFeed selectedSector={selectedCompany.sector} />
           </div>
 
-          {/* Community Panel */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          {/* Community Panel - 25% */}
+          <div className="h-[25%] min-h-0 overflow-hidden">
             <CommunityPanel />
           </div>
         </div>
 
         {/* CENTER (60%) - Main Analysis: Ontology-Focused */}
         <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Macro Impact Analysis (PRIMARY) */}
-          <div className="flex-shrink-0 min-h-0">
+          {/* Macro Impact Analysis (PRIMARY) - 30% */}
+          <div className="h-[30%] min-h-0">
             <Card className="h-full flex flex-col p-6">
               <h3 className="text-base font-semibold text-text-primary mb-4">
                 Macro Impact Analysis
@@ -337,8 +341,8 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Stock Chart (Secondary) */}
-          <div className="h-[25%] min-h-0">
+          {/* Stock Chart (Secondary) - 35% */}
+          <div className="h-[35%] min-h-0">
             <Card className="h-full flex flex-col">
               <CardTitle className="text-sm">{selectedCompany.name} ({selectedCompany.ticker})</CardTitle>
               <div className="flex-1 min-h-0 -ml-4 -mr-4 -mb-4">
@@ -359,8 +363,8 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Fundamental & Technical Tabs (Supplementary) */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          {/* Fundamental & Technical Tabs (Supplementary) - 35% */}
+          <div className="h-[35%] min-h-0 overflow-hidden">
             <Card className="h-full flex flex-col overflow-hidden">
               <div className="flex gap-1 border-b border-border-primary pb-3 overflow-x-auto flex-shrink-0">
                 {['Fundamental', 'Technical'].map(tab => (

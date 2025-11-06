@@ -346,10 +346,10 @@ export default function OntologyPage() {
 
   return (
     <div className="relative min-h-screen bg-black text-text-primary">
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col h-screen">
         {/* Header */}
         <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur">
-          <div className="mb-4">
+          <div>
             <h1 className="text-2xl font-bold text-accent-cyan mb-1 flex items-center gap-2">
               <Landmark size={28} />
               4-Level Economic Ontology
@@ -358,29 +358,120 @@ export default function OntologyPage() {
               The foundational framework of Nexus-Alpha: Systematic analysis of how macro variables cascade through sectors to companies and individual assets
             </p>
           </div>
-
-          {/* Level Selection Tabs */}
-          <div className="grid grid-cols-4 gap-3">
-            {ONTOLOGY_LEVELS.map((level) => (
-              <button
-                key={level.level}
-                onClick={() => setExpandedLevel(level.level)}
-                className={`px-3 py-3 rounded-lg text-xs font-semibold transition-all flex flex-col items-center gap-2 ${
-                  expandedLevel === level.level
-                    ? 'bg-accent-cyan text-black'
-                    : 'bg-background-secondary text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
-                }`}
-              >
-                <div className="text-lg">{renderIcon(level.icon, 24)}</div>
-                <div>Level {level.level}</div>
-                <div className="text-xs font-normal opacity-80">{level.name}</div>
-              </button>
-            ))}
-          </div>
         </div>
 
-        {/* Main Content */}
-        <div className="px-6 py-6 overflow-y-auto h-[calc(100vh-220px)]">
+        {/* Main Content with Sidebar */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Sidebar - 20% */}
+          <div className="w-[20%] min-w-[240px] border-r border-border-primary bg-[#0A0A0C] overflow-y-auto">
+            <div className="p-4 space-y-4">
+              {/* Quick Stats */}
+              <Card className="text-xs">
+                <h3 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
+                  <BarChart3 size={14} className="text-accent-cyan" />
+                  Ontology Overview
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-text-secondary">Levels:</span>
+                    <span className="font-semibold text-accent-cyan">4</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-secondary">Categories:</span>
+                    <span className="font-semibold text-text-primary">
+                      {ONTOLOGY_LEVELS.reduce((sum, level) => sum + level.elements.length, 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-secondary">Current Level:</span>
+                    <span className="font-semibold text-accent-magenta">{expandedLevel}</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Level Navigation */}
+              <div>
+                <h3 className="text-xs font-semibold text-text-tertiary mb-2 px-2">LEVELS</h3>
+                <div className="space-y-1">
+                  {ONTOLOGY_LEVELS.map((level) => (
+                    <button
+                      key={level.level}
+                      onClick={() => setExpandedLevel(level.level)}
+                      className={`w-full px-3 py-2.5 rounded-lg text-left transition-all text-xs ${
+                        expandedLevel === level.level
+                          ? 'bg-accent-cyan/10 border border-accent-cyan text-accent-cyan'
+                          : 'bg-background-secondary text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        {renderIcon(level.icon, 16)}
+                        <span className="font-semibold">Level {level.level}</span>
+                      </div>
+                      <div className="text-xs opacity-80 pl-5">{level.name}</div>
+                      <div className="text-xs opacity-60 pl-5 mt-1">
+                        {level.elements.length} categories
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Current Level Elements */}
+              <Card className="text-xs">
+                <h3 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
+                  <Package size={14} className="text-accent-emerald" />
+                  Elements
+                </h3>
+                <div className="space-y-1">
+                  {currentLevel?.elements.map((element, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setExpandedElement(expandedElement === element.name ? '' : element.name)}
+                      className={`w-full text-left px-2 py-1.5 rounded text-xs transition-all ${
+                        expandedElement === element.name
+                          ? 'bg-accent-cyan/10 text-accent-cyan'
+                          : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
+                      }`}
+                    >
+                      {element.name}
+                    </button>
+                  ))}
+                </div>
+              </Card>
+
+              {/* How It Works */}
+              <Card className="text-xs bg-accent-cyan/5 border-accent-cyan/20">
+                <h3 className="font-semibold text-accent-cyan mb-2 flex items-center gap-2">
+                  <Landmark size={14} />
+                  Flow
+                </h3>
+                <div className="space-y-1 text-text-secondary">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-accent-cyan" />
+                    <span>Macro Variables</span>
+                  </div>
+                  <div className="pl-4 text-text-tertiary">↓</div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-accent-emerald" />
+                    <span>Sector Metrics</span>
+                  </div>
+                  <div className="pl-4 text-text-tertiary">↓</div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-accent-magenta" />
+                    <span>Company Financials</span>
+                  </div>
+                  <div className="pl-4 text-text-tertiary">↓</div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                    <span>Individual Assets</span>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+
+          {/* Main Content - 80% */}
+          <div className="flex-1 px-6 py-6 overflow-y-auto">
           <div className="max-w-7xl mx-auto">
             {/* Level Overview */}
             <Card className="mb-6">
@@ -502,6 +593,7 @@ export default function OntologyPage() {
                 </div>
               </div>
             </Card>
+          </div>
           </div>
         </div>
       </div>
