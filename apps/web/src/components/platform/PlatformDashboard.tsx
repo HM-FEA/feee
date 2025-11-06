@@ -13,6 +13,7 @@ import {
   getVariablesByCategory,
   getDefaultMacroState
 } from '@/data/macroVariables';
+import { useMacroStore } from '@/lib/store/macroStore';
 
 const Card = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
   <div className={`bg-[#0D0D0F] border border-[#1A1A1F] rounded-2xl p-4 sm:p-6 ${className}`}>
@@ -124,15 +125,18 @@ const MacroImpactAnalysis = ({ company, macroVariables }: { company: Company, ma
 };
 
 export default function PlatformDashboard() {
+  // Zustand store for global macro state
+  const macroState = useMacroStore(state => state.macroState);
+  const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
+  const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+
   const [selectedCompany, setSelectedCompany] = useState<Company>(companies[0]);
   const [analysisTab, setAnalysisTab] = useState('Fundamental');
   const [searchTerm, setSearchTerm] = useState("");
   const [stockData, setStockData] = useState<any[]>([]);
-  const [macroState, setMacroState] = useState(getDefaultMacroState());
   const [expandedCategories, setExpandedCategories] = useState<Set<MacroCategory>>(
     new Set(['MONETARY_POLICY'])
   );
-  const [macroSidebarOpen, setMacroSidebarOpen] = useState(true);
 
   const analysisTabs = ['Fundamental', 'Technical', 'Macro Impact'];
   const filteredCompanies = useMemo(() => companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.ticker.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
@@ -145,10 +149,6 @@ export default function PlatformDashboard() {
       newSet.add(category);
     }
     setExpandedCategories(newSet);
-  };
-
-  const updateMacroVariable = (id: string, value: number) => {
-    setMacroState(prev => ({ ...prev, [id]: value }));
   };
 
   useEffect(() => {
@@ -282,38 +282,24 @@ export default function PlatformDashboard() {
                   </div>
                 </div>
 
-                {/* Impact Result */}
+                {/* Impact Result - NOW USING STORE! */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-text-secondary mb-2">
                       Estimated Net Income Impact
                     </p>
                     {(() => {
-                      const fedRate = macroState.fed_funds_rate || 5.25;
-                      const baseRate = 2.5;
-                      const rateChange = fedRate - baseRate;
-                      const tariff = macroState.us_tariff_rate || 0;
-                      const oilPrice = macroState.wti_oil || 78;
-                      const vix = macroState.vix || 15;
-
+                      // Get impact from store based on company sector
                       let impact = 0;
 
                       if (selectedCompany.sector === 'BANKING') {
-                        // Banking benefits from higher rates (NIM expansion)
-                        impact = rateChange * generateDeterministicMock(selectedCompany.ticker, 2.5, 3.5);
-                        // But high VIX hurts
-                        impact -= (vix - 15) * 0.3;
+                        impact = calculatedImpacts.banking;
                       } else if (selectedCompany.sector === 'REALESTATE') {
-                        // Real Estate hurt by higher rates (borrowing costs)
-                        impact = rateChange * generateDeterministicMock(selectedCompany.ticker, -4.5, -5.5);
+                        impact = calculatedImpacts.realEstate;
                       } else if (selectedCompany.sector === 'MANUFACTURING') {
-                        // Manufacturing hurt by tariffs
-                        impact = tariff * generateDeterministicMock(selectedCompany.ticker, -0.4, -0.6);
-                        // And higher oil prices
-                        impact -= (oilPrice - 60) * 0.05;
+                        impact = calculatedImpacts.manufacturing;
                       } else if (selectedCompany.sector === 'SEMICONDUCTOR') {
-                        // Semiconductor affected by tariffs and trade
-                        impact = tariff * generateDeterministicMock(selectedCompany.ticker, -0.3, -0.5);
+                        impact = calculatedImpacts.semiconductor;
                       }
 
                       return (
