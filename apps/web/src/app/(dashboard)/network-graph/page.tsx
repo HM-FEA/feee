@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { BarChart3, Info, Network as NetworkIcon, Layers } from 'lucide-react';
-import * as d3 from 'd3';
-import { companies } from '@/data/companies';
-import { MACRO_CATEGORIES } from '@/data/macroVariables';
+
+const NetworkGraph3D = dynamic(() => import('@/components/visualization/NetworkGraph3D'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full flex items-center justify-center">
+      <div className="text-accent-cyan animate-pulse">Loading 3D Visualization...</div>
+    </div>
+  ),
+});
 
 export default function NetworkGraphPage() {
   const [view, setView] = useState<'3d' | 'info'>('3d');
