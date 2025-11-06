@@ -1,383 +1,642 @@
 'use client';
 
-import React, { useState } from 'react';
-import InteractiveCard from '@/components/ui/InteractiveCard';
-import { ProgressBar } from '@/components/ui/ProgressBar';
-import { BarChart3, Rocket, TrendingUp, Users, DollarSign, Target, CheckCircle, Clock, Circle } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import {
+  Plus, Edit2, Trash2, Search, Filter, Network, Database,
+  TrendingUp, Building2, Sliders, GitBranch, ChevronDown, ChevronRight,
+  CheckCircle, AlertCircle, Info, BarChart3, Globe
+} from 'lucide-react';
+import {
+  MACRO_VARIABLES,
+  MACRO_CATEGORIES,
+  MacroCategory,
+  getVariablesByCategory
+} from '@/data/macroVariables';
+import { companies, Company } from '@/data/companies';
 
-type DashboardTab = 'project' | 'users' | 'revenue' | 'teams';
+type AdminTab = 'overview' | 'companies' | 'macros' | 'connections' | 'add-data';
+type ViewMode = 'list' | 'grid' | 'circuit';
 
-// Admin Dashboard Data
-const adminMetrics = {
-  totalUsers: 14000,
-  activeUsers: 10500,
-  freeUsers: 10000,
-  proUsers: 3000,
-  premiumUsers: 600,
-  institutionalUsers: 40,
-  monthlyRevenue: 51963.60,
-  monthlyUsingCost: 25118.80,
-  monthlyProfit: 26844.80,
-  profitMargin: 51.6,
-  breakEvenUsers: 1850,
-  currentPhase: '2.1',
-};
+const Card = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
+  <div className={`bg-[#0D0D0F] border border-[#1A1A1F] rounded-xl p-4 ${className}`}>
+    {children}
+  </div>
+);
 
-const teamCapacityData = [
-  { role: 'Market Structuring', progress: 100, status: 'completed' as const, team: 'Ontology' },
-  { role: 'Sector Analysis', progress: 75, status: 'in_progress' as const, team: 'Research' },
-  { role: 'Fundamental AI', progress: 0, status: 'pending' as const, team: 'AI' },
-  { role: 'Technical AI', progress: 0, status: 'pending' as const, team: 'AI' },
-  { role: 'Quant Engine', progress: 50, status: 'in_progress' as const, team: 'Backend' },
-  { role: 'Data Pipeline', progress: 46, status: 'in_progress' as const, team: 'Data' },
-  { role: 'SimViz', progress: 40, status: 'in_progress' as const, team: 'Frontend' },
-  { role: 'UI/Frontend', progress: 55, status: 'in_progress' as const, team: 'Frontend' },
-];
-
-const dataCoverageData = [
-  { sector: 'Banking', current: 7, total: 10, percentage: 70 },
-  { sector: 'Real Estate', current: 7, total: 15, percentage: 47 },
-  { sector: 'Manufacturing', current: 5, total: 10, percentage: 50 },
-  { sector: 'Semiconductors', current: 4, total: 10, percentage: 40 },
-  { sector: 'Options', current: 0, total: 5, percentage: 0 },
-];
-
-const phasesData = [
-  { phase: 'Phase 2.1 - Platform Refactor', status: 'completed' as const, completion: 100 },
-  { phase: 'Phase 2.2 - Community System', status: 'in_progress' as const, completion: 30 },
-  { phase: 'Phase 2.3 - Knowledge Base', status: 'pending' as const, completion: 0 },
-  { phase: 'Phase 2.4 - Simulation Platform', status: 'pending' as const, completion: 0 },
-  { phase: 'Phase 2.5 - Trading Bot Arena', status: 'pending' as const, completion: 0 },
-];
-
-const revenueBreakdown = [
-  { tier: 'Free', users: 10000, revenue: 0, apiCost: 0, infrastructureCost: 1.05, profit: -10500 },
-  { tier: 'Pro', users: 3000, revenue: 29970, apiCost: 450, infrastructureCost: 4500, profit: 25020 },
-  { tier: 'Premium', users: 600, revenue: 17994, apiCost: 6102, infrastructureCost: 1800, profit: 10092 },
-  { tier: 'Institutional', users: 40, revenue: 3999.60, apiCost: 1446.80, infrastructureCost: 320, profit: 2232.80 },
-];
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return 'text-status-safe';
-    case 'in_progress':
-      return 'text-status-caution';
-    default:
-      return 'text-text-tertiary';
-  }
-};
-
-const getStatusBg = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return 'bg-status-safe/10';
-    case 'in_progress':
-      return 'bg-status-caution/10';
-    default:
-      return 'bg-background-tertiary';
-  }
-};
-
-const getProgressBarColor = (status: string) => {
-    switch (status) {
-        case 'completed': return 'bg-status-safe';
-        case 'in_progress': return 'bg-status-caution';
-        default: return 'bg-text-tertiary';
-    }
+// Sector colors for visualization
+const SECTOR_COLORS: Record<string, string> = {
+  BANKING: '#06B6D4',
+  REALESTATE: '#00FF9F',
+  MANUFACTURING: '#8B5CF6',
+  SEMICONDUCTOR: '#F59E0B',
+  DEFAULT: '#9CA3AF'
 };
 
 export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState<DashboardTab>('project');
-  const overallProgress = Math.round(
-    (teamCapacityData.reduce((sum, item) => sum + item.progress, 0) / (teamCapacityData.length * 100)) * 100
-  );
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSector, setSelectedSector] = useState<string>('all');
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
-  const userConversionRate = ((adminMetrics.proUsers + adminMetrics.premiumUsers + adminMetrics.institutionalUsers) / adminMetrics.totalUsers * 100).toFixed(1);
-  const breakEvenPercentage = Math.round((adminMetrics.breakEvenUsers / adminMetrics.totalUsers) * 100);
+  // Statistics
+  const stats = useMemo(() => {
+    const totalCompanies = companies.length;
+    const sectorCounts = companies.reduce((acc, c) => {
+      acc[c.sector] = (acc[c.sector] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const avgICR = companies.reduce((sum, c) => sum + (c.ratios?.icr || 0), 0) / totalCompanies;
+    const healthyCompanies = companies.filter(c => (c.ratios?.icr || 0) > 2.5).length;
+
+    return {
+      totalCompanies,
+      sectorCounts,
+      totalMacroVariables: MACRO_VARIABLES.length,
+      totalSectors: Object.keys(sectorCounts).length,
+      avgICR: avgICR.toFixed(2),
+      healthyCompanies,
+      healthPercentage: ((healthyCompanies / totalCompanies) * 100).toFixed(1)
+    };
+  }, []);
+
+  // Filtered companies
+  const filteredCompanies = useMemo(() => {
+    return companies.filter(c => {
+      const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           c.ticker.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSector = selectedSector === 'all' || c.sector === selectedSector;
+      return matchesSearch && matchesSector;
+    });
+  }, [searchTerm, selectedSector]);
+
+  const toggleCategory = (category: string) => {
+    const newSet = new Set(expandedCategories);
+    if (newSet.has(category)) {
+      newSet.delete(category);
+    } else {
+      newSet.add(category);
+    }
+    setExpandedCategories(newSet);
+  };
 
   return (
-    <>
-      <div className="min-h-screen bg-black text-text-primary flex flex-col relative z-10">
-        {/* Header */}
-        <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur sticky top-0 z-20">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-accent-cyan">Admin Dashboard</h1>
-              <p className="text-xs text-text-secondary mt-1">Platform Operations & Business Metrics</p>
+    <div className="min-h-screen bg-black text-text-primary">
+      {/* Header */}
+      <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur sticky top-0 z-20">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-light text-accent-cyan mb-1">Admin Dashboard</h1>
+            <p className="text-xs text-text-secondary font-light">
+              Comprehensive Data Management & System Overview
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="text-xs text-text-tertiary">Total Companies</div>
+              <div className="text-2xl font-light text-accent-cyan">{stats.totalCompanies}</div>
             </div>
             <div className="text-right">
-              <p className="text-sm font-mono text-text-secondary">Platform Status</p>
-              <p className="text-2xl font-bold text-accent-emerald">Live</p>
+              <div className="text-xs text-text-tertiary">Macro Variables</div>
+              <div className="text-2xl font-light text-accent-magenta">{stats.totalMacroVariables}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-text-tertiary">Health Score</div>
+              <div className="text-2xl font-light text-accent-emerald">{stats.healthPercentage}%</div>
             </div>
           </div>
-
-          {/* Tab Navigation */}
-          <div className="flex gap-2 border-t border-border-primary pt-4">
-            {(['project', 'users', 'revenue', 'teams'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded text-xs font-mono transition-colors ${
-                  activeTab === tab
-                    ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan'
-                    : 'text-text-secondary hover:text-text-primary border border-border-primary'
-                }`}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
-          </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 px-6 py-6 overflow-y-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl mx-auto">
-            {/* Dynamic Content Based on Active Tab */}
-
-            {/* PROJECT TAB */}
-            {activeTab === 'project' && (
-              <>
-                <InteractiveCard intensity={15} glow={true}>
-                  <div className="p-4">
-                    <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
-                      <BarChart3 size={20} /> Project Progress
-                    </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-xs text-text-secondary">Overall Completion</span>
-                          <span className="text-sm font-mono text-accent-cyan">{overallProgress}%</span>
-                        </div>
-                        <ProgressBar value={overallProgress} gradient={true} />
-                      </div>
-
-                      <div className="bg-background-tertiary rounded-lg p-3 space-y-2 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-text-secondary">Current Phase:</span>
-                          <span className="text-text-primary font-semibold">{adminMetrics.currentPhase}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-text-secondary">Status:</span>
-                          <span className="text-status-caution font-semibold">In Progress</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-text-secondary">Last Updated:</span>
-                          <span className="text-accent-cyan font-mono">Nov 4, 2025</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </InteractiveCard>
-
-                <InteractiveCard intensity={15} glow={true}>
-                  <div className="p-4">
-                    <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2"><Rocket size={20} />Phase Roadmap</h3>
-                    <div className="space-y-3">
-                      {phasesData.map((p, idx) => (
-                        <div key={idx} className={`p-2 rounded transition-colors ${getStatusBg(p.status)}`}>
-                          <div className="flex items-start gap-2 mb-2">
-                            <span className={`flex-shrink-0 ${getStatusColor(p.status)}`}>
-                              {p.status === 'completed' ? <CheckCircle size={16} /> : p.status === 'in_progress' ? <Clock size={16} /> : <Circle size={16} />}
-                            </span>
-                            <span className={`text-xs font-semibold ${getStatusColor(p.status)}`}>
-                              {p.phase}
-                            </span>
-                          </div>
-                          <ProgressBar value={p.completion} color={getProgressBarColor(p.status)} height="h-1.5" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </InteractiveCard>
-
-                <InteractiveCard intensity={15} glow={true}>
-                  <div className="p-4">
-                    <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2"><TrendingUp size={20} />Data Coverage</h3>
-                    <div className="space-y-3">
-                      <div className="text-center p-3 bg-background-tertiary rounded-lg mb-3">
-                        <span className="text-xs text-text-secondary">Total Companies</span>
-                        <p className="text-2xl font-bold text-accent-cyan">
-                          {dataCoverageData.reduce((sum, item) => sum + item.current, 0)}/
-                          {dataCoverageData.reduce((sum, item) => sum + item.total, 0)}
-                        </p>
-                      </div>
-
-                      {dataCoverageData.map(item => (
-                        <div key={item.sector}>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs text-text-secondary">{item.sector}</span>
-                            <span className="text-xs font-mono text-accent-cyan">
-                              {item.current}/{item.total} ({item.percentage}%)
-                            </span>
-                          </div>
-                          <ProgressBar value={item.percentage} color="bg-status-safe" height="h-1.5" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </InteractiveCard>
-              </>
-            )}
-
-            {/* USERS TAB */}
-            {activeTab === 'users' && (
-              <>
-                <InteractiveCard intensity={15} glow={true}>
-                  <div className="p-4">
-                    <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2"><Users size={20} />User Metrics</h3>
-                    <div className="space-y-3">
-                      <div className="bg-background-tertiary rounded-lg p-3 space-y-2 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-text-secondary">Total Users:</span>
-                          <span className="text-text-primary font-semibold">{adminMetrics.totalUsers.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-text-secondary">Active Users:</span>
-                          <span className="text-accent-emerald font-semibold">{adminMetrics.activeUsers.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-text-secondary">Conversion Rate:</span>
-                          <span className="text-accent-cyan font-semibold">{userConversionRate}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-text-secondary">Break-even Target:</span>
-                          <span className="text-accent-cyan font-semibold">{adminMetrics.breakEvenUsers.toLocaleString()} ({breakEvenPercentage}%)</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </InteractiveCard>
-
-                <InteractiveCard intensity={15} glow={true}>
-                  <div className="p-4">
-                    <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2"><BarChart3 size={20} />Tier Distribution</h3>
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <div>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs text-text-secondary">Free</span>
-                            <span className="text-xs font-mono text-accent-cyan">{adminMetrics.freeUsers.toLocaleString()} users</span>
-                          </div>
-                          <ProgressBar value={71} color="bg-text-tertiary" />
-                        </div>
-                        <div>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs text-text-secondary">Pro</span>
-                            <span className="text-xs font-mono text-accent-cyan">{adminMetrics.proUsers.toLocaleString()} users</span>
-                          </div>
-                          <ProgressBar value={21} color="bg-status-caution" />
-                        </div>
-                        <div>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs text-text-secondary">Premium</span>
-                            <span className="text-xs font-mono text-accent-cyan">{adminMetrics.premiumUsers.toLocaleString()} users</span>
-                          </div>
-                          <ProgressBar value={4.2} color="bg-status-safe" />
-                        </div>
-                        <div>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs text-text-secondary">Institutional</span>
-                            <span className="text-xs font-mono text-accent-cyan">{adminMetrics.institutionalUsers} users</span>
-                          </div>
-                          <ProgressBar value={0.3} color="bg-accent-emerald" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </InteractiveCard>
-              </>
-            )}
-
-            {/* REVENUE TAB */}
-            {activeTab === 'revenue' && (
-              <>
-                <InteractiveCard intensity={15} glow={true}>
-                  <div className="p-4">
-                    <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2"><DollarSign size={20} />Revenue Summary</h3>
-                    <div className="space-y-3">
-                      <div className="bg-background-tertiary rounded-lg p-3 space-y-2 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-text-secondary">Monthly Revenue:</span>
-                          <span className="text-accent-emerald font-semibold">${adminMetrics.monthlyRevenue.toLocaleString('en-US', {maximumFractionDigits: 2})}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-text-secondary">Monthly Costs:</span>
-                          <span className="text-status-caution font-semibold">${adminMetrics.monthlyUsingCost.toLocaleString('en-US', {maximumFractionDigits: 2})}</span>
-                        </div>
-                        <div className="flex justify-between border-t border-border-primary pt-2">
-                          <span className="text-text-secondary">Monthly Profit:</span>
-                          <span className="text-accent-emerald font-bold">${adminMetrics.monthlyProfit.toLocaleString('en-US', {maximumFractionDigits: 2})}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-text-secondary">Profit Margin:</span>
-                          <span className="text-accent-cyan font-semibold">{adminMetrics.profitMargin}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </InteractiveCard>
-
-                <InteractiveCard intensity={15} glow={true}>
-                  <div className="p-4">
-                    <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2"><BarChart3 size={20} />Tier Breakdown</h3>
-                    <div className="space-y-3 text-xs">
-                      {revenueBreakdown.map((tier) => (
-                        <div key={tier.tier} className="border-b border-border-primary pb-2 last:border-0">
-                          <div className="font-semibold text-text-primary mb-1">{tier.tier}</div>
-                          <div className="grid grid-cols-2 gap-2 text-text-secondary">
-                            <div className="flex justify-between">
-                              <span>Users:</span>
-                              <span className="text-text-primary">{tier.users.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Revenue:</span>
-                              <span className="text-accent-emerald">${tier.revenue.toLocaleString('en-US', {maximumFractionDigits: 0})}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>API Cost:</span>
-                              <span className="text-status-caution">${tier.apiCost.toLocaleString('en-US', {maximumFractionDigits: 0})}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Profit:</span>
-                              <span className={tier.profit > 0 ? 'text-accent-emerald' : 'text-status-caution'}>${tier.profit.toLocaleString('en-US', {maximumFractionDigits: 0})}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </InteractiveCard>
-              </>
-            )}
-
-            {/* TEAMS TAB */}
-            {activeTab === 'teams' && (
-              <InteractiveCard intensity={15} glow={true} className="lg:col-span-2">
-                <div className="p-4">
-                  <h3 className="text-lg font-bold text-text-primary mb-4 flex items-center gap-2"><Target size={20} />Team Capacity</h3>
-                  <div className="space-y-4">
-                    {teamCapacityData.map(item => (
-                      <div key={item.role}>
-                        <div className="flex justify-between items-center mb-1">
-                          <div>
-                            <span className="text-xs text-text-secondary">{item.role}</span>
-                            <span className="text-xs text-text-tertiary ml-2">({item.team})</span>
-                          </div>
-                          <span className={`text-xs font-mono ${getStatusColor(item.status)}`}>
-                            {item.progress}%
-                          </span>
-                        </div>
-                        <ProgressBar value={item.progress} color={getProgressBarColor(item.status)} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </InteractiveCard>
-            )}
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {(['overview', 'companies', 'macros', 'connections', 'add-data'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-lg text-xs font-light whitespace-nowrap transition-all ${
+                activeTab === tab
+                  ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan'
+                  : 'text-text-secondary hover:text-text-primary border border-border-primary hover:border-[#2A2A3F]'
+              }`}
+            >
+              {tab.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+            </button>
+          ))}
         </div>
       </div>
-    </>
+
+      {/* Main Content */}
+      <div className="px-6 py-6">
+        {/* OVERVIEW TAB */}
+        {activeTab === 'overview' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl">
+            {/* System Health */}
+            <Card className="lg:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 size={18} className="text-accent-cyan" />
+                <h3 className="text-base font-semibold text-text-primary">System Overview</h3>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-background-secondary rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">Total Companies</div>
+                  <div className="text-2xl font-bold text-text-primary">{stats.totalCompanies}</div>
+                </div>
+                <div className="bg-background-secondary rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">Sectors</div>
+                  <div className="text-2xl font-bold text-accent-cyan">{stats.totalSectors}</div>
+                </div>
+                <div className="bg-background-secondary rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">Healthy (ICR&gt;2.5)</div>
+                  <div className="text-2xl font-bold text-accent-emerald">{stats.healthyCompanies}</div>
+                </div>
+                <div className="bg-background-secondary rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">Avg ICR</div>
+                  <div className="text-2xl font-bold text-accent-magenta">{stats.avgICR}x</div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-text-primary">Sector Distribution</h4>
+                {Object.entries(stats.sectorCounts).map(([sector, count]) => (
+                  <div key={sector}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-text-secondary">{sector}</span>
+                      <span className="text-xs font-mono text-accent-cyan">
+                        {count} ({((count / stats.totalCompanies) * 100).toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="h-2 bg-background-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full transition-all duration-300"
+                        style={{
+                          width: `${(count / stats.totalCompanies) * 100}%`,
+                          backgroundColor: SECTOR_COLORS[sector] || SECTOR_COLORS.DEFAULT
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <Plus size={18} className="text-accent-emerald" />
+                <h3 className="text-base font-semibold text-text-primary">Quick Actions</h3>
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  onClick={() => setActiveTab('add-data')}
+                  className="w-full px-4 py-3 bg-accent-cyan/10 hover:bg-accent-cyan/20 border border-accent-cyan rounded-lg text-sm text-accent-cyan transition-all flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  Add New Company
+                </button>
+                <button
+                  onClick={() => setActiveTab('connections')}
+                  className="w-full px-4 py-3 bg-accent-magenta/10 hover:bg-accent-magenta/20 border border-accent-magenta rounded-lg text-sm text-accent-magenta transition-all flex items-center gap-2"
+                >
+                  <GitBranch size={16} />
+                  View Connections
+                </button>
+                <button
+                  onClick={() => setActiveTab('macros')}
+                  className="w-full px-4 py-3 bg-accent-emerald/10 hover:bg-accent-emerald/20 border border-accent-emerald rounded-lg text-sm text-accent-emerald transition-all flex items-center gap-2"
+                >
+                  <Sliders size={16} />
+                  Configure Macros
+                </button>
+              </div>
+
+              <div className="mt-6 p-3 bg-background-secondary rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Info size={14} className="text-accent-cyan mt-0.5" />
+                  <div className="text-xs text-text-secondary">
+                    <p className="font-semibold text-text-primary mb-1">System Status</p>
+                    <p>All data pipelines operational. Last sync: 2 minutes ago.</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Macro Variables Summary */}
+            <Card className="lg:col-span-3">
+              <div className="flex items-center gap-2 mb-4">
+                <Globe size={18} className="text-accent-magenta" />
+                <h3 className="text-base font-semibold text-text-primary">Macro Variables Summary</h3>
+                <span className="text-xs text-text-tertiary">({MACRO_VARIABLES.length} total)</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Object.entries(MACRO_CATEGORIES).map(([key, category]) => {
+                  const vars = getVariablesByCategory(key as MacroCategory);
+                  return (
+                    <div key={key} className="bg-background-secondary rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-base">{category.icon}</span>
+                        <span className="text-xs font-semibold text-text-primary">{category.label}</span>
+                      </div>
+                      <div className="text-2xl font-bold" style={{ color: category.color }}>
+                        {vars.length}
+                      </div>
+                      <div className="text-xs text-text-tertiary mt-1">
+                        {vars[0]?.name || 'Variables'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* COMPANIES TAB */}
+        {activeTab === 'companies' && (
+          <div className="max-w-7xl">
+            {/* Filters */}
+            <div className="flex gap-4 mb-6">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
+                <input
+                  type="text"
+                  placeholder="Search companies..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-background-secondary border border-border-primary rounded-lg pl-10 pr-4 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-cyan"
+                />
+              </div>
+
+              <select
+                value={selectedSector}
+                onChange={(e) => setSelectedSector(e.target.value)}
+                className="bg-background-secondary border border-border-primary rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-cyan"
+              >
+                <option value="all">All Sectors</option>
+                {Object.keys(stats.sectorCounts).map(sector => (
+                  <option key={sector} value={sector}>{sector}</option>
+                ))}
+              </select>
+
+              <div className="flex gap-2 border-l border-border-primary pl-4">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded ${viewMode === 'list' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-text-tertiary hover:text-text-primary'}`}
+                >
+                  <Database size={18} />
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded ${viewMode === 'grid' ? 'bg-accent-cyan/20 text-accent-cyan' : 'text-text-tertiary hover:text-text-primary'}`}
+                >
+                  <BarChart3 size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Companies List */}
+            <div className="space-y-3">
+              {filteredCompanies.map(company => (
+                <Card key={company.ticker} className="hover:border-[#2A2A3F] transition-all">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div
+                        className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                        style={{ backgroundColor: SECTOR_COLORS[company.sector] || SECTOR_COLORS.DEFAULT }}
+                      >
+                        {company.ticker.substring(0, 2)}
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="text-base font-semibold text-text-primary">{company.name}</h4>
+                          <span className="px-2 py-0.5 bg-background-secondary text-text-tertiary text-xs rounded">
+                            {company.ticker}
+                          </span>
+                          <span
+                            className="px-2 py-0.5 text-xs rounded"
+                            style={{
+                              backgroundColor: `${SECTOR_COLORS[company.sector]}20`,
+                              color: SECTOR_COLORS[company.sector]
+                            }}
+                          >
+                            {company.sector}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-4 text-xs">
+                          <div>
+                            <span className="text-text-tertiary">Revenue:</span>
+                            <span className="ml-2 font-mono text-text-primary">
+                              ${company.financials.revenue.toLocaleString()}M
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-text-tertiary">Net Income:</span>
+                            <span className="ml-2 font-mono text-text-primary">
+                              ${company.financials.net_income.toLocaleString()}M
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-text-tertiary">ICR:</span>
+                            <span className={`ml-2 font-mono font-semibold ${
+                              (company.ratios?.icr || 0) > 2.5 ? 'text-accent-emerald' :
+                              (company.ratios?.icr || 0) > 2 ? 'text-status-caution' : 'text-status-danger'
+                            }`}>
+                              {company.ratios?.icr?.toFixed(2) || 'N/A'}x
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-text-tertiary">Debt:</span>
+                            <span className="ml-2 font-mono text-text-primary">
+                              ${company.financials.total_debt.toLocaleString()}M
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button className="p-2 text-text-tertiary hover:text-accent-cyan transition-colors">
+                        <Edit2 size={16} />
+                      </button>
+                      <button className="p-2 text-text-tertiary hover:text-status-danger transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {filteredCompanies.length === 0 && (
+              <div className="text-center py-12">
+                <Database size={48} className="mx-auto mb-3 text-text-tertiary opacity-50" />
+                <p className="text-text-secondary">No companies found matching your criteria</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MACROS TAB */}
+        {activeTab === 'macros' && (
+          <div className="max-w-7xl">
+            <div className="mb-6">
+              <h2 className="text-xl font-light text-text-primary mb-2">Macro Variables Configuration</h2>
+              <p className="text-sm text-text-secondary">
+                Manage all {MACRO_VARIABLES.length} macro variables across {Object.keys(MACRO_CATEGORIES).length} categories
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {Object.entries(MACRO_CATEGORIES).map(([categoryKey, category]) => {
+                const isExpanded = expandedCategories.has(categoryKey);
+                const variables = getVariablesByCategory(categoryKey as MacroCategory);
+
+                return (
+                  <Card key={categoryKey}>
+                    <button
+                      onClick={() => toggleCategory(categoryKey)}
+                      className="w-full flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{category.icon}</span>
+                        <div className="text-left">
+                          <h3 className="text-base font-semibold text-text-primary">{category.label}</h3>
+                          <p className="text-xs text-text-tertiary">{variables.length} variables</p>
+                        </div>
+                      </div>
+                      {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                    </button>
+
+                    {isExpanded && (
+                      <div className="mt-4 pt-4 border-t border-border-primary">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {variables.map(variable => (
+                            <div key={variable.id} className="bg-background-secondary rounded-lg p-3">
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <h4 className="text-sm font-medium text-text-primary mb-1">
+                                    {variable.name}
+                                  </h4>
+                                  <p className="text-xs text-text-tertiary">
+                                    {variable.description}
+                                  </p>
+                                </div>
+                                <button className="p-1 text-text-tertiary hover:text-accent-cyan">
+                                  <Edit2 size={14} />
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+                                <div>
+                                  <span className="text-text-tertiary">Min:</span>
+                                  <span className="ml-1 font-mono text-text-primary">
+                                    {variable.min}{variable.unit}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-text-tertiary">Default:</span>
+                                  <span className="ml-1 font-mono" style={{ color: category.color }}>
+                                    {variable.defaultValue}{variable.unit}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-text-tertiary">Max:</span>
+                                  <span className="ml-1 font-mono text-text-primary">
+                                    {variable.max}{variable.unit}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {variable.impact.sectors.slice(0, 3).map(sector => (
+                                  <span
+                                    key={sector}
+                                    className="px-2 py-0.5 bg-background-tertiary text-text-tertiary text-xs rounded"
+                                  >
+                                    {sector}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* CONNECTIONS TAB - Circuit Diagram View */}
+        {activeTab === 'connections' && (
+          <div className="max-w-7xl">
+            <div className="mb-6">
+              <h2 className="text-xl font-light text-text-primary mb-2">System Connections & Relationships</h2>
+              <p className="text-sm text-text-secondary">
+                Visualize how macro variables, sectors, and companies are interconnected
+              </p>
+            </div>
+
+            <Card>
+              <div className="text-center py-12">
+                <Network size={64} className="mx-auto mb-4 text-accent-cyan opacity-50" />
+                <h3 className="text-lg font-semibold text-text-primary mb-2">
+                  Circuit Diagram Visualization
+                </h3>
+                <p className="text-sm text-text-secondary mb-6">
+                  Interactive 4-Level Ontology: Macro → Sector → Company → Asset
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto mt-8">
+                  <div className="bg-background-secondary rounded-lg p-4 border-l-4 border-accent-cyan">
+                    <div className="text-2xl mb-2">🌐</div>
+                    <h4 className="text-sm font-semibold text-accent-cyan mb-1">Level 1: Macro</h4>
+                    <p className="text-xs text-text-tertiary">{MACRO_VARIABLES.length} variables</p>
+                  </div>
+
+                  <div className="bg-background-secondary rounded-lg p-4 border-l-4 border-accent-magenta">
+                    <div className="text-2xl mb-2">🏭</div>
+                    <h4 className="text-sm font-semibold text-accent-magenta mb-1">Level 2: Sector</h4>
+                    <p className="text-xs text-text-tertiary">{stats.totalSectors} sectors</p>
+                  </div>
+
+                  <div className="bg-background-secondary rounded-lg p-4 border-l-4 border-accent-emerald">
+                    <div className="text-2xl mb-2">🏢</div>
+                    <h4 className="text-sm font-semibold text-accent-emerald mb-1">Level 3: Company</h4>
+                    <p className="text-xs text-text-tertiary">{stats.totalCompanies} companies</p>
+                  </div>
+
+                  <div className="bg-background-secondary rounded-lg p-4 border-l-4 border-yellow-400">
+                    <div className="text-2xl mb-2">💎</div>
+                    <h4 className="text-sm font-semibold text-yellow-400 mb-1">Level 4: Asset</h4>
+                    <p className="text-xs text-text-tertiary">Individual products</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => window.location.href = '/network-graph'}
+                  className="mt-8 px-6 py-3 bg-accent-cyan text-black font-semibold rounded-lg hover:bg-accent-cyan/90 transition-all"
+                >
+                  Open Interactive Network Graph
+                </button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* ADD DATA TAB */}
+        {activeTab === 'add-data' && (
+          <div className="max-w-4xl mx-auto">
+            <Card>
+              <div className="flex items-center gap-2 mb-6">
+                <Plus size={20} className="text-accent-cyan" />
+                <h2 className="text-xl font-light text-text-primary">Add New Company</h2>
+              </div>
+
+              <form className="space-y-6">
+                {/* Basic Info */}
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary mb-3">Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs text-text-tertiary mb-1">Company Name *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Samsung Electronics"
+                        className="w-full bg-background-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-cyan"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-text-tertiary mb-1">Ticker Symbol *</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., SSNLF"
+                        className="w-full bg-background-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-cyan"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sector */}
+                <div>
+                  <label className="block text-xs text-text-tertiary mb-1">Sector *</label>
+                  <select className="w-full bg-background-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-cyan">
+                    <option value="">Select a sector...</option>
+                    <option value="BANKING">Banking</option>
+                    <option value="REALESTATE">Real Estate</option>
+                    <option value="MANUFACTURING">Manufacturing</option>
+                    <option value="SEMICONDUCTOR">Semiconductor</option>
+                  </select>
+                </div>
+
+                {/* Financials */}
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary mb-3">Financial Data</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs text-text-tertiary mb-1">Revenue (M) *</label>
+                      <input
+                        type="number"
+                        placeholder="e.g., 200000"
+                        className="w-full bg-background-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-cyan"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-text-tertiary mb-1">Net Income (M) *</label>
+                      <input
+                        type="number"
+                        placeholder="e.g., 25000"
+                        className="w-full bg-background-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-cyan"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-text-tertiary mb-1">Total Debt (M) *</label>
+                      <input
+                        type="number"
+                        placeholder="e.g., 50000"
+                        className="w-full bg-background-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-cyan"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Buttons */}
+                <div className="flex gap-3 pt-4 border-t border-border-primary">
+                  <button
+                    type="button"
+                    className="flex-1 px-4 py-2 bg-background-secondary text-text-secondary rounded-lg hover:bg-background-tertiary transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-accent-cyan text-black font-semibold rounded-lg hover:bg-accent-cyan/90 transition-all"
+                  >
+                    Add Company
+                  </button>
+                </div>
+              </form>
+
+              <div className="mt-6 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Info size={14} className="text-blue-400 mt-0.5" />
+                  <div className="text-xs text-blue-400">
+                    <p className="font-semibold mb-1">Note:</p>
+                    <p>All financial data should be in millions (M). ICR and other ratios will be automatically calculated.</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

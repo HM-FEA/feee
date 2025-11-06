@@ -2,10 +2,17 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { companies, Company } from '@/data/companies';
-import { Search, TrendingUp } from 'lucide-react';
+import { Search, TrendingUp, ChevronDown, ChevronRight, Sliders } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import NewsFeed from './NewsFeed';
 import CommunityPanel from './CommunityPanel';
+import {
+  MACRO_VARIABLES,
+  MACRO_CATEGORIES,
+  MacroCategory,
+  getVariablesByCategory,
+  getDefaultMacroState
+} from '@/data/macroVariables';
 
 const Card = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
   <div className={`bg-[#0D0D0F] border border-[#1A1A1F] rounded-2xl p-4 sm:p-6 ${className}`}>
@@ -117,10 +124,28 @@ export default function PlatformDashboard() {
   const [analysisTab, setAnalysisTab] = useState('Fundamental');
   const [searchTerm, setSearchTerm] = useState("");
   const [stockData, setStockData] = useState<any[]>([]);
-  const [macroVariables, setMacroVariables] = useState({ interestRate: 2.5, tariffRate: 0, fxRate: 1200 });
+  const [macroState, setMacroState] = useState(getDefaultMacroState());
+  const [expandedCategories, setExpandedCategories] = useState<Set<MacroCategory>>(
+    new Set(['MONETARY_POLICY'])
+  );
+  const [macroSidebarOpen, setMacroSidebarOpen] = useState(true);
 
   const analysisTabs = ['Fundamental', 'Technical', 'Macro Impact'];
   const filteredCompanies = useMemo(() => companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.ticker.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
+
+  const toggleCategory = (category: MacroCategory) => {
+    const newSet = new Set(expandedCategories);
+    if (newSet.has(category)) {
+      newSet.delete(category);
+    } else {
+      newSet.add(category);
+    }
+    setExpandedCategories(newSet);
+  };
+
+  const updateMacroVariable = (id: string, value: number) => {
+    setMacroState(prev => ({ ...prev, [id]: value }));
+  };
 
   useEffect(() => {
     setStockData(Array.from({ length: 30 }, (_, i) => ({ name: `Day ${i + 1}`, price: generateDeterministicMock(`${selectedCompany.ticker}-price-${i}`, selectedCompany.financials.equity / 200, selectedCompany.financials.equity / 100) })));
@@ -231,16 +256,26 @@ export default function PlatformDashboard() {
                 Macro Impact Analysis
               </h3>
               <div className="space-y-4">
-                {/* Scenario Display */}
-                <div className="text-xs text-text-secondary">
-                  <span>Scenario: Interest Rate at </span>
-                  <span className="text-accent-cyan font-semibold">
-                    {macroVariables.interestRate.toFixed(1)}%
-                  </span>
-                  <span>, Tariff Rate at </span>
-                  <span className="text-accent-cyan font-semibold">
-                    {macroVariables.tariffRate.toFixed(0)}%
-                  </span>
+                {/* Scenario Display - Key Variables */}
+                <div className="grid grid-cols-3 gap-3 text-xs">
+                  <div className="bg-background-secondary rounded-lg p-2">
+                    <div className="text-text-tertiary mb-1">Fed Rate</div>
+                    <div className="text-accent-cyan font-mono font-semibold">
+                      {macroState.fed_funds_rate?.toFixed(2) || 'N/A'}%
+                    </div>
+                  </div>
+                  <div className="bg-background-secondary rounded-lg p-2">
+                    <div className="text-text-tertiary mb-1">US Tariff</div>
+                    <div className="text-accent-magenta font-mono font-semibold">
+                      {macroState.us_tariff_rate?.toFixed(0) || 'N/A'}%
+                    </div>
+                  </div>
+                  <div className="bg-background-secondary rounded-lg p-2">
+                    <div className="text-text-tertiary mb-1">KRW/USD</div>
+                    <div className="text-accent-emerald font-mono font-semibold">
+                      {macroState.krw_usd?.toFixed(0) || 'N/A'}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Impact Result */}
@@ -250,16 +285,33 @@ export default function PlatformDashboard() {
                       Estimated Net Income Impact
                     </p>
                     {(() => {
+                      const fedRate = macroState.fed_funds_rate || 5.25;
                       const baseRate = 2.5;
-                      const rateChange = macroVariables.interestRate - baseRate;
+                      const rateChange = fedRate - baseRate;
+                      const tariff = macroState.us_tariff_rate || 0;
+                      const oilPrice = macroState.wti_oil || 78;
+                      const vix = macroState.vix || 15;
+
                       let impact = 0;
+
                       if (selectedCompany.sector === 'BANKING') {
+                        // Banking benefits from higher rates (NIM expansion)
                         impact = rateChange * generateDeterministicMock(selectedCompany.ticker, 2.5, 3.5);
+                        // But high VIX hurts
+                        impact -= (vix - 15) * 0.3;
                       } else if (selectedCompany.sector === 'REALESTATE') {
+                        // Real Estate hurt by higher rates (borrowing costs)
                         impact = rateChange * generateDeterministicMock(selectedCompany.ticker, -4.5, -5.5);
                       } else if (selectedCompany.sector === 'MANUFACTURING') {
-                        impact = macroVariables.tariffRate * generateDeterministicMock(selectedCompany.ticker, -0.4, -0.6);
+                        // Manufacturing hurt by tariffs
+                        impact = tariff * generateDeterministicMock(selectedCompany.ticker, -0.4, -0.6);
+                        // And higher oil prices
+                        impact -= (oilPrice - 60) * 0.05;
+                      } else if (selectedCompany.sector === 'SEMICONDUCTOR') {
+                        // Semiconductor affected by tariffs and trade
+                        impact = tariff * generateDeterministicMock(selectedCompany.ticker, -0.3, -0.5);
                       }
+
                       return (
                         <p className={`text-4xl font-bold ${
                           impact >= 0 ? 'text-status-safe' : 'text-status-danger'
@@ -368,56 +420,71 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Macro Controls */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <Card className="h-full flex flex-col overflow-y-auto text-xs">
-              <CardTitle className="text-xs mb-2">Macro Variables</CardTitle>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-text-secondary text-xs block mb-1">Interest Rate</label>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="range"
-                      min="0"
-                      max="10"
-                      step="0.1"
-                      value={macroVariables.interestRate}
-                      onChange={(e) => setMacroVariables({...macroVariables, interestRate: parseFloat(e.target.value)})}
-                      className="flex-1 h-0.5"
-                    />
-                    <span className="text-accent-cyan font-mono text-xs w-8 text-right">{macroVariables.interestRate.toFixed(1)}%</span>
-                  </div>
+          {/* Macro Controls - Categorized */}
+          <div className="flex-[2] min-h-0 overflow-hidden">
+            <Card className="h-full flex flex-col text-xs">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Sliders size={14} className="text-accent-cyan" />
+                  <span className="text-xs font-semibold text-text-primary">Macro Variables (56)</span>
                 </div>
-                <div>
-                  <label className="text-text-secondary text-xs block mb-1">Tariff</label>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="range"
-                      min="0"
-                      max="50"
-                      step="1"
-                      value={macroVariables.tariffRate}
-                      onChange={(e) => setMacroVariables({...macroVariables, tariffRate: parseFloat(e.target.value)})}
-                      className="flex-1 h-0.5"
-                    />
-                    <span className="text-accent-cyan font-mono text-xs w-8 text-right">{macroVariables.tariffRate.toFixed(0)}%</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-text-secondary text-xs block mb-1">FX (KRW/USD)</label>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="range"
-                      min="900"
-                      max="1500"
-                      step="10"
-                      value={macroVariables.fxRate}
-                      onChange={(e) => setMacroVariables({...macroVariables, fxRate: parseFloat(e.target.value)})}
-                      className="flex-1 h-0.5"
-                    />
-                    <span className="text-accent-cyan font-mono text-xs w-10 text-right">{macroVariables.fxRate.toFixed(0)}</span>
-                  </div>
-                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-2 space-y-2">
+                {Object.entries(MACRO_CATEGORIES).map(([categoryKey, category]) => {
+                  const isExpanded = expandedCategories.has(categoryKey as MacroCategory);
+                  const variables = getVariablesByCategory(categoryKey as MacroCategory);
+
+                  return (
+                    <div key={categoryKey} className="border border-border-primary rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => toggleCategory(categoryKey as MacroCategory)}
+                        className="w-full px-3 py-2 flex items-center justify-between bg-background-secondary hover:bg-background-tertiary transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{category.icon}</span>
+                          <span className="text-xs font-medium text-text-primary">{category.label}</span>
+                          <span className="text-xs text-text-tertiary">({variables.length})</span>
+                        </div>
+                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="px-3 py-2 space-y-3 bg-[#0A0A0C]">
+                          {variables.slice(0, 5).map(variable => (
+                            <div key={variable.id}>
+                              <label className="text-text-secondary text-xs block mb-1 flex items-center justify-between">
+                                <span>{variable.name}</span>
+                                <span className="font-mono" style={{ color: category.color }}>
+                                  {macroState[variable.id]?.toFixed(variable.step < 1 ? 2 : 0) || variable.defaultValue.toFixed(variable.step < 1 ? 2 : 0)}
+                                  {variable.unit}
+                                </span>
+                              </label>
+                              <input
+                                type="range"
+                                min={variable.min}
+                                max={variable.max}
+                                step={variable.step}
+                                value={macroState[variable.id] || variable.defaultValue}
+                                onChange={(e) => updateMacroVariable(variable.id, parseFloat(e.target.value))}
+                                className="w-full h-1 rounded-lg appearance-none cursor-pointer"
+                                style={{
+                                  background: `linear-gradient(to right, ${category.color} 0%, ${category.color} ${((macroState[variable.id] || variable.defaultValue) - variable.min) / (variable.max - variable.min) * 100}%, #1A1A1F ${((macroState[variable.id] || variable.defaultValue) - variable.min) / (variable.max - variable.min) * 100}%, #1A1A1F 100%)`
+                                }}
+                              />
+                              <div className="text-xs text-text-tertiary mt-0.5 truncate">{variable.description}</div>
+                            </div>
+                          ))}
+                          {variables.length > 5 && (
+                            <div className="text-xs text-text-tertiary text-center pt-2 border-t border-border-primary">
+                              + {variables.length - 5} more variables
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </Card>
           </div>
