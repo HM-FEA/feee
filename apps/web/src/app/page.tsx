@@ -20,28 +20,42 @@ export default function LandingPage() {
 
   return (
     <div className="relative min-h-screen bg-black text-white overflow-hidden">
-      {/* Minimal Starfield Background - Cylinder Effect */}
+      {/* Glass Texture Background with Starfield */}
       <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-black via-[#0A0A0F] to-black">
-          {Array.from({ length: 60 }).map((_, i) => {
-            const depth = 0.4 + Math.random() * 0.25; // Limited depth range for cylinder effect
+        {/* Base gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black via-[#0A0A0F] to-black" />
+
+        {/* Glass texture overlays */}
+        <div className="absolute inset-0 bg-gradient-to-br from-accent-cyan/5 via-transparent to-accent-magenta/5 backdrop-blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-accent-cyan/10 via-transparent to-transparent" />
+
+        {/* Enhanced starfield */}
+        <div className="absolute inset-0">
+          {Array.from({ length: 100 }).map((_, i) => {
+            const depth = 0.5 + Math.random() * 0.5;
+            const size = (0.5 + Math.random() * 1.5) * depth;
             return (
               <div
                 key={i}
                 className="absolute bg-white rounded-full"
                 style={{
-                  width: (0.5 + Math.random() * 1) * depth + 'px',
-                  height: (0.5 + Math.random() * 1) * depth + 'px',
+                  width: size + 'px',
+                  height: size + 'px',
                   top: Math.random() * 100 + '%',
                   left: Math.random() * 100 + '%',
-                  opacity: (Math.random() * 0.5 + 0.2) * depth,
-                  transform: `translateY(${scrollY * 0.02 * depth}px)`, // Very minimal parallax
+                  opacity: 0.3 + Math.random() * 0.5, // Increased from 0.08-0.35 to 0.3-0.8
+                  transform: `translateY(${scrollY * 0.02 * depth}px)`,
                   transition: 'transform 0.1s ease-out',
+                  boxShadow: `0 0 ${size * 2}px rgba(255, 255, 255, ${0.2 * depth})`,
                 }}
               />
             );
           })}
         </div>
+
+        {/* Additional glass panels for depth */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent-cyan/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent-magenta/5 rounded-full blur-3xl" />
       </div>
 
       {/* Apple-Style Navigation */}
@@ -102,17 +116,6 @@ export default function LandingPage() {
             >
               <span>Explore Docs</span>
             </Link>
-          </div>
-
-          {/* Scroll Indicator */}
-          <div
-            className={`absolute bottom-12 left-1/2 -translate-x-1/2 transition-opacity duration-1000 delay-1000 ${
-              isLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            <div className="w-5 h-8 border border-white/20 rounded-full p-1 flex justify-center">
-              <div className="w-1 h-2 bg-accent-cyan rounded-full animate-bounce" />
-            </div>
           </div>
         </div>
       </section>
