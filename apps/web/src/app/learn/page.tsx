@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { BookOpen, Video, Code, BarChart3, ChevronRight, Search, Lock, Book, Globe, Banknote, Home, TrendingUp, Target, RefreshCw, Settings, Check, Clock, GraduationCap, Lightbulb } from 'lucide-react';
+import { GlobalTopNav } from '@/components/layout/GlobalTopNav';
 
 // Types
 interface Lesson {
@@ -112,9 +113,8 @@ export default function LearnPage() {
   const completedCount = MOCK_LESSONS.filter(l => l.completed).length;
 
     return (
-
       <div className="relative min-h-screen bg-black text-text-primary">
-
+        <GlobalTopNav />
         <div className="relative z-10">
         <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur">
           <div className="mb-4">

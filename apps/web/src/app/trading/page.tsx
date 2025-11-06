@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { TrendingUp, BarChart2, Activity, DollarSign, Search } from 'lucide-react';
 import { companies } from '@/data/companies';
+import { GlobalTopNav } from '@/components/layout/GlobalTopNav';
 
 // Dynamic import to avoid SSR issues
 const LightweightChart = dynamic(() => import('@/components/charts/LightweightChart'), {
@@ -70,8 +71,9 @@ export default function TradingPage() {
 
   return (
     <div className="relative min-h-screen bg-black text-text-primary">
+      <GlobalTopNav />
       {/* Header */}
-      <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur sticky top-0 z-20">
+      <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur sticky top-16 z-20">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-accent-cyan mb-1 flex items-center gap-2">
