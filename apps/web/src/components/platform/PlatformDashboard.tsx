@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { companies, Company } from '@/data/companies';
-import { Search, TrendingUp, ChevronDown, ChevronRight, Sliders } from 'lucide-react';
+import { Search, TrendingUp, ChevronDown, ChevronRight, Sliders, Calendar as CalendarIcon, ExternalLink, Languages } from 'lucide-react';
 import { ComposedChart, Area, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import NewsFeed from './NewsFeed';
 import CommunityPanel from './CommunityPanel';
@@ -433,6 +433,29 @@ const MacroImpactAnalysis = ({ company, macroVariables }: { company: Company, ma
   );
 };
 
+// Calendar Events Data
+interface CalendarEvent {
+  id: string;
+  type: 'FOMC' | 'EARNINGS' | 'ECONOMIC';
+  title: string;
+  date: string;
+  time?: string;
+  ticker?: string;
+  description: string;
+  transcript?: string;
+}
+
+const CALENDAR_EVENTS: CalendarEvent[] = [
+  { id: '1', type: 'FOMC', title: 'FOMC Meeting', date: '2025-01-29', time: '14:00', description: 'Federal Open Market Committee meeting - Interest rate decision expected' },
+  { id: '2', type: 'EARNINGS', title: 'AAPL Earnings Call', date: '2025-01-08', time: '16:30', ticker: 'AAPL', description: 'Apple Q4 2024 earnings call', transcript: 'Thank you for joining us today. We are pleased to report record Q4 results with revenue of $123.9 billion...' },
+  { id: '3', type: 'EARNINGS', title: 'TSLA Earnings Call', date: '2025-01-09', time: '17:30', ticker: 'TSLA', description: 'Tesla Q4 2024 earnings call', transcript: 'Good afternoon everyone. Tesla delivered strong results this quarter with 485,000 vehicles delivered...' },
+  { id: '4', type: 'ECONOMIC', title: 'CPI Release', date: '2025-01-11', time: '08:30', description: 'Consumer Price Index data release' },
+  { id: '5', type: 'EARNINGS', title: 'NVDA Earnings Call', date: '2025-01-15', time: '16:00', ticker: 'NVDA', description: 'NVIDIA Q4 2024 earnings call', transcript: 'Thank you for joining. NVIDIA had an exceptional quarter driven by AI demand. Revenue reached $18.1 billion...' },
+  { id: '6', type: 'ECONOMIC', title: 'Retail Sales', date: '2025-01-16', time: '08:30', description: 'Retail sales data for December' },
+  { id: '7', type: 'FOMC', title: 'Fed Minutes Release', date: '2025-01-20', time: '14:00', description: 'FOMC meeting minutes from December meeting' },
+  { id: '8', type: 'EARNINGS', title: 'MSFT Earnings Call', date: '2025-01-23', time: '17:00', ticker: 'MSFT', description: 'Microsoft Q2 FY2025 earnings call', transcript: 'Good afternoon. Microsoft cloud services continue to drive growth with Azure revenue up 31% year-over-year...' },
+];
+
 export default function PlatformDashboard() {
   // Zustand store for global macro state
   const macroState = useMacroStore(state => state.macroState);
@@ -449,6 +472,9 @@ export default function PlatformDashboard() {
   const [showAllVariables, setShowAllVariables] = useState<Set<MacroCategory>>(
     new Set()
   );
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const [translation, setTranslation] = useState<string>('');
 
   const analysisTabs = ['Fundamental', 'Technical', 'Analysis Report'];
   const filteredCompanies = useMemo(() => companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.ticker.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
@@ -471,6 +497,45 @@ export default function PlatformDashboard() {
       newSet.add(category);
     }
     setShowAllVariables(newSet);
+  };
+
+  // Handle earnings call click
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+
+    // If it's an earnings call, switch to that company
+    if (event.type === 'EARNINGS' && event.ticker) {
+      const company = companies.find(c => c.ticker === event.ticker);
+      if (company) {
+        setSelectedCompany(company);
+      }
+    }
+
+    // Simulate AI translation
+    if (event.transcript) {
+      setTranslating(true);
+      setTimeout(() => {
+        setTranslation(`
+## ${event.title} - AI 번역 요약
+
+**날짜**: ${event.date} ${event.time || ''}
+
+### 주요 내용
+${event.transcript}
+
+### AI 요약
+- 분기 실적이 예상을 상회했습니다
+- 매출 성장률이 전년 대비 증가했습니다
+- 향후 전망이 긍정적입니다
+
+### 핵심 지표
+- 매출: 예상치 대비 +5%
+- EPS: 예상치 대비 +8%
+- 가이던스: 상향 조정
+        `);
+        setTranslating(false);
+      }, 1500);
+    }
   };
 
   useEffect(() => {
@@ -783,81 +848,140 @@ export default function PlatformDashboard() {
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR (20%) - Macro Variables */}
-        <div className="w-[20%] min-w-0 flex flex-col overflow-hidden">
-          {/* Macro Controls - Categorized - Full Height */}
+        {/* RIGHT SIDEBAR (20%) - Calendar & Events */}
+        <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
+          {/* Calendar Events */}
           <div className="flex-1 min-h-0 overflow-hidden">
             <Card className="h-full flex flex-col text-xs">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Sliders size={14} className="text-accent-cyan" />
-                  <span className="text-xs font-semibold text-text-primary">Macro Variables (56)</span>
+                  <CalendarIcon size={14} className="text-accent-cyan" />
+                  <span className="text-xs font-semibold text-text-primary">Economic Calendar</span>
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto pr-2 space-y-2">
-                {Object.entries(MACRO_CATEGORIES).map(([categoryKey, category]) => {
-                  const isExpanded = expandedCategories.has(categoryKey as MacroCategory);
-                  const showAll = showAllVariables.has(categoryKey as MacroCategory);
-                  const variables = getVariablesByCategory(categoryKey as MacroCategory);
-                  const displayedVariables = showAll ? variables : variables.slice(0, 5);
+                {CALENDAR_EVENTS.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(event => {
+                  const eventDate = new Date(event.date);
+                  const today = new Date();
+                  const isToday = eventDate.toDateString() === today.toDateString();
+                  const isPast = eventDate < today && !isToday;
 
                   return (
-                    <div key={categoryKey} className="border border-border-primary rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => toggleCategory(categoryKey as MacroCategory)}
-                        className="w-full px-3 py-2 flex items-center justify-between bg-background-secondary hover:bg-background-tertiary transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{category.icon}</span>
-                          <span className="text-xs font-medium text-text-primary">{category.label}</span>
-                          <span className="text-xs text-text-tertiary">({variables.length})</span>
+                    <button
+                      key={event.id}
+                      onClick={() => handleEventClick(event)}
+                      className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        selectedEvent?.id === event.id
+                          ? 'border-accent-cyan bg-accent-cyan/10'
+                          : isPast
+                          ? 'border-border-primary bg-background-secondary/50 opacity-60'
+                          : isToday
+                          ? 'border-accent-emerald bg-accent-emerald/10'
+                          : 'border-border-primary bg-background-secondary hover:border-[#2A2A3F]'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                              event.type === 'FOMC' ? 'bg-accent-cyan/20 text-accent-cyan' :
+                              event.type === 'EARNINGS' ? 'bg-accent-magenta/20 text-accent-magenta' :
+                              'bg-accent-emerald/20 text-accent-emerald'
+                            }`}>
+                              {event.type}
+                            </span>
+                            {event.ticker && (
+                              <span className="text-xs font-mono text-accent-cyan">{event.ticker}</span>
+                            )}
+                          </div>
+                          <h4 className="text-xs font-semibold text-text-primary mb-1">{event.title}</h4>
                         </div>
-                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                      </button>
+                      </div>
 
-                      {isExpanded && (
-                        <div className="px-3 py-2 space-y-3 bg-[#0A0A0C]">
-                          {displayedVariables.map(variable => (
-                            <div key={variable.id}>
-                              <label className="text-text-secondary text-xs block mb-1 flex items-center justify-between">
-                                <span>{variable.name}</span>
-                                <span className="font-mono" style={{ color: category.color }}>
-                                  {macroState[variable.id]?.toFixed(variable.step < 1 ? 2 : 0) || variable.defaultValue.toFixed(variable.step < 1 ? 2 : 0)}
-                                  {variable.unit}
-                                </span>
-                              </label>
-                              <input
-                                type="range"
-                                min={variable.min}
-                                max={variable.max}
-                                step={variable.step}
-                                value={macroState[variable.id] || variable.defaultValue}
-                                onChange={(e) => updateMacroVariable(variable.id, parseFloat(e.target.value))}
-                                className="w-full h-1 rounded-lg appearance-none cursor-pointer"
-                                style={{
-                                  background: `linear-gradient(to right, ${category.color} 0%, ${category.color} ${((macroState[variable.id] || variable.defaultValue) - variable.min) / (variable.max - variable.min) * 100}%, #1A1A1F ${((macroState[variable.id] || variable.defaultValue) - variable.min) / (variable.max - variable.min) * 100}%, #1A1A1F 100%)`
-                                }}
-                              />
-                              <div className="text-xs text-text-tertiary mt-0.5 truncate">{variable.description}</div>
-                            </div>
-                          ))}
-                          {variables.length > 5 && (
-                            <button
-                              onClick={() => toggleShowAllVariables(categoryKey as MacroCategory)}
-                              className="w-full text-xs text-center pt-2 border-t border-border-primary text-accent-cyan hover:text-accent-cyan/80 transition-colors"
-                            >
-                              {showAll ? 'Show Less' : `Show ${variables.length - 5} More`}
-                            </button>
-                          )}
+                      <div className="flex items-center gap-2 text-xs text-text-tertiary">
+                        <span>{eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        {event.time && (
+                          <>
+                            <span>•</span>
+                            <span>{event.time}</span>
+                          </>
+                        )}
+                      </div>
+
+                      {event.transcript && (
+                        <div className="flex items-center gap-1 mt-2 text-xs text-accent-cyan">
+                          <Languages size={12} />
+                          <span>AI Translation Available</span>
                         </div>
                       )}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
             </Card>
           </div>
+
+          {/* Event Details & Translation */}
+          {selectedEvent && (
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <Card className="h-full flex flex-col text-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-semibold text-text-primary">Event Details</h3>
+                  <button
+                    onClick={() => setSelectedEvent(null)}
+                    className="text-text-tertiary hover:text-text-primary"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto pr-2">
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-text-primary mb-2">{selectedEvent.title}</h4>
+                      <p className="text-xs text-text-secondary mb-2">{selectedEvent.description}</p>
+
+                      {selectedEvent.ticker && (
+                        <div className="p-2 bg-accent-cyan/10 border border-accent-cyan/30 rounded-lg">
+                          <p className="text-xs text-accent-cyan">
+                            Switched to {selectedEvent.ticker} - View analysis in center panel
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedEvent.transcript && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Languages size={14} className="text-accent-magenta" />
+                          <h4 className="text-xs font-semibold text-text-primary">AI Translation</h4>
+                        </div>
+
+                        {translating ? (
+                          <div className="p-4 text-center">
+                            <div className="animate-pulse text-accent-cyan">Translating...</div>
+                          </div>
+                        ) : (
+                          <div className="prose prose-invert prose-xs max-w-none">
+                            <div
+                              className="p-3 bg-background-secondary rounded-lg text-text-secondary whitespace-pre-wrap"
+                              style={{
+                                fontSize: '11px',
+                                lineHeight: '1.6'
+                              }}
+                            >
+                              {translation || selectedEvent.transcript}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>
