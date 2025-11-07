@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { createChart, ColorType, IChartApi, ISeriesApi } from 'lightweight-charts';
+import { createChart, ColorType } from 'lightweight-charts';
 
 interface LightweightChartProps {
   data: { time: string; value: number }[];
@@ -11,8 +11,6 @@ interface LightweightChartProps {
 
 export default function LightweightChart({ data, height = 400, ticker = 'Stock' }: LightweightChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -39,32 +37,32 @@ export default function LightweightChart({ data, height = 400, ticker = 'Stock' 
       },
     });
 
-    chartRef.current = chart;
-
-    // Create area series
-    const areaSeries = chart.addAreaSeries({
-      lineColor: '#00E5FF',
-      topColor: 'rgba(0, 229, 255, 0.4)',
-      bottomColor: 'rgba(0, 229, 255, 0.0)',
+    // Create baseline series (works like area chart in v5)
+    const baselineSeries = chart.addBaselineSeries({
+      baseValue: { type: 'price', price: data[0]?.value || 0 },
+      topLineColor: '#00E5FF',
+      topFillColor1: 'rgba(0, 229, 255, 0.4)',
+      topFillColor2: 'rgba(0, 229, 255, 0.05)',
+      bottomLineColor: '#EF4444',
+      bottomFillColor1: 'rgba(239, 68, 68, 0.05)',
+      bottomFillColor2: 'rgba(239, 68, 68, 0.4)',
       lineWidth: 2,
     });
-
-    seriesRef.current = areaSeries;
 
     // Set data
     const formattedData = data.map(d => ({
       time: d.time,
       value: d.value
     }));
-    areaSeries.setData(formattedData);
+    baselineSeries.setData(formattedData);
 
     // Fit content
     chart.timeScale().fitContent();
 
     // Handle resize
     const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
+      if (chartContainerRef.current) {
+        chart.applyOptions({
           width: chartContainerRef.current.clientWidth,
         });
       }
