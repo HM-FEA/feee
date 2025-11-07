@@ -13,7 +13,7 @@ export default function LightweightChart({ data, height = 400, ticker = 'Stock' 
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    if (!chartContainerRef.current || data.length === 0) return;
 
     // Create chart
     const chart = createChart(chartContainerRef.current, {
@@ -37,15 +37,9 @@ export default function LightweightChart({ data, height = 400, ticker = 'Stock' 
       },
     });
 
-    // Create baseline series (works like area chart in v5)
-    const baselineSeries = chart.addBaselineSeries({
-      baseValue: { type: 'price', price: data[0]?.value || 0 },
-      topLineColor: '#00E5FF',
-      topFillColor1: 'rgba(0, 229, 255, 0.4)',
-      topFillColor2: 'rgba(0, 229, 255, 0.05)',
-      bottomLineColor: '#EF4444',
-      bottomFillColor1: 'rgba(239, 68, 68, 0.05)',
-      bottomFillColor2: 'rgba(239, 68, 68, 0.4)',
+    // Use line series (most compatible with v5)
+    const lineSeries = chart.addLineSeries({
+      color: '#00E5FF',
       lineWidth: 2,
     });
 
@@ -54,7 +48,7 @@ export default function LightweightChart({ data, height = 400, ticker = 'Stock' 
       time: d.time,
       value: d.value
     }));
-    baselineSeries.setData(formattedData);
+    lineSeries.setData(formattedData);
 
     // Fit content
     chart.timeScale().fitContent();

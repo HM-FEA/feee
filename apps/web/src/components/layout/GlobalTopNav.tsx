@@ -2,18 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Network, Trophy, BookOpen, Zap, Landmark, Bot, BarChart } from 'lucide-react';
+import { Home, Network, Trophy, BookOpen, Zap, Landmark, Bot, BarChart, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const mainNavigation = [
-  { name: 'Home', href: '/dashboard', icon: Home },
-  { name: 'Platform', href: '/simulate', icon: Zap },
+  { name: 'Platform', href: '/dashboard', icon: Home },
   { name: 'Network', href: '/network-graph', icon: Network },
+  { name: 'Globe', href: '/globe', icon: Globe },
   { name: 'Ontology', href: '/ontology', icon: Landmark },
+  { name: 'Simulate', href: '/simulate', icon: Zap },
   { name: 'Arena', href: '/arena', icon: Trophy },
   { name: 'Learn', href: '/learn', icon: BookOpen },
   { name: 'Trading', href: '/trading', icon: BarChart },
-  { name: 'AI Bots', href: '/trading-agents', icon: Bot },
 ];
 
 export function GlobalTopNav() {

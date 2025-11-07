@@ -196,12 +196,11 @@ export default function PlatformDashboard() {
 
   return (
     <div className="min-h-screen bg-black text-text-primary flex flex-col">
-      {/* Header */}
-      <div className="border-b border-border-primary px-6 py-3 bg-black/50 backdrop-blur">
-        <div className="flex items-center justify-between mb-3">
+      {/* Compact Header - Selected Company Info */}
+      <div className="border-b border-border-primary px-6 py-2 bg-black/50 backdrop-blur">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-accent-cyan">Nexus-Alpha</h1>
-            <p className="text-xs text-text-secondary">Financial Simulation Platform</p>
+            <h2 className="text-sm font-semibold text-text-primary">Platform Dashboard</h2>
           </div>
           <div className="text-right">
             <p className="text-sm text-text-primary font-mono">{selectedCompany.name}</p>
