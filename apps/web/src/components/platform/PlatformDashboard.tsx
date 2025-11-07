@@ -211,6 +211,84 @@ const TechnicalAnalysis = ({ ticker }: { ticker: string }) => {
   );
 };
 
+const EventDetails = ({ event, translating, translation }: { event: CalendarEvent, translating: boolean, translation: string }) => (
+  <div className="space-y-6 text-sm">
+    {/* Event Header */}
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <span className={`px-3 py-1 rounded text-sm font-semibold ${
+          event.type === 'FOMC' ? 'bg-accent-cyan/20 text-accent-cyan' :
+          event.type === 'EARNINGS' ? 'bg-accent-magenta/20 text-accent-magenta' :
+          'bg-accent-emerald/20 text-accent-emerald'
+        }`}>
+          {event.type}
+        </span>
+        {event.ticker && (
+          <span className="text-sm font-mono text-accent-cyan">{event.ticker}</span>
+        )}
+        <span className="text-sm text-text-tertiary">{event.date} {event.time}</span>
+      </div>
+
+      <h3 className="text-2xl font-bold text-text-primary mb-3">{event.title}</h3>
+      <p className="text-sm text-text-secondary">{event.description}</p>
+
+      {event.ticker && (
+        <div className="mt-4 p-3 bg-accent-cyan/10 border border-accent-cyan/30 rounded-lg">
+          <p className="text-sm text-accent-cyan">
+            ✓ Switched to {event.ticker} - All data in center panel now reflects this company
+          </p>
+        </div>
+      )}
+    </div>
+
+    {/* Original Transcript */}
+    {event.transcript && (
+      <div>
+        <h4 className="text-base font-semibold text-text-primary mb-3 flex items-center gap-2">
+          <ExternalLink size={16} className="text-text-secondary" />
+          Original Transcript
+        </h4>
+        <div className="p-4 bg-background-secondary rounded-lg border border-border-primary">
+          <p className="text-sm text-text-secondary leading-relaxed">{event.transcript}</p>
+        </div>
+      </div>
+    )}
+
+    {/* AI Translation */}
+    {event.transcript && (
+      <div>
+        <h4 className="text-base font-semibold text-text-primary mb-3 flex items-center gap-2">
+          <Languages size={16} className="text-accent-magenta" />
+          AI Translation & Summary
+        </h4>
+
+        {translating ? (
+          <div className="p-8 text-center bg-background-secondary rounded-lg border border-border-primary">
+            <div className="animate-pulse text-accent-cyan text-lg mb-2">번역 중...</div>
+            <div className="text-xs text-text-tertiary">AI가 어닝콜을 분석하고 번역하고 있습니다</div>
+          </div>
+        ) : translation ? (
+          <div className="p-4 bg-background-secondary rounded-lg border border-accent-magenta/30">
+            <div
+              className="prose prose-invert prose-sm max-w-none text-text-secondary"
+              style={{
+                fontSize: '13px',
+                lineHeight: '1.7'
+              }}
+            >
+              <div className="whitespace-pre-wrap">{translation}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 bg-background-secondary rounded-lg border border-border-primary">
+            <p className="text-sm text-text-tertiary text-center">Click an event with transcript to see AI translation</p>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+);
+
 const AnalysisReport = ({ company }: { company: Company }) => {
   const [reportType, setReportType] = useState<'official' | 'community' | 'create'>('official');
   const [newReport, setNewReport] = useState({ title: '', content: '', rating: 'BUY' });
@@ -476,7 +554,9 @@ export default function PlatformDashboard() {
   const [translating, setTranslating] = useState(false);
   const [translation, setTranslation] = useState<string>('');
 
-  const analysisTabs = ['Fundamental', 'Technical', 'Analysis Report'];
+  const analysisTabs = selectedEvent
+    ? ['Fundamental', 'Technical', 'Analysis Report', 'Event Details']
+    : ['Fundamental', 'Technical', 'Analysis Report'];
   const filteredCompanies = useMemo(() => companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.ticker.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
 
   const toggleCategory = (category: MacroCategory) => {
@@ -502,6 +582,7 @@ export default function PlatformDashboard() {
   // Handle earnings call click
   const handleEventClick = (event: CalendarEvent) => {
     setSelectedEvent(event);
+    setAnalysisTab('Event Details'); // Auto-switch to Event Details tab
 
     // If it's an earnings call, switch to that company
     if (event.type === 'EARNINGS' && event.ticker) {
@@ -514,6 +595,7 @@ export default function PlatformDashboard() {
     // Simulate AI translation
     if (event.transcript) {
       setTranslating(true);
+      setTranslation(''); // Clear previous translation
       setTimeout(() => {
         setTranslation(`
 ## ${event.title} - AI 번역 요약
@@ -586,6 +668,7 @@ ${event.transcript}
       case 'Fundamental': return <FundamentalAnalysis company={selectedCompany} />;
       case 'Technical': return <TechnicalAnalysis ticker={selectedCompany.ticker} />;
       case 'Analysis Report': return <AnalysisReport company={selectedCompany} />;
+      case 'Event Details': return selectedEvent ? <EventDetails event={selectedEvent} translating={translating} translation={translation} /> : null;
       default: return null;
     }
   }
@@ -848,8 +931,8 @@ ${event.transcript}
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR (20%) - Calendar & Events */}
-        <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
+        {/* RIGHT SIDEBAR (20%) - Economic Calendar */}
+        <div className="w-[20%] min-w-0 flex flex-col overflow-hidden">
           {/* Calendar Events */}
           <div className="flex-1 min-h-0 overflow-hidden">
             <Card className="h-full flex flex-col text-xs">
@@ -921,67 +1004,6 @@ ${event.transcript}
               </div>
             </Card>
           </div>
-
-          {/* Event Details & Translation */}
-          {selectedEvent && (
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <Card className="h-full flex flex-col text-xs">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-semibold text-text-primary">Event Details</h3>
-                  <button
-                    onClick={() => setSelectedEvent(null)}
-                    className="text-text-tertiary hover:text-text-primary"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto pr-2">
-                  <div className="space-y-3">
-                    <div>
-                      <h4 className="text-sm font-semibold text-text-primary mb-2">{selectedEvent.title}</h4>
-                      <p className="text-xs text-text-secondary mb-2">{selectedEvent.description}</p>
-
-                      {selectedEvent.ticker && (
-                        <div className="p-2 bg-accent-cyan/10 border border-accent-cyan/30 rounded-lg">
-                          <p className="text-xs text-accent-cyan">
-                            Switched to {selectedEvent.ticker} - View analysis in center panel
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {selectedEvent.transcript && (
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Languages size={14} className="text-accent-magenta" />
-                          <h4 className="text-xs font-semibold text-text-primary">AI Translation</h4>
-                        </div>
-
-                        {translating ? (
-                          <div className="p-4 text-center">
-                            <div className="animate-pulse text-accent-cyan">Translating...</div>
-                          </div>
-                        ) : (
-                          <div className="prose prose-invert prose-xs max-w-none">
-                            <div
-                              className="p-3 bg-background-secondary rounded-lg text-text-secondary whitespace-pre-wrap"
-                              style={{
-                                fontSize: '11px',
-                                lineHeight: '1.6'
-                              }}
-                            >
-                              {translation || selectedEvent.transcript}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            </div>
-          )}
         </div>
       </div>
     </div>
