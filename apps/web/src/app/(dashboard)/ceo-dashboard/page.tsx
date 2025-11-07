@@ -4,8 +4,9 @@ import React, { useState, useMemo } from 'react';
 import {
   Plus, Edit2, Trash2, Search, Filter, Network, Database,
   TrendingUp, Building2, Sliders, GitBranch, ChevronDown, ChevronRight,
-  CheckCircle, AlertCircle, Info, BarChart3, Globe
+  CheckCircle, AlertCircle, Info, BarChart3, Globe, DollarSign, Users, CreditCard, TrendingDown
 } from 'lucide-react';
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import {
   MACRO_VARIABLES,
   MACRO_CATEGORIES,
@@ -58,6 +59,65 @@ export default function AdminDashboardPage() {
       avgICR: avgICR.toFixed(2),
       healthyCompanies,
       healthPercentage: ((healthyCompanies / totalCompanies) * 100).toFixed(1)
+    };
+  }, []);
+
+  // Payment & Subscription Analytics
+  const paymentData = useMemo(() => {
+    const totalUsers = 14253;
+    const proUsers = 1847;
+    const freeUsers = totalUsers - proUsers;
+    const conversionRate = (proUsers / totalUsers * 100).toFixed(1);
+    const mrr = proUsers * 29; // $29/month per pro user
+    const churnRate = 3.2; // 3.2%
+
+    // Monthly revenue trend (last 6 months)
+    const revenueHistory = [
+      { month: 'Aug', revenue: 42000, users: 1520 },
+      { month: 'Sep', revenue: 45500, users: 1630 },
+      { month: 'Oct', revenue: 48200, users: 1710 },
+      { month: 'Nov', revenue: 50100, users: 1780 },
+      { month: 'Dec', revenue: 52000, users: 1840 },
+      { month: 'Jan', revenue: 53600, users: 1847 }
+    ];
+
+    // P&L Data
+    const monthlyRevenue = mrr;
+    const costs = {
+      server: 8500,
+      api: 4200,
+      dataProviders: 6800,
+      staff: 15000,
+      marketing: 3500,
+      other: 2000
+    };
+    const totalCosts = Object.values(costs).reduce((sum, cost) => sum + cost, 0);
+    const netProfit = monthlyRevenue - totalCosts;
+    const profitMargin = ((netProfit / monthlyRevenue) * 100).toFixed(1);
+
+    // Recent transactions (mock)
+    const recentTransactions = [
+      { id: 1, user: 'john.doe@email.com', plan: 'Pro', amount: 29, date: '2025-01-06', status: 'success' },
+      { id: 2, user: 'jane.smith@email.com', plan: 'Pro', amount: 29, date: '2025-01-06', status: 'success' },
+      { id: 3, user: 'mike.wilson@email.com', plan: 'Pro', amount: 29, date: '2025-01-05', status: 'success' },
+      { id: 4, user: 'sarah.j@email.com', plan: 'Pro', amount: 29, date: '2025-01-05', status: 'failed' },
+      { id: 5, user: 'alex.kim@email.com', plan: 'Pro', amount: 29, date: '2025-01-04', status: 'success' }
+    ];
+
+    return {
+      totalUsers,
+      proUsers,
+      freeUsers,
+      conversionRate,
+      mrr,
+      churnRate,
+      revenueHistory,
+      monthlyRevenue,
+      costs,
+      totalCosts,
+      netProfit,
+      profitMargin,
+      recentTransactions
     };
   }, []);
 
@@ -249,6 +309,217 @@ export default function AdminDashboardPage() {
                     </div>
                   );
                 })}
+              </div>
+            </Card>
+
+            {/* Payment & Subscription Analytics */}
+            <Card className="lg:col-span-2">
+              <div className="flex items-center gap-2 mb-4">
+                <CreditCard size={18} className="text-accent-emerald" />
+                <h3 className="text-base font-semibold text-text-primary">Payment & Subscriptions</h3>
+              </div>
+
+              {/* Key Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-background-secondary rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">Total Users</div>
+                  <div className="text-2xl font-bold text-text-primary">{paymentData.totalUsers.toLocaleString()}</div>
+                </div>
+                <div className="bg-background-secondary rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">Pro Users</div>
+                  <div className="text-2xl font-bold text-accent-emerald">{paymentData.proUsers.toLocaleString()}</div>
+                  <div className="text-xs text-text-tertiary mt-1">{paymentData.conversionRate}% conversion</div>
+                </div>
+                <div className="bg-background-secondary rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">MRR</div>
+                  <div className="text-2xl font-bold text-accent-cyan">${paymentData.mrr.toLocaleString()}</div>
+                </div>
+                <div className="bg-background-secondary rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">Churn Rate</div>
+                  <div className="text-2xl font-bold text-status-caution">{paymentData.churnRate}%</div>
+                </div>
+              </div>
+
+              {/* Revenue Trend Chart */}
+              <div>
+                <h4 className="text-sm font-semibold text-text-primary mb-3">Revenue Trend (6 Months)</h4>
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={paymentData.revenueHistory} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1F" />
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                        tickLine={false}
+                        axisLine={{ stroke: '#1A1A1F' }}
+                      />
+                      <YAxis
+                        tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                        tickLine={false}
+                        axisLine={{ stroke: '#1A1A1F' }}
+                        tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                      />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F', borderRadius: '8px' }}
+                        formatter={(value: any) => [`$${value.toLocaleString()}`, 'Revenue']}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#10B981"
+                        strokeWidth={2}
+                        fillOpacity={1}
+                        fill="url(#colorRevenue)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* User Split */}
+              <div className="mt-6">
+                <h4 className="text-sm font-semibold text-text-primary mb-3">User Distribution</h4>
+                <div className="space-y-2">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-text-secondary">Pro Users</span>
+                      <span className="text-xs font-mono text-accent-emerald">
+                        {paymentData.proUsers} ({paymentData.conversionRate}%)
+                      </span>
+                    </div>
+                    <div className="h-2 bg-background-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-accent-emerald transition-all duration-300"
+                        style={{ width: `${paymentData.conversionRate}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-text-secondary">Free Users</span>
+                      <span className="text-xs font-mono text-text-tertiary">
+                        {paymentData.freeUsers} ({(100 - parseFloat(paymentData.conversionRate)).toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="h-2 bg-background-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-text-tertiary transition-all duration-300"
+                        style={{ width: `${100 - parseFloat(paymentData.conversionRate)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* P&L (Profit & Loss) */}
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <DollarSign size={18} className="text-accent-cyan" />
+                <h3 className="text-base font-semibold text-text-primary">P&L Statement</h3>
+              </div>
+
+              {/* Profitability Overview */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                  <div className="text-xs text-green-400 mb-1">Monthly Revenue</div>
+                  <div className="text-2xl font-bold text-green-400">${paymentData.monthlyRevenue.toLocaleString()}</div>
+                </div>
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                  <div className="text-xs text-red-400 mb-1">Total Costs</div>
+                  <div className="text-2xl font-bold text-red-400">${paymentData.totalCosts.toLocaleString()}</div>
+                </div>
+              </div>
+
+              {/* Net Profit */}
+              <div className={`p-4 rounded-lg mb-6 ${
+                paymentData.netProfit >= 0
+                  ? 'bg-accent-emerald/10 border border-accent-emerald/20'
+                  : 'bg-status-danger/10 border border-status-danger/20'
+              }`}>
+                <div className={`text-xs mb-1 ${paymentData.netProfit >= 0 ? 'text-accent-emerald' : 'text-status-danger'}`}>
+                  Net Profit
+                </div>
+                <div className={`text-3xl font-bold ${paymentData.netProfit >= 0 ? 'text-accent-emerald' : 'text-status-danger'}`}>
+                  ${Math.abs(paymentData.netProfit).toLocaleString()}
+                </div>
+                <div className="text-xs text-text-tertiary mt-1">
+                  Margin: {paymentData.profitMargin}%
+                </div>
+              </div>
+
+              {/* Cost Breakdown */}
+              <div>
+                <h4 className="text-sm font-semibold text-text-primary mb-3">Cost Breakdown</h4>
+                <div className="space-y-2">
+                  {Object.entries(paymentData.costs).map(([category, amount]) => (
+                    <div key={category}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-text-secondary capitalize">{category}</span>
+                        <span className="text-xs font-mono text-text-primary">
+                          ${amount.toLocaleString()} ({((amount / paymentData.totalCosts) * 100).toFixed(1)}%)
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-background-secondary rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-status-danger transition-all duration-300"
+                          style={{ width: `${(amount / paymentData.totalCosts) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+
+            {/* Recent Transactions */}
+            <Card className="lg:col-span-3">
+              <div className="flex items-center gap-2 mb-4">
+                <Users size={18} className="text-accent-magenta" />
+                <h3 className="text-base font-semibold text-text-primary">Recent Transactions</h3>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border-primary">
+                      <th className="text-left py-3 text-text-secondary font-semibold">User</th>
+                      <th className="text-left py-3 text-text-secondary font-semibold">Plan</th>
+                      <th className="text-right py-3 text-text-secondary font-semibold">Amount</th>
+                      <th className="text-left py-3 text-text-secondary font-semibold">Date</th>
+                      <th className="text-left py-3 text-text-secondary font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paymentData.recentTransactions.map((transaction) => (
+                      <tr key={transaction.id} className="border-b border-border-primary/50">
+                        <td className="py-3 text-text-primary">{transaction.user}</td>
+                        <td className="py-3">
+                          <span className="px-2 py-0.5 bg-accent-cyan/20 text-accent-cyan text-xs rounded">
+                            {transaction.plan}
+                          </span>
+                        </td>
+                        <td className="text-right py-3 font-mono text-text-primary">${transaction.amount}</td>
+                        <td className="py-3 text-text-tertiary">{transaction.date}</td>
+                        <td className="py-3">
+                          <span className={`px-2 py-0.5 text-xs rounded ${
+                            transaction.status === 'success'
+                              ? 'bg-green-500/20 text-green-400'
+                              : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {transaction.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </Card>
           </div>

@@ -4,9 +4,17 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Zap, Brain, TrendingUp, Globe, Shield, Sparkles } from 'lucide-react';
 
+interface Comet {
+  id: number;
+  startX: number;
+  startY: number;
+  active: boolean;
+}
+
 export default function LandingPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [comets, setComets] = useState<Comet[]>([]);
 
   useEffect(() => {
     // Delayed fade-in for dramatic effect
@@ -15,7 +23,38 @@ export default function LandingPage() {
     // Handle scroll for parallax effects
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    // Spawn comet periodically
+    let cometId = 0;
+    const spawnComet = () => {
+      const newComet: Comet = {
+        id: cometId++,
+        startX: 10 + Math.random() * 80, // 10-90%
+        startY: -10 + Math.random() * 30, // -10-20%
+        active: true
+      };
+
+      setComets(prev => [...prev, newComet]);
+
+      // Remove comet after animation completes
+      setTimeout(() => {
+        setComets(prev => prev.filter(c => c.id !== newComet.id));
+      }, 4000); // 4s animation duration
+    };
+
+    // Spawn first comet after 3 seconds
+    const initialTimeout = setTimeout(spawnComet, 3000);
+
+    // Then spawn every 15-25 seconds randomly
+    const cometInterval = setInterval(() => {
+      spawnComet();
+    }, 15000 + Math.random() * 10000); // 15-25 seconds
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(initialTimeout);
+      clearInterval(cometInterval);
+    };
   }, []);
 
   return (
@@ -43,8 +82,8 @@ export default function LandingPage() {
                   height: size + 'px',
                   top: Math.random() * 100 + '%',
                   left: Math.random() * 100 + '%',
-                  opacity: 0.3 + Math.random() * 0.5, // Increased from 0.08-0.35 to 0.3-0.8
-                  transform: `translateY(${scrollY * 0.02 * depth}px)`,
+                  opacity: 0.3 + Math.random() * 0.5,
+                  transform: `translateY(${scrollY * 0.005 * depth}px)`, // Reduced from 0.02 to 0.005 for slower movement
                   transition: 'transform 0.1s ease-out',
                   boxShadow: `0 0 ${size * 2}px rgba(255, 255, 255, ${0.2 * depth})`,
                 }}
@@ -52,6 +91,66 @@ export default function LandingPage() {
             );
           })}
         </div>
+
+        {/* Comets */}
+        {comets.map(comet => (
+          <div
+            key={comet.id}
+            className="absolute pointer-events-none"
+            style={{
+              top: `${comet.startY}%`,
+              left: `${comet.startX}%`,
+              animation: 'cometFly 4s linear forwards',
+            }}
+          >
+            {/* Comet head */}
+            <div className="relative">
+              <div
+                className="w-3 h-3 rounded-full bg-gradient-to-br from-accent-cyan via-white to-accent-magenta"
+                style={{
+                  boxShadow: '0 0 20px rgba(0, 229, 255, 0.8), 0 0 40px rgba(0, 229, 255, 0.6)',
+                }}
+              />
+              {/* Comet tail */}
+              <div
+                className="absolute top-1/2 -translate-y-1/2 left-full h-1 bg-gradient-to-r from-accent-cyan/80 via-accent-cyan/40 to-transparent"
+                style={{
+                  width: '120px',
+                  filter: 'blur(2px)',
+                  boxShadow: '0 0 15px rgba(0, 229, 255, 0.6)',
+                }}
+              />
+              {/* Secondary tail for more glow */}
+              <div
+                className="absolute top-1/2 -translate-y-1/2 left-full h-2 bg-gradient-to-r from-white/60 via-accent-cyan/20 to-transparent"
+                style={{
+                  width: '80px',
+                  filter: 'blur(4px)',
+                }}
+              />
+            </div>
+          </div>
+        ))}
+
+        <style jsx>{`
+          @keyframes cometFly {
+            0% {
+              transform: translate(0, 0) scale(0);
+              opacity: 0;
+            }
+            10% {
+              opacity: 1;
+              transform: translate(0, 0) scale(1);
+            }
+            90% {
+              opacity: 1;
+            }
+            100% {
+              transform: translate(150vw, 100vh) scale(0.5);
+              opacity: 0;
+            }
+          }
+        `}</style>
 
         {/* Additional glass panels for depth */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent-cyan/5 rounded-full blur-3xl" />
@@ -165,13 +264,32 @@ export default function LandingPage() {
             ].map((feature, idx) => (
               <div
                 key={idx}
-                className="group relative bg-[#0A0A0F]/50 backdrop-blur-sm border border-white/5 rounded-xl p-6 hover:border-accent-cyan/30 hover:bg-[#0A0A0F]/80 transition-all duration-300"
+                className="group relative bg-[#0A0A0F]/50 backdrop-blur-sm border border-white/5 rounded-xl p-6 hover:border-accent-cyan/40 hover:bg-[#0A0A0F]/80 transition-all duration-500 hover:-translate-y-1"
+                style={{
+                  boxShadow: '0 0 0 0 rgba(0, 229, 255, 0)',
+                  transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 40px 2px rgba(0, 229, 255, 0.15), 0 0 80px 4px rgba(0, 229, 255, 0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 0 0 rgba(0, 229, 255, 0)';
+                }}
               >
-                <div className="text-accent-cyan mb-4">
-                  {feature.icon}
+                {/* Glow effect on hover */}
+                <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(0, 229, 255, 0.06), transparent 40%)'
+                  }}
+                />
+
+                <div className="relative z-10">
+                  <div className="text-accent-cyan mb-4 group-hover:scale-110 transition-transform duration-500">
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-lg font-medium mb-2 text-white group-hover:text-accent-cyan transition-colors duration-300">{feature.title}</h3>
+                  <p className="text-text-secondary text-sm leading-relaxed font-light">{feature.description}</p>
                 </div>
-                <h3 className="text-lg font-medium mb-2 text-white">{feature.title}</h3>
-                <p className="text-text-secondary text-sm leading-relaxed font-light">{feature.description}</p>
               </div>
             ))}
           </div>
