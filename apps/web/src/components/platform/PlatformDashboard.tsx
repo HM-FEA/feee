@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { companies, Company } from '@/data/companies';
 import { Search, TrendingUp, ChevronDown, ChevronRight, Sliders } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Area, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import NewsFeed from './NewsFeed';
 import CommunityPanel from './CommunityPanel';
 import {
@@ -165,11 +165,24 @@ export default function PlatformDashboard() {
   };
 
   useEffect(() => {
-    // Generate stock data for Recharts
-    setStockData(Array.from({ length: 30 }, (_, i) => ({
-      name: `Day ${i + 1}`,
-      price: generateDeterministicMock(`${selectedCompany.ticker}-price-${i}`, selectedCompany.financials.equity / 200, selectedCompany.financials.equity / 100)
-    })));
+    // Generate stock data with proper dates and volume
+    const today = new Date();
+    const basePrice = selectedCompany.financials.equity / 200;
+
+    setStockData(Array.from({ length: 30 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - (29 - i));
+      const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+
+      const price = generateDeterministicMock(`${selectedCompany.ticker}-price-${i}`, basePrice * 0.8, basePrice * 1.2);
+      const volume = generateDeterministicMock(`${selectedCompany.ticker}-vol-${i}`, 1000000, 5000000);
+
+      return {
+        date: dateStr,
+        price: parseFloat(price.toFixed(2)),
+        volume: Math.floor(volume)
+      };
+    }));
   }, [selectedCompany]);
 
   const renderAnalysisContent = () => {
@@ -269,9 +282,9 @@ export default function PlatformDashboard() {
 
         {/* CENTER (60%) - Main Analysis: Ontology-Focused */}
         <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Macro Impact Analysis (PRIMARY) - Fixed height */}
-          <div className="h-[280px] flex-shrink-0">
-            <Card className="h-full flex flex-col p-6">
+          {/* Macro Impact Analysis (PRIMARY) - Fixed max height */}
+          <div className="h-[200px] max-h-[200px] flex-shrink-0">
+            <Card className="h-full flex flex-col p-4 overflow-hidden">
               <h3 className="text-base font-semibold text-text-primary mb-4">
                 Macro Impact Analysis
               </h3>
@@ -343,31 +356,80 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Stock Chart (Secondary) - Equal share of remaining space */}
-          <div className="flex-1 min-h-0">
-            <Card className="h-full flex flex-col">
-              <CardTitle className="text-sm">{selectedCompany.name} ({selectedCompany.ticker})</CardTitle>
-              <div className="flex-1 min-h-0 -ml-4 -mr-4 -mb-4">
+          {/* Stock Chart (Secondary) - Fixed max height */}
+          <div className="h-[300px] max-h-[300px] flex-shrink-0">
+            <Card className="h-full flex flex-col p-4">
+              <h3 className="text-sm font-semibold text-text-primary mb-2">{selectedCompany.name} ({selectedCompany.ticker})</h3>
+              <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={stockData} margin={{ top: 5, right: 15, left: 40, bottom: 0 }}>
+                  <ComposedChart data={stockData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.4}/>
                         <stop offset="95%" stopColor="#00E5FF" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
-                    <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} width={40} />
-                    <Area type="monotone" dataKey="price" stroke="#00E5FF" strokeWidth={2} fillOpacity={1} fill="url(#colorPrice)" />
-                  </AreaChart>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1F" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={{ stroke: '#1A1A1F' }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis
+                      yAxisId="price"
+                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={{ stroke: '#1A1A1F' }}
+                      width={60}
+                      tickFormatter={(value) => `$${value.toFixed(0)}`}
+                    />
+                    <YAxis
+                      yAxisId="volume"
+                      orientation="right"
+                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={{ stroke: '#1A1A1F' }}
+                      width={60}
+                      tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                    />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F', borderRadius: '8px' }}
+                      labelStyle={{ color: '#00E5FF' }}
+                      formatter={(value: any, name: string) => {
+                        if (name === 'price') return [`$${value.toFixed(2)}`, 'Price'];
+                        if (name === 'volume') return [`${(value / 1000000).toFixed(2)}M`, 'Volume'];
+                        return value;
+                      }}
+                    />
+                    <Area
+                      yAxisId="price"
+                      type="monotone"
+                      dataKey="price"
+                      stroke="#00E5FF"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorPrice)"
+                    />
+                    <Bar
+                      yAxisId="volume"
+                      dataKey="volume"
+                      fill="#E6007A"
+                      opacity={0.3}
+                      barSize={4}
+                    />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </Card>
           </div>
 
-          {/* Fundamental & Technical Tabs (Supplementary) - Equal share of remaining space */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <Card className="h-full flex flex-col overflow-hidden">
+          {/* Fundamental & Technical Tabs (Supplementary) - Remaining space */}
+          <div className="flex-1 min-h-0 max-h-[400px] overflow-hidden">
+            <Card className="h-full flex flex-col overflow-hidden p-4">
               <div className="flex gap-1 border-b border-border-primary pb-3 overflow-x-auto flex-shrink-0">
                 {['Fundamental', 'Technical'].map(tab => (
                   <button
