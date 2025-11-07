@@ -47,7 +47,7 @@ export default function LandingPage() {
                   top: Math.random() * 100 + '%',
                   left: Math.random() * 100 + '%',
                   opacity: 0.3 + Math.random() * 0.5,
-                  transform: `translateY(${scrollY * 0.004 * depth}px)`, // Max 20px movement at full scroll
+                  transform: `translateY(${Math.min(scrollY * 0.0008 * depth, 10)}px)`, // Capped at 10px max
                   transition: 'transform 0.1s ease-out',
                   boxShadow: `0 0 ${size * 2}px rgba(255, 255, 255, ${0.2 * depth})`,
                 }}
