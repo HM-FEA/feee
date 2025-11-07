@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import dynamic from 'next/dynamic';
 import { companies, Company } from '@/data/companies';
 import { Search, TrendingUp, ChevronDown, ChevronRight, Sliders } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -15,12 +14,6 @@ import {
   getDefaultMacroState
 } from '@/data/macroVariables';
 import { useMacroStore } from '@/lib/store/macroStore';
-
-// Dynamic import for Lightweight Charts (client-side only)
-const LightweightChart = dynamic(() => import('@/components/charts/LightweightChart'), {
-  ssr: false,
-  loading: () => <div className="h-full flex items-center justify-center"><span className="text-text-tertiary animate-pulse">Loading chart...</span></div>
-});
 
 const Card = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
   <div className={`bg-[#0D0D0F] border border-[#1A1A1F] rounded-2xl p-4 sm:p-6 ${className}`}>
@@ -172,17 +165,11 @@ export default function PlatformDashboard() {
   };
 
   useEffect(() => {
-    // Generate stock data for Lightweight Charts format
-    const endDate = new Date();
-    const chartData = Array.from({ length: 30 }, (_, i) => {
-      const date = new Date(endDate);
-      date.setDate(date.getDate() - (29 - i)); // Go back 29 days, then forward
-      return {
-        time: date.toISOString().split('T')[0], // YYYY-MM-DD format
-        value: generateDeterministicMock(`${selectedCompany.ticker}-price-${i}`, selectedCompany.financials.equity / 200, selectedCompany.financials.equity / 100)
-      };
-    });
-    setStockData(chartData);
+    // Generate stock data for Recharts
+    setStockData(Array.from({ length: 30 }, (_, i) => ({
+      name: `Day ${i + 1}`,
+      price: generateDeterministicMock(`${selectedCompany.ticker}-price-${i}`, selectedCompany.financials.equity / 200, selectedCompany.financials.equity / 100)
+    })));
   }, [selectedCompany]);
 
   const renderAnalysisContent = () => {
@@ -356,18 +343,24 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Stock Chart (Secondary) - flex-[4] ~36% - Using Lightweight Charts */}
+          {/* Stock Chart (Secondary) - flex-[4] ~36% - Using Recharts */}
           <div className="flex-[4] min-h-0">
-            <Card className="h-full flex flex-col overflow-hidden">
+            <Card className="h-full flex flex-col">
               <CardTitle className="text-sm">{selectedCompany.name} ({selectedCompany.ticker})</CardTitle>
-              <div className="flex-1 min-h-0">
-                {stockData.length > 0 && (
-                  <LightweightChart
-                    data={stockData}
-                    ticker={selectedCompany.ticker}
-                    height={250}
-                  />
-                )}
+              <div className="flex-1 min-h-0 -ml-4 -mr-4 -mb-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={stockData} margin={{ top: 5, right: 15, left: 40, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#00E5FF" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
+                    <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} width={40} />
+                    <Area type="monotone" dataKey="price" stroke="#00E5FF" strokeWidth={2} fillOpacity={1} fill="url(#colorPrice)" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </Card>
           </div>
