@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { companies, Company } from '@/data/companies';
 import { Search, TrendingUp, ChevronDown, ChevronRight, Sliders, Calendar as CalendarIcon, ExternalLink, Languages } from 'lucide-react';
-import { ComposedChart, Area, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { ComposedChart, Area, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart } from 'recharts';
 import NewsFeed from './NewsFeed';
 import CommunityPanel from './CommunityPanel';
 import {
