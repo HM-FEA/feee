@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { companies, Company } from '@/data/companies';
-import { Search, TrendingUp, ChevronDown, ChevronRight, Sliders, Calendar as CalendarIcon, ExternalLink, Languages } from 'lucide-react';
+import { Search, TrendingUp } from 'lucide-react';
 import { ComposedChart, Area, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart } from 'recharts';
 import NewsFeed from './NewsFeed';
 import CommunityPanel from './CommunityPanel';
@@ -210,84 +210,6 @@ const TechnicalAnalysis = ({ ticker }: { ticker: string }) => {
     </div>
   );
 };
-
-const EventDetails = ({ event, translating, translation }: { event: CalendarEvent, translating: boolean, translation: string }) => (
-  <div className="space-y-6 text-sm">
-    {/* Event Header */}
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <span className={`px-3 py-1 rounded text-sm font-semibold ${
-          event.type === 'FOMC' ? 'bg-accent-cyan/20 text-accent-cyan' :
-          event.type === 'EARNINGS' ? 'bg-accent-magenta/20 text-accent-magenta' :
-          'bg-accent-emerald/20 text-accent-emerald'
-        }`}>
-          {event.type}
-        </span>
-        {event.ticker && (
-          <span className="text-sm font-mono text-accent-cyan">{event.ticker}</span>
-        )}
-        <span className="text-sm text-text-tertiary">{event.date} {event.time}</span>
-      </div>
-
-      <h3 className="text-2xl font-bold text-text-primary mb-3">{event.title}</h3>
-      <p className="text-sm text-text-secondary">{event.description}</p>
-
-      {event.ticker && (
-        <div className="mt-4 p-3 bg-accent-cyan/10 border border-accent-cyan/30 rounded-lg">
-          <p className="text-sm text-accent-cyan">
-            ✓ Switched to {event.ticker} - All data in center panel now reflects this company
-          </p>
-        </div>
-      )}
-    </div>
-
-    {/* Original Transcript */}
-    {event.transcript && (
-      <div>
-        <h4 className="text-base font-semibold text-text-primary mb-3 flex items-center gap-2">
-          <ExternalLink size={16} className="text-text-secondary" />
-          Original Transcript
-        </h4>
-        <div className="p-4 bg-background-secondary rounded-lg border border-border-primary">
-          <p className="text-sm text-text-secondary leading-relaxed">{event.transcript}</p>
-        </div>
-      </div>
-    )}
-
-    {/* AI Translation */}
-    {event.transcript && (
-      <div>
-        <h4 className="text-base font-semibold text-text-primary mb-3 flex items-center gap-2">
-          <Languages size={16} className="text-accent-magenta" />
-          AI Translation & Summary
-        </h4>
-
-        {translating ? (
-          <div className="p-8 text-center bg-background-secondary rounded-lg border border-border-primary">
-            <div className="animate-pulse text-accent-cyan text-lg mb-2">번역 중...</div>
-            <div className="text-xs text-text-tertiary">AI가 어닝콜을 분석하고 번역하고 있습니다</div>
-          </div>
-        ) : translation ? (
-          <div className="p-4 bg-background-secondary rounded-lg border border-accent-magenta/30">
-            <div
-              className="prose prose-invert prose-sm max-w-none text-text-secondary"
-              style={{
-                fontSize: '13px',
-                lineHeight: '1.7'
-              }}
-            >
-              <div className="whitespace-pre-wrap">{translation}</div>
-            </div>
-          </div>
-        ) : (
-          <div className="p-4 bg-background-secondary rounded-lg border border-border-primary">
-            <p className="text-sm text-text-tertiary text-center">Click an event with transcript to see AI translation</p>
-          </div>
-        )}
-      </div>
-    )}
-  </div>
-);
 
 const AnalysisReport = ({ company }: { company: Company }) => {
   const [reportType, setReportType] = useState<'official' | 'community' | 'create'>('official');
@@ -511,29 +433,6 @@ const MacroImpactAnalysis = ({ company, macroVariables }: { company: Company, ma
   );
 };
 
-// Calendar Events Data
-interface CalendarEvent {
-  id: string;
-  type: 'FOMC' | 'EARNINGS' | 'ECONOMIC';
-  title: string;
-  date: string;
-  time?: string;
-  ticker?: string;
-  description: string;
-  transcript?: string;
-}
-
-const CALENDAR_EVENTS: CalendarEvent[] = [
-  { id: '1', type: 'FOMC', title: 'FOMC Meeting', date: '2025-01-29', time: '14:00', description: 'Federal Open Market Committee meeting - Interest rate decision expected' },
-  { id: '2', type: 'EARNINGS', title: 'AAPL Earnings Call', date: '2025-01-08', time: '16:30', ticker: 'AAPL', description: 'Apple Q4 2024 earnings call', transcript: 'Thank you for joining us today. We are pleased to report record Q4 results with revenue of $123.9 billion...' },
-  { id: '3', type: 'EARNINGS', title: 'TSLA Earnings Call', date: '2025-01-09', time: '17:30', ticker: 'TSLA', description: 'Tesla Q4 2024 earnings call', transcript: 'Good afternoon everyone. Tesla delivered strong results this quarter with 485,000 vehicles delivered...' },
-  { id: '4', type: 'ECONOMIC', title: 'CPI Release', date: '2025-01-11', time: '08:30', description: 'Consumer Price Index data release' },
-  { id: '5', type: 'EARNINGS', title: 'NVDA Earnings Call', date: '2025-01-15', time: '16:00', ticker: 'NVDA', description: 'NVIDIA Q4 2024 earnings call', transcript: 'Thank you for joining. NVIDIA had an exceptional quarter driven by AI demand. Revenue reached $18.1 billion...' },
-  { id: '6', type: 'ECONOMIC', title: 'Retail Sales', date: '2025-01-16', time: '08:30', description: 'Retail sales data for December' },
-  { id: '7', type: 'FOMC', title: 'Fed Minutes Release', date: '2025-01-20', time: '14:00', description: 'FOMC meeting minutes from December meeting' },
-  { id: '8', type: 'EARNINGS', title: 'MSFT Earnings Call', date: '2025-01-23', time: '17:00', ticker: 'MSFT', description: 'Microsoft Q2 FY2025 earnings call', transcript: 'Good afternoon. Microsoft cloud services continue to drive growth with Azure revenue up 31% year-over-year...' },
-];
-
 export default function PlatformDashboard() {
   // Zustand store for global macro state
   const macroState = useMacroStore(state => state.macroState);
@@ -550,13 +449,8 @@ export default function PlatformDashboard() {
   const [showAllVariables, setShowAllVariables] = useState<Set<MacroCategory>>(
     new Set()
   );
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [translating, setTranslating] = useState(false);
-  const [translation, setTranslation] = useState<string>('');
 
-  const analysisTabs = selectedEvent
-    ? ['Fundamental', 'Technical', 'Analysis Report', 'Event Details']
-    : ['Fundamental', 'Technical', 'Analysis Report'];
+  const analysisTabs = ['Fundamental', 'Technical', 'Analysis Report'];
   const filteredCompanies = useMemo(() => companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.ticker.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
 
   const toggleCategory = (category: MacroCategory) => {
@@ -577,47 +471,6 @@ export default function PlatformDashboard() {
       newSet.add(category);
     }
     setShowAllVariables(newSet);
-  };
-
-  // Handle earnings call click
-  const handleEventClick = (event: CalendarEvent) => {
-    setSelectedEvent(event);
-    setAnalysisTab('Event Details'); // Auto-switch to Event Details tab
-
-    // If it's an earnings call, switch to that company
-    if (event.type === 'EARNINGS' && event.ticker) {
-      const company = companies.find(c => c.ticker === event.ticker);
-      if (company) {
-        setSelectedCompany(company);
-      }
-    }
-
-    // Simulate AI translation
-    if (event.transcript) {
-      setTranslating(true);
-      setTranslation(''); // Clear previous translation
-      setTimeout(() => {
-        setTranslation(`
-## ${event.title} - AI 번역 요약
-
-**날짜**: ${event.date} ${event.time || ''}
-
-### 주요 내용
-${event.transcript}
-
-### AI 요약
-- 분기 실적이 예상을 상회했습니다
-- 매출 성장률이 전년 대비 증가했습니다
-- 향후 전망이 긍정적입니다
-
-### 핵심 지표
-- 매출: 예상치 대비 +5%
-- EPS: 예상치 대비 +8%
-- 가이던스: 상향 조정
-        `);
-        setTranslating(false);
-      }, 1500);
-    }
   };
 
   useEffect(() => {
@@ -668,13 +521,12 @@ ${event.transcript}
       case 'Fundamental': return <FundamentalAnalysis company={selectedCompany} />;
       case 'Technical': return <TechnicalAnalysis ticker={selectedCompany.ticker} />;
       case 'Analysis Report': return <AnalysisReport company={selectedCompany} />;
-      case 'Event Details': return selectedEvent ? <EventDetails event={selectedEvent} translating={translating} translation={translation} /> : null;
       default: return null;
     }
   }
 
   return (
-    <div className="min-h-screen bg-black text-text-primary flex flex-col">
+    <div className="flex-1 bg-black text-text-primary flex flex-col">
       {/* Compact Header - Selected Company Info */}
       <div className="border-b border-border-primary px-6 py-2 bg-black/50 backdrop-blur">
         <div className="flex items-center justify-between">
@@ -688,7 +540,7 @@ ${event.transcript}
         </div>
       </div>
 
-      {/* Main Content: 20% | 60% | 20% */}
+      {/* Main Content: 20% | 80% */}
       <div className="flex-1 flex gap-4 px-4 py-4 overflow-hidden">
 
         {/* LEFT SIDEBAR (20%) - Company Selector + News + Community */}
@@ -926,81 +778,6 @@ ${event.transcript}
               </div>
               <div className="flex-1 min-h-0 overflow-y-auto pt-3 text-xs pr-2">
                 {renderAnalysisContent()}
-              </div>
-            </Card>
-          </div>
-        </div>
-
-        {/* RIGHT SIDEBAR (20%) - Economic Calendar */}
-        <div className="w-[20%] min-w-0 flex flex-col overflow-hidden">
-          {/* Calendar Events */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <Card className="h-full flex flex-col text-xs">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <CalendarIcon size={14} className="text-accent-cyan" />
-                  <span className="text-xs font-semibold text-text-primary">Economic Calendar</span>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto pr-2 space-y-2">
-                {CALENDAR_EVENTS.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(event => {
-                  const eventDate = new Date(event.date);
-                  const today = new Date();
-                  const isToday = eventDate.toDateString() === today.toDateString();
-                  const isPast = eventDate < today && !isToday;
-
-                  return (
-                    <button
-                      key={event.id}
-                      onClick={() => handleEventClick(event)}
-                      className={`w-full text-left p-3 rounded-lg border transition-all ${
-                        selectedEvent?.id === event.id
-                          ? 'border-accent-cyan bg-accent-cyan/10'
-                          : isPast
-                          ? 'border-border-primary bg-background-secondary/50 opacity-60'
-                          : isToday
-                          ? 'border-accent-emerald bg-accent-emerald/10'
-                          : 'border-border-primary bg-background-secondary hover:border-[#2A2A3F]'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                              event.type === 'FOMC' ? 'bg-accent-cyan/20 text-accent-cyan' :
-                              event.type === 'EARNINGS' ? 'bg-accent-magenta/20 text-accent-magenta' :
-                              'bg-accent-emerald/20 text-accent-emerald'
-                            }`}>
-                              {event.type}
-                            </span>
-                            {event.ticker && (
-                              <span className="text-xs font-mono text-accent-cyan">{event.ticker}</span>
-                            )}
-                          </div>
-                          <h4 className="text-xs font-semibold text-text-primary mb-1">{event.title}</h4>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs text-text-tertiary">
-                        <span>{eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                        {event.time && (
-                          <>
-                            <span>•</span>
-                            <span>{event.time}</span>
-                          </>
-                        )}
-                      </div>
-
-                      {event.transcript && (
-                        <div className="flex items-center gap-1 mt-2 text-xs text-accent-cyan">
-                          <Languages size={12} />
-                          <span>AI Translation Available</span>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
               </div>
             </Card>
           </div>
