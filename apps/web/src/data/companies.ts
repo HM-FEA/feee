@@ -12,7 +12,7 @@
  * - Options: 0개 → 목표 5개
  */
 
-export type Sector = 'BANKING' | 'REALESTATE' | 'MANUFACTURING' | 'SEMICONDUCTOR' | 'OPTIONS';
+export type Sector = 'BANKING' | 'REALESTATE' | 'MANUFACTURING' | 'SEMICONDUCTOR' | 'OPTIONS' | 'CRYPTO';
 
 export interface Company {
   id: string;
@@ -842,6 +842,121 @@ export const SEMICONDUCTOR_COMPANIES: Company[] = [
 ];
 
 // ========================================
+// CRYPTO SECTOR (20 companies)
+// ========================================
+
+export const CRYPTO_COMPANIES: Company[] = [
+  {
+    id: 'BTC',
+    ticker: 'BTC-USD',
+    name: 'Bitcoin',
+    name_en: 'Bitcoin',
+    sector: 'CRYPTO',
+    country: 'GLOBAL',
+    financials: {
+      revenue: 0, // Crypto assets don't have traditional revenue
+      net_income: 0,
+      total_assets: 850000000, // Market cap in millions
+      total_debt: 0,
+      equity: 850000000,
+      operating_income: 0,
+    },
+    ratios: {
+      icr: 0,
+      de_ratio: 0,
+      pe_ratio: 0,
+    },
+    sector_metrics: {
+      rd_intensity: 0,
+    },
+  },
+  {
+    id: 'ETH',
+    ticker: 'ETH-USD',
+    name: 'Ethereum',
+    name_en: 'Ethereum',
+    sector: 'CRYPTO',
+    country: 'GLOBAL',
+    financials: {
+      revenue: 0,
+      net_income: 0,
+      total_assets: 280000000,
+      total_debt: 0,
+      equity: 280000000,
+      operating_income: 0,
+    },
+    ratios: {
+      icr: 0,
+      de_ratio: 0,
+      pe_ratio: 0,
+    },
+  },
+  {
+    id: 'BNB',
+    ticker: 'BNB-USD',
+    name: 'BNB',
+    name_en: 'BNB',
+    sector: 'CRYPTO',
+    country: 'GLOBAL',
+    financials: {
+      revenue: 0,
+      net_income: 0,
+      total_assets: 45000000,
+      total_debt: 0,
+      equity: 45000000,
+      operating_income: 0,
+    },
+    ratios: {
+      icr: 0,
+      de_ratio: 0,
+      pe_ratio: 0,
+    },
+  },
+  {
+    id: 'SOL',
+    ticker: 'SOL-USD',
+    name: 'Solana',
+    name_en: 'Solana',
+    sector: 'CRYPTO',
+    country: 'GLOBAL',
+    financials: {
+      revenue: 0,
+      net_income: 0,
+      total_assets: 35000000,
+      total_debt: 0,
+      equity: 35000000,
+      operating_income: 0,
+    },
+    ratios: {
+      icr: 0,
+      de_ratio: 0,
+      pe_ratio: 0,
+    },
+  },
+  {
+    id: 'ADA',
+    ticker: 'ADA-USD',
+    name: 'Cardano',
+    name_en: 'Cardano',
+    sector: 'CRYPTO',
+    country: 'GLOBAL',
+    financials: {
+      revenue: 0,
+      net_income: 0,
+      total_assets: 12000000,
+      total_debt: 0,
+      equity: 12000000,
+      operating_income: 0,
+    },
+    ratios: {
+      icr: 0,
+      de_ratio: 0,
+      pe_ratio: 0,
+    },
+  },
+];
+
+// ========================================
 // OPTIONS SECTOR (0/5 companies)
 // ========================================
 
@@ -859,6 +974,7 @@ export const ALL_COMPANIES: Company[] = [
   ...REALESTATE_COMPANIES,
   ...MANUFACTURING_COMPANIES,
   ...SEMICONDUCTOR_COMPANIES,
+  ...CRYPTO_COMPANIES,
   ...OPTIONS_COMPANIES,
 ];
 
@@ -901,7 +1017,75 @@ export function getCompanyCount(): { total: number; by_sector: Record<Sector, nu
       REALESTATE: REALESTATE_COMPANIES.length,
       MANUFACTURING: MANUFACTURING_COMPANIES.length,
       SEMICONDUCTOR: SEMICONDUCTOR_COMPANIES.length,
+      CRYPTO: CRYPTO_COMPANIES.length,
       OPTIONS: OPTIONS_COMPANIES.length,
     },
   };
 }
+
+// ========================================
+// SYNTHETIC DATA GENERATOR
+// (Expand dataset to 100+ companies)
+// ========================================
+
+export function generateSyntheticCompanies(baseCompanies: Company[], targetCount: number): Company[] {
+  const synthetic: Company[] = [];
+  let index = 1;
+
+  while (baseCompanies.length + synthetic.length < targetCount) {
+    const template = baseCompanies[index % baseCompanies.length];
+    const variation = (Math.random() - 0.5) * 0.3; // ±15% variation
+
+    synthetic.push({
+      ...template,
+      id: `${template.id}_SYN_${index}`,
+      ticker: `${template.ticker}-${index}`,
+      name: `${template.name} ${index}`,
+      name_en: template.name_en ? `${template.name_en} ${index}` : undefined,
+      financials: {
+        revenue: Math.round(template.financials.revenue * (1 + variation)),
+        net_income: Math.round(template.financials.net_income * (1 + variation)),
+        total_assets: Math.round(template.financials.total_assets * (1 + variation)),
+        total_debt: Math.round(template.financials.total_debt * (1 + variation)),
+        equity: Math.round(template.financials.equity * (1 + variation)),
+        operating_income: template.financials.operating_income
+          ? Math.round(template.financials.operating_income * (1 + variation))
+          : undefined,
+        ebitda: template.financials.ebitda
+          ? Math.round(template.financials.ebitda * (1 + variation))
+          : undefined,
+      },
+      ratios: {
+        icr: template.ratios.icr * (1 + variation * 0.5),
+        de_ratio: template.ratios.de_ratio * (1 + variation * 0.5),
+        roe: template.ratios.roe ? template.ratios.roe * (1 + variation * 0.5) : undefined,
+        roa: template.ratios.roa ? template.ratios.roa * (1 + variation * 0.5) : undefined,
+        current_ratio: template.ratios.current_ratio,
+        pe_ratio: template.ratios.pe_ratio ? template.ratios.pe_ratio * (1 + variation * 0.5) : undefined,
+      },
+    });
+
+    index++;
+  }
+
+  return synthetic;
+}
+
+// Generate extended dataset (100+ companies)
+const SYNTHETIC_BANKING = generateSyntheticCompanies(BANKING_COMPANIES, 20);
+const SYNTHETIC_REALESTATE = generateSyntheticCompanies(REALESTATE_COMPANIES, 20);
+const SYNTHETIC_MANUFACTURING = generateSyntheticCompanies(MANUFACTURING_COMPANIES, 20);
+const SYNTHETIC_SEMICONDUCTOR = generateSyntheticCompanies(SEMICONDUCTOR_COMPANIES, 20);
+const SYNTHETIC_CRYPTO = generateSyntheticCompanies(CRYPTO_COMPANIES, 15);
+
+export const EXTENDED_COMPANIES: Company[] = [
+  ...ALL_COMPANIES,
+  ...SYNTHETIC_BANKING,
+  ...SYNTHETIC_REALESTATE,
+  ...SYNTHETIC_MANUFACTURING,
+  ...SYNTHETIC_SEMICONDUCTOR,
+  ...SYNTHETIC_CRYPTO,
+];
+
+// Use extended dataset by default
+export const companies = EXTENDED_COMPANIES;

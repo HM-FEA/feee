@@ -107,7 +107,8 @@ export default function SimulationPage() {
     { id: 'BANKING', label: 'Banking', color: '#06B6D4', icon: '🏦', impact: calculatedImpacts.banking },
     { id: 'REALESTATE', label: 'Real Estate', color: '#00FF9F', icon: '🏢', impact: calculatedImpacts.realEstate },
     { id: 'MANUFACTURING', label: 'Manufacturing', color: '#8B5CF6', icon: '🏭', impact: calculatedImpacts.manufacturing },
-    { id: 'SEMICONDUCTOR', label: 'Semiconductor', color: '#F59E0B', icon: '💻', impact: calculatedImpacts.semiconductor }
+    { id: 'SEMICONDUCTOR', label: 'Semiconductor', color: '#F59E0B', icon: '💻', impact: calculatedImpacts.semiconductor },
+    { id: 'CRYPTO', label: 'Crypto', color: '#E6007A', icon: '₿', impact: calculatedImpacts.crypto }
   ];
 
   return (

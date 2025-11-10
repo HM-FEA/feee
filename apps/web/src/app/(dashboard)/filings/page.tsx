@@ -285,6 +285,8 @@ export default function FilingsPage() {
   const [selectedFiling, setSelectedFiling] = useState<Filing | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+  const [bookmarkedFilings, setBookmarkedFilings] = useState<Set<string>>(new Set(['f1', 'f3']));
+  const [watchlistCompanies] = useState<string[]>(['005930', '000660', '086790']);
 
   const filteredFilings = MOCK_FILINGS.filter(filing => {
     const matchesSearch = filing.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -292,6 +294,21 @@ export default function FilingsPage() {
     const matchesType = filterType === 'all' || filing.type === filterType;
     return matchesSearch && matchesType;
   });
+
+  const toggleBookmark = (filingId: string) => {
+    setBookmarkedFilings(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(filingId)) {
+        newSet.delete(filingId);
+      } else {
+        newSet.add(filingId);
+      }
+      return newSet;
+    });
+  };
+
+  const recentFilings = MOCK_FILINGS.slice(0, 3);
+  const bookmarkedFilingsList = MOCK_FILINGS.filter(f => bookmarkedFilings.has(f.id));
 
   return (
     <div className="relative min-h-screen bg-black text-text-primary">
@@ -312,33 +329,150 @@ export default function FilingsPage() {
         }
       />
 
-      <div className="px-6 py-6">
+      <div className="flex h-[calc(100vh-120px)]">
+        {/* Left Sidebar */}
+        <div className="w-64 border-r border-border-primary bg-black/50 backdrop-blur p-4 overflow-y-auto">
+          {/* Quick Filters */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+              <Filter size={14} className="text-accent-cyan" />
+              Quick Filters
+            </h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => setFilterType('all')}
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
+                  filterType === 'all'
+                    ? 'bg-accent-cyan text-black font-semibold'
+                    : 'bg-background-secondary text-text-secondary hover:bg-background-tertiary'
+                }`}
+              >
+                All Types ({MOCK_FILINGS.length})
+              </button>
+              <button
+                onClick={() => setFilterType('10-K')}
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
+                  filterType === '10-K'
+                    ? 'bg-accent-emerald text-black font-semibold'
+                    : 'bg-background-secondary text-text-secondary hover:bg-background-tertiary'
+                }`}
+              >
+                10-K Annual ({MOCK_FILINGS.filter(f => f.type === '10-K').length})
+              </button>
+              <button
+                onClick={() => setFilterType('10-Q')}
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
+                  filterType === '10-Q'
+                    ? 'bg-accent-magenta text-black font-semibold'
+                    : 'bg-background-secondary text-text-secondary hover:bg-background-tertiary'
+                }`}
+              >
+                10-Q Quarterly ({MOCK_FILINGS.filter(f => f.type === '10-Q').length})
+              </button>
+              <button
+                onClick={() => setFilterType('8-K')}
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all ${
+                  filterType === '8-K'
+                    ? 'bg-status-caution text-black font-semibold'
+                    : 'bg-background-secondary text-text-secondary hover:bg-background-tertiary'
+                }`}
+              >
+                8-K Current ({MOCK_FILINGS.filter(f => f.type === '8-K').length})
+              </button>
+            </div>
+          </div>
+
+          {/* Recent Filings */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+              <Calendar size={14} className="text-accent-magenta" />
+              Recent Filings
+            </h3>
+            <div className="space-y-2">
+              {recentFilings.map(filing => (
+                <button
+                  key={filing.id}
+                  onClick={() => setSelectedFiling(filing)}
+                  className="w-full text-left p-2 bg-background-secondary hover:bg-background-tertiary rounded-lg border border-border-primary transition-all"
+                >
+                  <div className="text-xs font-semibold text-text-primary mb-1">
+                    {filing.ticker}
+                  </div>
+                  <div className="text-[10px] text-text-tertiary">
+                    {filing.type} • {filing.filedDate}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bookmarked Filings */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+              <FileText size={14} className="text-accent-cyan" />
+              Bookmarks ({bookmarkedFilings.size})
+            </h3>
+            {bookmarkedFilingsList.length > 0 ? (
+              <div className="space-y-2">
+                {bookmarkedFilingsList.map(filing => (
+                  <button
+                    key={filing.id}
+                    onClick={() => setSelectedFiling(filing)}
+                    className="w-full text-left p-2 bg-accent-cyan/10 hover:bg-accent-cyan/20 rounded-lg border border-accent-cyan/30 transition-all"
+                  >
+                    <div className="text-xs font-semibold text-accent-cyan mb-1">
+                      {filing.ticker}
+                    </div>
+                    <div className="text-[10px] text-text-tertiary">
+                      {filing.type} • {filing.period}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-text-tertiary">No bookmarked filings</p>
+            )}
+          </div>
+
+          {/* Watchlist Companies */}
+          <div>
+            <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
+              <Building2 size={14} className="text-accent-emerald" />
+              Watchlist
+            </h3>
+            <div className="space-y-1">
+              {watchlistCompanies.map(ticker => {
+                const filing = MOCK_FILINGS.find(f => f.ticker === ticker);
+                return filing ? (
+                  <div
+                    key={ticker}
+                    className="px-2 py-1.5 bg-background-tertiary rounded text-xs text-text-primary border border-border-primary"
+                  >
+                    {filing.company}
+                    <div className="text-[10px] text-accent-emerald font-mono">{ticker}</div>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 px-6 py-6 overflow-y-auto">
         {!selectedFiling ? (
           <>
-            {/* Filters */}
-            <div className="flex gap-3 mb-6">
-              <div className="flex-1 relative">
+            {/* Search Bar */}
+            <div className="mb-6">
+              <div className="relative max-w-2xl">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
                 <input
                   type="text"
                   placeholder="Search by company or ticker..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-background-secondary border border-border-primary rounded-lg pl-10 pr-4 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-cyan"
+                  className="w-full bg-background-secondary border border-border-primary rounded-lg pl-10 pr-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-cyan"
                 />
               </div>
-
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="bg-background-secondary border border-border-primary rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-cyan"
-              >
-                <option value="all">All Types</option>
-                <option value="10-K">10-K (Annual)</option>
-                <option value="10-Q">10-Q (Quarterly)</option>
-                <option value="8-K">8-K (Current)</option>
-                <option value="DEF 14A">DEF 14A (Proxy)</option>
-              </select>
             </div>
 
             {/* Filings Grid */}
@@ -400,6 +534,7 @@ export default function FilingsPage() {
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );

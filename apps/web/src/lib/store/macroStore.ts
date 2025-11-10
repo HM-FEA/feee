@@ -29,6 +29,7 @@ interface MacroStore {
     realEstate: number;   // % impact on real estate sector
     manufacturing: number; // % impact on manufacturing sector
     semiconductor: number; // % impact on semiconductor sector
+    crypto: number;       // % impact on crypto sector
   };
 
   // Calculate adjusted financials based on macro impact
@@ -59,11 +60,16 @@ const calculateSectorImpacts = (macroState: MacroState) => {
   // Semiconductor: Affected by tech cycle and demand
   const semiconductorImpact = (gdpGrowth - 0.021) * 100 * 40 + (vix - 18.5) / 18.5 * -15;
 
+  // Crypto: Hurt by higher rates (risk-off), benefits from liquidity
+  const m2Growth = macroState['global_m2_growth'] || 5;
+  const cryptoImpact = -(fedRate - 0.025) * 100 * 25 + (m2Growth - 5) * 2 + (vix - 18.5) / 18.5 * -20;
+
   return {
     banking: bankingImpact,
     realEstate: realEstateImpact,
     manufacturing: manufacturingImpact,
     semiconductor: semiconductorImpact,
+    crypto: cryptoImpact,
   };
 };
 
@@ -75,6 +81,7 @@ export const useMacroStore = create<MacroStore>((set, get) => ({
     realEstate: 0,
     manufacturing: 0,
     semiconductor: 0,
+    crypto: 0,
   },
 
   updateMacroVariable: (id: string, value: number) => {
@@ -102,6 +109,7 @@ export const useMacroStore = create<MacroStore>((set, get) => ({
         realEstate: 0,
         manufacturing: 0,
         semiconductor: 0,
+        crypto: 0,
       },
     });
   },
@@ -120,6 +128,8 @@ export const useMacroStore = create<MacroStore>((set, get) => ({
       sectorImpact = impacts.manufacturing;
     } else if (company.sector === 'SEMICONDUCTOR') {
       sectorImpact = impacts.semiconductor;
+    } else if (company.sector === 'CRYPTO') {
+      sectorImpact = impacts.crypto;
     }
 
     // Apply impact as percentage change

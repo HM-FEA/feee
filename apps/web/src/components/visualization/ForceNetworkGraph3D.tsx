@@ -45,6 +45,8 @@ const SECTOR_COLORS: Record<string, string> = {
   REALESTATE: '#00FF9F',
   MANUFACTURING: '#8B5CF6',
   SEMICONDUCTOR: '#F59E0B',
+  CRYPTO: '#E6007A',
+  OPTIONS: '#39FF14',
 };
 
 // Generate graph data with 4-level ontology
