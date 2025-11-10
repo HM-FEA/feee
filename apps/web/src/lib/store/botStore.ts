@@ -135,6 +135,7 @@ interface BotStore {
   updateBotStatus: (botId: string, status: BotStatus) => void;
 
   // Tournament
+  createTournament: (tournament: Omit<Tournament, 'id'>) => string;
   joinTournament: (botId: string, tournamentId: string) => void;
   leaveTournament: (botId: string, tournamentId: string) => void;
   updateLeaderboard: (tournamentId: string) => void;
@@ -265,6 +266,24 @@ export const useBotStore = create<BotStore>()(
             },
           },
         }));
+      },
+
+      createTournament: (tournament) => {
+        const id = `tournament-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        const newTournament: Tournament = {
+          ...tournament,
+          id,
+        };
+
+        set(state => ({
+          tournaments: {
+            ...state.tournaments,
+            [id]: newTournament,
+          },
+        }));
+
+        return id;
       },
 
       joinTournament: (botId, tournamentId) => {
@@ -424,3 +443,64 @@ export const STRATEGY_PRESETS: Record<BotStrategy, { name: string; description: 
     defaultParams: {},
   },
 };
+
+// Sample Tournaments
+export const SAMPLE_TOURNAMENTS: Omit<Tournament, 'id'>[] = [
+  {
+    name: 'November Championship 2025',
+    description: 'Monthly tournament with $10,000 prize pool. Test your strategies against the best traders.',
+    startDate: '2025-11-01',
+    endDate: '2025-11-30',
+    status: 'active',
+    initialCapital: 100000,
+    allowedSymbols: ['SPY', 'QQQ', 'AAPL', 'TSLA', 'NVDA', 'MSFT', 'GOOGL', 'AMZN'],
+    maxLeverage: 2,
+    participants: [],
+    leaderboard: [],
+    prizes: [
+      { rank: 1, reward: '5000' },
+      { rank: 2, reward: '3000' },
+      { rank: 3, reward: '2000' },
+    ],
+  },
+  {
+    name: 'Q4 Grand Finals',
+    description: 'Quarterly championship with the largest prize pool of the year. Elite competition.',
+    startDate: '2025-10-15',
+    endDate: '2025-12-31',
+    status: 'active',
+    initialCapital: 200000,
+    allowedSymbols: [
+      'SPY', 'QQQ', 'IWM', 'DIA', // US Indices
+      'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', // Tech Giants
+      'GLD', 'SLV', 'USO', // Commodities
+    ],
+    maxLeverage: 3,
+    participants: [],
+    leaderboard: [],
+    prizes: [
+      { rank: 1, reward: '25000' },
+      { rank: 2, reward: '15000' },
+      { rank: 3, reward: '10000' },
+      { rank: 4, reward: '5000' },
+      { rank: 5, reward: '3000' },
+    ],
+  },
+  {
+    name: 'December Crypto Challenge',
+    description: 'Specialized tournament for cryptocurrency trading strategies. High volatility, high rewards.',
+    startDate: '2025-12-01',
+    endDate: '2025-12-31',
+    status: 'upcoming',
+    initialCapital: 50000,
+    allowedSymbols: ['BTC-USD', 'ETH-USD', 'SOL-USD', 'ADA-USD', 'DOT-USD'],
+    maxLeverage: 5,
+    participants: [],
+    leaderboard: [],
+    prizes: [
+      { rank: 1, reward: '10000' },
+      { rank: 2, reward: '6000' },
+      { rank: 3, reward: '4000' },
+    ],
+  },
+];

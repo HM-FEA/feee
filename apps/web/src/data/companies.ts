@@ -957,12 +957,170 @@ export const CRYPTO_COMPANIES: Company[] = [
 ];
 
 // ========================================
-// OPTIONS SECTOR (0/5 companies)
+// OPTIONS SECTOR (5/5 companies)
 // ========================================
 
 export const OPTIONS_COMPANIES: Company[] = [
-  // TODO: Team Data - Add options data
-  // Examples: S&P 500 options, KOSPI options, etc.
+  {
+    id: 'OPT-SPX',
+    ticker: 'SPX',
+    name: 'S&P 500 Index Options',
+    name_en: 'S&P 500 Index Options',
+    sector: 'OPTIONS',
+    country: 'US',
+    financials: {
+      revenue: 580000, // Daily volume (contracts)
+      net_income: 12500, // Premium volume (million USD)
+      total_assets: 4200000, // Open interest
+      total_debt: 0,
+      equity: 4200000,
+      ebitda: 12500,
+      operating_income: 12500,
+    },
+    ratios: {
+      icr: 999, // N/A for options
+      de_ratio: 0,
+      roe: 0.15,
+      roa: 0.15,
+      current_ratio: 1.0,
+      pe_ratio: 18.5,
+    },
+    sector_metrics: {
+      delta: 0.52, // Average delta
+      gamma: 0.018,
+      vega: 0.24,
+      theta: -0.08,
+    },
+    location: { lat: 41.8781, lng: -87.6298 }, // Chicago (CBOE)
+  },
+  {
+    id: 'OPT-VIX',
+    ticker: 'VIX',
+    name: 'CBOE Volatility Index Options',
+    name_en: 'VIX Options',
+    sector: 'OPTIONS',
+    country: 'US',
+    financials: {
+      revenue: 280000, // Daily volume
+      net_income: 5200, // Premium volume (million USD)
+      total_assets: 1800000, // Open interest
+      total_debt: 0,
+      equity: 1800000,
+      ebitda: 5200,
+      operating_income: 5200,
+    },
+    ratios: {
+      icr: 999,
+      de_ratio: 0,
+      roe: 0.18,
+      roa: 0.18,
+      current_ratio: 1.0,
+      pe_ratio: 22.0,
+    },
+    sector_metrics: {
+      delta: 0.48,
+      gamma: 0.022,
+      vega: 0.35,
+      theta: -0.12,
+    },
+    location: { lat: 41.8781, lng: -87.6298 },
+  },
+  {
+    id: 'OPT-KOSPI200',
+    ticker: 'KOSPI200',
+    name: 'KOSPI 200 Options',
+    name_en: 'KOSPI 200 Index Options',
+    sector: 'OPTIONS',
+    country: 'KR',
+    financials: {
+      revenue: 820000, // Daily volume (highest in world)
+      net_income: 8900, // Premium volume
+      total_assets: 2200000, // Open interest
+      total_debt: 0,
+      equity: 2200000,
+      ebitda: 8900,
+      operating_income: 8900,
+    },
+    ratios: {
+      icr: 999,
+      de_ratio: 0,
+      roe: 0.16,
+      roa: 0.16,
+      current_ratio: 1.0,
+      pe_ratio: 16.8,
+    },
+    sector_metrics: {
+      delta: 0.50,
+      gamma: 0.020,
+      vega: 0.28,
+      theta: -0.09,
+    },
+    location: { lat: 37.5665, lng: 126.9780 }, // Seoul (KRX)
+  },
+  {
+    id: 'OPT-EQUITY',
+    ticker: 'EQUITY-OPT',
+    name: 'US Equity Options (AAPL, TSLA, NVDA)',
+    name_en: 'Individual Equity Options',
+    sector: 'OPTIONS',
+    country: 'US',
+    financials: {
+      revenue: 1250000, // Daily volume (all equity options)
+      net_income: 18500, // Premium volume
+      total_assets: 5800000, // Open interest
+      total_debt: 0,
+      equity: 5800000,
+      ebitda: 18500,
+      operating_income: 18500,
+    },
+    ratios: {
+      icr: 999,
+      de_ratio: 0,
+      roe: 0.14,
+      roa: 0.14,
+      current_ratio: 1.0,
+      pe_ratio: 20.5,
+    },
+    sector_metrics: {
+      delta: 0.55, // Average across all strikes
+      gamma: 0.025,
+      vega: 0.32,
+      theta: -0.10,
+    },
+    location: { lat: 40.7128, lng: -74.0060 }, // New York
+  },
+  {
+    id: 'OPT-FX',
+    ticker: 'FX-OPT',
+    name: 'FX Options (EUR/USD, USD/JPY)',
+    name_en: 'Currency Options',
+    sector: 'OPTIONS',
+    country: 'GLOBAL',
+    financials: {
+      revenue: 420000, // Daily volume
+      net_income: 9200, // Premium volume
+      total_assets: 3200000, // Open interest
+      total_debt: 0,
+      equity: 3200000,
+      ebitda: 9200,
+      operating_income: 9200,
+    },
+    ratios: {
+      icr: 999,
+      de_ratio: 0,
+      roe: 0.17,
+      roa: 0.17,
+      current_ratio: 1.0,
+      pe_ratio: 19.2,
+    },
+    sector_metrics: {
+      delta: 0.51,
+      gamma: 0.019,
+      vega: 0.30,
+      theta: -0.11,
+    },
+    location: { lat: 51.5074, lng: -0.1278 }, // London
+  },
 ];
 
 // ========================================

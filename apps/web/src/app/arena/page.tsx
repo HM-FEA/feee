@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Trophy, Zap, Code, Target, TrendingUp, Users, Calendar, Award, Plus, Search, Filter, Swords, Bot, Crown, Rocket, Check } from 'lucide-react';
 import { GlobalTopNav } from '@/components/layout/GlobalTopNav';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
-import { useBotStore, STRATEGY_PRESETS } from '@/lib/store/botStore';
+import { useBotStore, STRATEGY_PRESETS, SAMPLE_TOURNAMENTS } from '@/lib/store/botStore';
 import type { TradingBot, Tournament } from '@/lib/store/botStore';
 
 // Generate performance data for charts
@@ -168,7 +168,7 @@ const TournamentCard = ({ tournament, onJoin, userBots }: { tournament: Tourname
 };
 
 export default function ArenaPage() {
-  const { bots, tournaments, activeTournamentId, getUserBots, getTopBots, createBot, runBacktest, joinTournament } = useBotStore();
+  const { bots, tournaments, activeTournamentId, getUserBots, getTopBots, createBot, createTournament, runBacktest, joinTournament } = useBotStore();
   const [activeTab, setActiveTab] = useState('leaderboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [strategyFilter, setStrategyFilter] = useState('all');
@@ -182,6 +182,14 @@ export default function ArenaPage() {
 
   // Initialize with sample data if empty
   useEffect(() => {
+    // Initialize tournaments if empty
+    if (allTournaments.length === 0) {
+      SAMPLE_TOURNAMENTS.forEach(tournament => {
+        createTournament(tournament);
+      });
+    }
+
+    // Initialize bots if empty
     if (allBots.length === 0) {
       // Create 3 sample bots
       const sampleBots = [
