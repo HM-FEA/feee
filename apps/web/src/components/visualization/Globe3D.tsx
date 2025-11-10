@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useMacroStore } from '@/lib/store/macroStore';
+import { companies, Company } from '@/data/companies';
+import { getSectorColor } from '@/lib/config/sectors.config';
 
 // Dynamic import to avoid SSR issues
 const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
@@ -76,10 +78,12 @@ export default function Globe3D({
   const globeRef = useRef<any>();
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
-  const [viewMode, setViewMode] = useState<'m2' | 'flows'>('m2');
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [viewMode, setViewMode] = useState<'m2' | 'flows' | 'companies'>('companies');
   const [autoRotate, setAutoRotate] = useState(true);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const macroState = useMacroStore(state => state.macroState);
+  const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
 
   // Measure container size
   useEffect(() => {
@@ -176,6 +180,35 @@ export default function Globe3D({
     });
   }, [selectedSector]);
 
+  // Prepare company points for Globe
+  const companyPoints = useMemo(() => {
+    return companies
+      .filter(c => c.location) // Only companies with location data
+      .map(company => {
+        const sectorImpact =
+          company.sector === 'BANKING' ? calculatedImpacts.banking :
+          company.sector === 'REALESTATE' ? calculatedImpacts.realEstate :
+          company.sector === 'MANUFACTURING' ? calculatedImpacts.manufacturing :
+          company.sector === 'SEMICONDUCTOR' ? calculatedImpacts.semiconductor :
+          company.sector === 'CRYPTO' ? calculatedImpacts.crypto :
+          0;
+
+        const isRelevant = !selectedSector || company.sector === selectedSector;
+
+        return {
+          lat: company.location!.lat,
+          lng: company.location!.lng,
+          name: company.name_en || company.name,
+          ticker: company.ticker,
+          sector: company.sector,
+          size: Math.log(company.financials.revenue + 1) * 0.3, // Size based on revenue
+          color: isRelevant ? getSectorColor(company.sector) : 'rgba(100, 100, 100, 0.3)',
+          impact: sectorImpact,
+          company: company,
+        };
+      });
+  }, [selectedSector, calculatedImpacts]);
+
   return (
     <div ref={containerRef} className="w-full h-full relative bg-black">
       {/* Sector Focus Indicator */}
@@ -192,7 +225,17 @@ export default function Globe3D({
       <div className="absolute top-4 left-4 z-10 space-y-2">
         <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
           <div className="text-xs text-text-tertiary mb-2 font-semibold">View Mode</div>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => setViewMode('companies')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                viewMode === 'companies'
+                  ? 'bg-accent-emerald text-black shadow-lg shadow-accent-emerald/50'
+                  : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Companies
+            </button>
             <button
               onClick={() => setViewMode('m2')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -211,7 +254,7 @@ export default function Globe3D({
                   : 'bg-background-secondary text-text-secondary hover:text-text-primary'
               }`}
             >
-              Capital Flows
+              Flows
             </button>
           </div>
         </div>
@@ -336,20 +379,43 @@ export default function Globe3D({
       {/* Stats */}
       <div className="absolute bottom-4 left-4 z-10 bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
         <div className="grid grid-cols-3 gap-4 text-xs">
-          <div>
-            <div className="text-text-tertiary">Countries</div>
-            <div className="text-accent-cyan font-bold text-lg">{COUNTRIES.length}</div>
-          </div>
-          <div>
-            <div className="text-text-tertiary">Total M2</div>
-            <div className="text-accent-emerald font-bold text-lg">
-              ${adjustedCountries.reduce((sum, c) => sum + c.m2Supply, 0).toFixed(1)}T
-            </div>
-          </div>
-          <div>
-            <div className="text-text-tertiary">Flows</div>
-            <div className="text-accent-magenta font-bold text-lg">{CAPITAL_FLOWS.length}</div>
-          </div>
+          {viewMode === 'companies' ? (
+            <>
+              <div>
+                <div className="text-text-tertiary">Companies</div>
+                <div className="text-accent-emerald font-bold text-lg">{companyPoints.length}</div>
+              </div>
+              <div>
+                <div className="text-text-tertiary">Sectors</div>
+                <div className="text-accent-cyan font-bold text-lg">
+                  {new Set(companyPoints.map(c => c.sector)).size}
+                </div>
+              </div>
+              <div>
+                <div className="text-text-tertiary">{selectedSector || 'All'}</div>
+                <div className="text-accent-magenta font-bold text-lg">
+                  {selectedSector ? companyPoints.filter(c => c.sector === selectedSector).length : companyPoints.length}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <div className="text-text-tertiary">Countries</div>
+                <div className="text-accent-cyan font-bold text-lg">{COUNTRIES.length}</div>
+              </div>
+              <div>
+                <div className="text-text-tertiary">Total M2</div>
+                <div className="text-accent-emerald font-bold text-lg">
+                  ${adjustedCountries.reduce((sum, c) => sum + c.m2Supply, 0).toFixed(1)}T
+                </div>
+              </div>
+              <div>
+                <div className="text-text-tertiary">Flows</div>
+                <div className="text-accent-magenta font-bold text-lg">{CAPITAL_FLOWS.length}</div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -360,21 +426,45 @@ export default function Globe3D({
         globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
         bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
 
-        // Points (M2 Supply)
-        pointsData={viewMode === 'm2' ? visibleCountries : []}
+        // Points (Companies, Countries, or empty)
+        pointsData={
+          viewMode === 'companies' ? companyPoints :
+          viewMode === 'm2' ? visibleCountries :
+          []
+        }
         pointLat="lat"
         pointLng="lng"
         pointAltitude={(d: any) => d.size * 0.01}
-        pointRadius={(d: any) => d.size * 0.5}
+        pointRadius={(d: any) => viewMode === 'companies' ? d.size * 0.4 : d.size * 0.5}
         pointColor={(d: any) => d.color}
-        pointLabel={(d: any) => `
-          <div style="background: rgba(0, 0, 0, 0.9); padding: 8px; border-radius: 6px; border: 1px solid #00E5FF;">
-            <div style="color: #00E5FF; font-weight: bold; margin-bottom: 4px;">${d.name}</div>
-            <div style="color: white; font-size: 12px;">M2: $${d.m2Supply.toFixed(1)}T</div>
-            <div style="color: #00FF9F; font-size: 12px;">GDP: $${d.gdp.toFixed(1)}T</div>
-          </div>
-        `}
-        onPointClick={(point: any) => handleCountryClick(point as Country)}
+        pointLabel={(d: any) => {
+          if (viewMode === 'companies') {
+            return `
+              <div style="background: rgba(0, 0, 0, 0.95); padding: 10px; border-radius: 8px; border: 2px solid ${d.color};">
+                <div style="color: ${d.color}; font-weight: bold; font-size: 14px; margin-bottom: 6px;">${d.name}</div>
+                <div style="color: white; font-size: 11px; margin-bottom: 4px;">Ticker: <span style="color: #00E5FF;">${d.ticker}</span></div>
+                <div style="color: white; font-size: 11px; margin-bottom: 4px;">Sector: <span style="color: ${d.color};">${d.sector}</span></div>
+                <div style="color: white; font-size: 11px;">Impact: <span style="color: ${d.impact >= 0 ? '#00FF9F' : '#FF4444'};">${d.impact >= 0 ? '+' : ''}${d.impact.toFixed(2)}%</span></div>
+              </div>
+            `;
+          } else {
+            return `
+              <div style="background: rgba(0, 0, 0, 0.9); padding: 8px; border-radius: 6px; border: 1px solid #00E5FF;">
+                <div style="color: #00E5FF; font-weight: bold; margin-bottom: 4px;">${d.name}</div>
+                <div style="color: white; font-size: 12px;">M2: $${d.m2Supply?.toFixed(1)}T</div>
+                <div style="color: #00FF9F; font-size: 12px;">GDP: $${d.gdp?.toFixed(1)}T</div>
+              </div>
+            `;
+          }
+        }}
+        onPointClick={(point: any) => {
+          if (viewMode === 'companies') {
+            setSelectedCompany(point.company);
+            setSelectedCountry(null);
+          } else {
+            handleCountryClick(point as Country);
+          }
+        }}
 
         // Arcs (Capital Flows)
         arcsData={viewMode === 'flows' ? visibleFlows : []}
