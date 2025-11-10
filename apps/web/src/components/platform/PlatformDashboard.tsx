@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { companies, Company } from '@/data/companies';
-import { Search, TrendingUp, ChevronDown, ChevronRight, Sliders } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Search, TrendingUp } from 'lucide-react';
+import { ComposedChart, Area, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart } from 'recharts';
 import NewsFeed from './NewsFeed';
 import CommunityPanel from './CommunityPanel';
 import {
@@ -13,6 +13,7 @@ import {
   getVariablesByCategory,
   getDefaultMacroState
 } from '@/data/macroVariables';
+import { useMacroStore } from '@/lib/store/macroStore';
 
 const Card = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
   <div className={`bg-[#0D0D0F] border border-[#1A1A1F] rounded-2xl p-4 sm:p-6 ${className}`}>
@@ -36,54 +37,363 @@ const generateDeterministicMock = (seed: string, min: number, max: number) => {
 
 // Analysis Components
 const FundamentalAnalysis = ({ company }: { company: Company }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+  <div className="space-y-6 text-sm">
+    {/* Key Ratios Section */}
     <div>
-      <h4 className="font-bold text-text-primary mb-3">Income Statement</h4>
-      <div className="space-y-2 p-4 bg-black rounded-lg">
-        <div className="flex justify-between"><span className="text-text-secondary">Revenue:</span><span className="font-mono text-text-primary">${company.financials.revenue.toLocaleString()} M</span></div>
-        <div className="flex justify-between"><span className="text-text-secondary">Operating Income:</span><span className="font-mono text-text-primary">${company.financials.operating_income?.toLocaleString() || 'N/A'} M</span></div>
-        <div className="flex justify-between"><span className="text-text-secondary">Net Income:</span><span className="font-mono text-text-primary">${company.financials.net_income.toLocaleString()} M</span></div>
+      <h4 className="font-bold text-text-primary mb-3">Key Ratios</h4>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+          <div className="text-text-secondary text-xs mb-1">P/E Ratio</div>
+          <div className="font-bold text-text-primary text-lg">{company.ratios?.pe_ratio?.toFixed(1) || 'N/A'}</div>
+        </div>
+        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+          <div className="text-text-secondary text-xs mb-1">ROE</div>
+          <div className="font-bold text-text-primary text-lg">{company.ratios?.roe?.toFixed(1) || 'N/A'}%</div>
+        </div>
+        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+          <div className="text-text-secondary text-xs mb-1">D/E Ratio</div>
+          <div className="font-bold text-text-primary text-lg">{company.ratios?.de_ratio?.toFixed(1) || 'N/A'}</div>
+        </div>
+        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+          <div className="text-text-secondary text-xs mb-1">ICR</div>
+          <div className={`font-bold text-lg ${
+            company.ratios?.icr && company.ratios.icr > 2
+              ? 'text-status-safe'
+              : company.ratios?.icr && company.ratios.icr > 0
+              ? 'text-status-caution'
+              : 'text-status-danger'
+          }`}>
+            {company.ratios?.icr?.toFixed(1) || 'N/A'}
+          </div>
+        </div>
       </div>
     </div>
-    <div>
-      <h4 className="font-bold text-text-primary mb-3">Balance Sheet</h4>
-      <div className="space-y-2 p-4 bg-black rounded-lg">
-        <div className="flex justify-between"><span className="text-text-secondary">Total Assets:</span><span className="font-mono text-text-primary">${company.financials.total_assets.toLocaleString()} M</span></div>
-        <div className="flex justify-between"><span className="text-text-secondary">Total Debt:</span><span className="font-mono text-text-primary">${company.financials.total_debt.toLocaleString()} M</span></div>
-        <div className="flex justify-between"><span className="text-text-secondary">Equity:</span><span className="font-mono text-text-primary">${company.financials.equity.toLocaleString()} M</span></div>
+
+    {/* Financial Statements */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h4 className="font-bold text-text-primary mb-3">Income Statement</h4>
+        <div className="space-y-2 p-4 bg-black rounded-lg">
+          <div className="flex justify-between"><span className="text-text-secondary">Revenue:</span><span className="font-mono text-text-primary">${company.financials.revenue.toLocaleString()} M</span></div>
+          <div className="flex justify-between"><span className="text-text-secondary">Operating Income:</span><span className="font-mono text-text-primary">${company.financials.operating_income?.toLocaleString() || 'N/A'} M</span></div>
+          <div className="flex justify-between"><span className="text-text-secondary">Net Income:</span><span className="font-mono text-text-primary">${company.financials.net_income.toLocaleString()} M</span></div>
+          <div className="flex justify-between"><span className="text-text-secondary">EBITDA:</span><span className="font-mono text-text-primary">${(company.financials.operating_income ? company.financials.operating_income * 1.2 : 0).toLocaleString()} M</span></div>
+        </div>
+      </div>
+      <div>
+        <h4 className="font-bold text-text-primary mb-3">Balance Sheet</h4>
+        <div className="space-y-2 p-4 bg-black rounded-lg">
+          <div className="flex justify-between"><span className="text-text-secondary">Total Assets:</span><span className="font-mono text-text-primary">${company.financials.total_assets.toLocaleString()} M</span></div>
+          <div className="flex justify-between"><span className="text-text-secondary">Total Debt:</span><span className="font-mono text-text-primary">${company.financials.total_debt.toLocaleString()} M</span></div>
+          <div className="flex justify-between"><span className="text-text-secondary">Equity:</span><span className="font-mono text-text-primary">${company.financials.equity.toLocaleString()} M</span></div>
+          <div className="flex justify-between"><span className="text-text-secondary">Current Ratio:</span><span className="font-mono text-text-primary">{(company.financials.total_assets / company.financials.total_debt * 0.4).toFixed(2)}</span></div>
+        </div>
       </div>
     </div>
   </div>
 );
 
 const TechnicalAnalysis = ({ ticker }: { ticker: string }) => {
-  const data = useMemo(() => Array.from({ length: 30 }, (_, i) => ({ name: `Day ${i}`, rsi: generateDeterministicMock(`${ticker}-rsi-${i}`, 30, 70), macd: generateDeterministicMock(`${ticker}-macd-${i}`, -0.5, 0.5) })), [ticker]);
+  const data = useMemo(() => Array.from({ length: 30 }, (_, i) => {
+    const basePrice = 100;
+    const price = generateDeterministicMock(`${ticker}-price-${i}`, basePrice * 0.9, basePrice * 1.1);
+    const ma20 = basePrice + Math.sin(i * 0.2) * 5;
+    const ma50 = basePrice + Math.sin(i * 0.1) * 3;
+    const upper = price + generateDeterministicMock(`${ticker}-bb-${i}`, 5, 8);
+    const lower = price - generateDeterministicMock(`${ticker}-bb-${i}`, 5, 8);
+
+    return {
+      day: i + 1,
+      rsi: generateDeterministicMock(`${ticker}-rsi-${i}`, 30, 70),
+      macd: generateDeterministicMock(`${ticker}-macd-${i}`, -0.5, 0.5),
+      stochastic: generateDeterministicMock(`${ticker}-stoch-${i}`, 20, 80),
+      volume: generateDeterministicMock(`${ticker}-vol-${i}`, 500000, 2000000),
+      price,
+      ma20,
+      ma50,
+      upper,
+      lower
+    };
+  }), [ticker]);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
-      <div className="min-h-[180px]">
-        <h4 className="text-sm text-text-secondary mb-2">RSI (14)</h4>
-        <div className="h-[calc(100%-28px)]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-              <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
-              <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} domain={[0, 100]} />
-              <Area type="monotone" dataKey="rsi" stroke="#E6007A" fill="#E6007A" fillOpacity={0.2} strokeWidth={2} dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* RSI */}
+      <div className="min-h-[160px]">
+        <h4 className="text-sm font-semibold text-text-primary mb-2">RSI (14)</h4>
+        <ResponsiveContainer width="100%" height={140}>
+          <AreaChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1F" />
+            <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
+            <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} domain={[0, 100]} />
+            <Area type="monotone" dataKey="rsi" stroke="#E6007A" fill="#E6007A" fillOpacity={0.2} strokeWidth={2} dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
-      <div className="min-h-[180px]">
-        <h4 className="text-sm text-text-secondary mb-2">MACD</h4>
-        <div className="h-[calc(100%-28px)]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-              <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
-              <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} />
-              <Area type="monotone" dataKey="macd" stroke="#39FF14" fill="#39FF14" fillOpacity={0.2} strokeWidth={2} dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+
+      {/* MACD */}
+      <div className="min-h-[160px]">
+        <h4 className="text-sm font-semibold text-text-primary mb-2">MACD</h4>
+        <ResponsiveContainer width="100%" height={140}>
+          <AreaChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1F" />
+            <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
+            <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} />
+            <Area type="monotone" dataKey="macd" stroke="#39FF14" fill="#39FF14" fillOpacity={0.2} strokeWidth={2} dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
+
+      {/* Bollinger Bands */}
+      <div className="min-h-[160px]">
+        <h4 className="text-sm font-semibold text-text-primary mb-2">Bollinger Bands</h4>
+        <ResponsiveContainer width="100%" height={140}>
+          <ComposedChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1F" />
+            <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
+            <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} />
+            <Area type="monotone" dataKey="upper" stroke="#00E5FF" fill="#00E5FF" fillOpacity={0.1} strokeWidth={1} dot={false} />
+            <Area type="monotone" dataKey="lower" stroke="#00E5FF" fill="#00E5FF" fillOpacity={0.1} strokeWidth={1} dot={false} />
+            <Area type="monotone" dataKey="price" stroke="#FFFFFF" fill="none" strokeWidth={2} dot={false} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Moving Averages */}
+      <div className="min-h-[160px]">
+        <h4 className="text-sm font-semibold text-text-primary mb-2">Moving Averages (20/50)</h4>
+        <ResponsiveContainer width="100%" height={140}>
+          <ComposedChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1F" />
+            <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
+            <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} />
+            <Area type="monotone" dataKey="price" stroke="#FFFFFF" fill="#FFFFFF" fillOpacity={0.1} strokeWidth={2} dot={false} />
+            <Area type="monotone" dataKey="ma20" stroke="#00E5FF" fill="none" strokeWidth={1.5} dot={false} strokeDasharray="5 5" />
+            <Area type="monotone" dataKey="ma50" stroke="#E6007A" fill="none" strokeWidth={1.5} dot={false} strokeDasharray="5 5" />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Stochastic Oscillator */}
+      <div className="min-h-[160px]">
+        <h4 className="text-sm font-semibold text-text-primary mb-2">Stochastic Oscillator</h4>
+        <ResponsiveContainer width="100%" height={140}>
+          <AreaChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1F" />
+            <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
+            <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} domain={[0, 100]} />
+            <Area type="monotone" dataKey="stochastic" stroke="#FFD700" fill="#FFD700" fillOpacity={0.2} strokeWidth={2} dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Volume */}
+      <div className="min-h-[160px]">
+        <h4 className="text-sm font-semibold text-text-primary mb-2">Volume</h4>
+        <ResponsiveContainer width="100%" height={140}>
+          <ComposedChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1F" />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }}
+              formatter={(value: any) => [(value / 1000000).toFixed(2) + 'M', 'Volume']}
+            />
+            <YAxis
+              tick={{ fill: '#9CA3AF', fontSize: 10 }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+            />
+            <Bar dataKey="volume" fill="#9333EA" opacity={0.6} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
+
+const AnalysisReport = ({ company }: { company: Company }) => {
+  const [reportType, setReportType] = useState<'official' | 'community' | 'create'>('official');
+  const [newReport, setNewReport] = useState({ title: '', content: '', rating: 'BUY' });
+
+  // Mock official reports
+  const officialReports = [
+    {
+      id: 1,
+      analyst: 'Goldman Sachs',
+      date: '2025-01-05',
+      rating: 'BUY',
+      target: company.financials.equity / 180,
+      summary: `Strong fundamentals with robust revenue growth. ${company.sector} sector showing resilience in current macro environment.`
+    },
+    {
+      id: 2,
+      analyst: 'Morgan Stanley',
+      date: '2025-01-02',
+      rating: 'HOLD',
+      target: company.financials.equity / 200,
+      summary: 'Valuation at fair levels. Monitoring macro headwinds and sector rotation patterns.'
+    }
+  ];
+
+  // Mock community reports
+  const communityReports = [
+    {
+      id: 1,
+      author: 'TechAnalyst_2024',
+      date: '2025-01-06',
+      rating: 'BUY',
+      upvotes: 247,
+      content: `Detailed analysis shows ${company.ticker} is undervalued. Strong balance sheet with D/E of ${company.ratios?.de_ratio?.toFixed(1)}. Expecting breakout above resistance.`
+    },
+    {
+      id: 2,
+      author: 'ValueInvestor',
+      date: '2025-01-04',
+      rating: 'HOLD',
+      upvotes: 128,
+      content: 'Fair valuation at current levels. Would wait for better entry point. Watch Fed rate decisions closely.'
+    }
+  ];
+
+  const handleCreateReport = () => {
+    console.log('Creating report:', newReport);
+    alert('Report created successfully! (This would integrate with Trading Agent backend)');
+    setNewReport({ title: '', content: '', rating: 'BUY' });
+  };
+
+  return (
+    <div className="space-y-4 text-sm">
+      {/* Report Type Tabs */}
+      <div className="flex gap-2 border-b border-border-primary pb-2">
+        {[
+          { id: 'official', label: 'Official Reports' },
+          { id: 'community', label: 'Community Reports' },
+          { id: 'create', label: 'Create Report' }
+        ].map(type => (
+          <button
+            key={type.id}
+            onClick={() => setReportType(type.id as any)}
+            className={`px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
+              reportType === type.id
+                ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan'
+                : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
+            }`}
+          >
+            {type.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Official Reports */}
+      {reportType === 'official' && (
+        <div className="space-y-3">
+          {officialReports.map(report => (
+            <div key={report.id} className="p-4 bg-black rounded-lg border border-border-primary hover:border-accent-cyan/50 transition-colors">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h4 className="font-semibold text-text-primary">{report.analyst}</h4>
+                  <p className="text-xs text-text-tertiary">{report.date}</p>
+                </div>
+                <div className="text-right">
+                  <span className={`px-2 py-1 rounded text-xs font-bold ${
+                    report.rating === 'BUY' ? 'bg-green-500/20 text-green-400' :
+                    report.rating === 'SELL' ? 'bg-red-500/20 text-red-400' :
+                    'bg-yellow-500/20 text-yellow-400'
+                  }`}>
+                    {report.rating}
+                  </span>
+                  <p className="text-xs text-text-secondary mt-1">Target: ${report.target.toFixed(2)}</p>
+                </div>
+              </div>
+              <p className="text-text-secondary text-xs leading-relaxed">{report.summary}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Community Reports */}
+      {reportType === 'community' && (
+        <div className="space-y-3">
+          {communityReports.map(report => (
+            <div key={report.id} className="p-4 bg-black rounded-lg border border-border-primary hover:border-accent-magenta/50 transition-colors">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h4 className="font-semibold text-text-primary flex items-center gap-2">
+                    {report.author}
+                    <span className="text-accent-magenta text-xs">↑ {report.upvotes}</span>
+                  </h4>
+                  <p className="text-xs text-text-tertiary">{report.date}</p>
+                </div>
+                <span className={`px-2 py-1 rounded text-xs font-bold ${
+                  report.rating === 'BUY' ? 'bg-green-500/20 text-green-400' :
+                  report.rating === 'SELL' ? 'bg-red-500/20 text-red-400' :
+                  'bg-yellow-500/20 text-yellow-400'
+                }`}>
+                  {report.rating}
+                </span>
+              </div>
+              <p className="text-text-secondary text-xs leading-relaxed">{report.content}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create Report */}
+      {reportType === 'create' && (
+        <div className="p-4 bg-black rounded-lg border border-border-primary">
+          <h4 className="font-semibold text-text-primary mb-4">Create Analysis Report (Trading Agent)</h4>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs text-text-secondary mb-2">Report Title</label>
+              <input
+                type="text"
+                value={newReport.title}
+                onChange={(e) => setNewReport({ ...newReport, title: e.target.value })}
+                className="w-full bg-background-secondary border border-border-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent-cyan"
+                placeholder={`Analysis for ${company.ticker}`}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-text-secondary mb-2">Rating</label>
+              <div className="flex gap-2">
+                {['BUY', 'HOLD', 'SELL'].map(rating => (
+                  <button
+                    key={rating}
+                    onClick={() => setNewReport({ ...newReport, rating })}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${
+                      newReport.rating === rating
+                        ? rating === 'BUY' ? 'bg-green-500/30 text-green-400 border border-green-400' :
+                          rating === 'SELL' ? 'bg-red-500/30 text-red-400 border border-red-400' :
+                          'bg-yellow-500/30 text-yellow-400 border border-yellow-400'
+                        : 'bg-background-secondary text-text-secondary hover:bg-background-tertiary'
+                    }`}
+                  >
+                    {rating}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-text-secondary mb-2">Analysis Content</label>
+              <textarea
+                value={newReport.content}
+                onChange={(e) => setNewReport({ ...newReport, content: e.target.value })}
+                className="w-full bg-background-secondary border border-border-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent-cyan min-h-[120px]"
+                placeholder="Enter your detailed analysis here..."
+              />
+            </div>
+            <button
+              onClick={handleCreateReport}
+              className="w-full bg-accent-cyan hover:bg-accent-cyan/80 text-black font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+            >
+              Create Report with Trading Agent
+            </button>
+            <p className="text-xs text-text-tertiary text-center">
+              This will use your Trading Agent to analyze {company.ticker} and generate a comprehensive report
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -124,17 +434,23 @@ const MacroImpactAnalysis = ({ company, macroVariables }: { company: Company, ma
 };
 
 export default function PlatformDashboard() {
+  // Zustand store for global macro state
+  const macroState = useMacroStore(state => state.macroState);
+  const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
+  const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+
   const [selectedCompany, setSelectedCompany] = useState<Company>(companies[0]);
   const [analysisTab, setAnalysisTab] = useState('Fundamental');
   const [searchTerm, setSearchTerm] = useState("");
   const [stockData, setStockData] = useState<any[]>([]);
-  const [macroState, setMacroState] = useState(getDefaultMacroState());
   const [expandedCategories, setExpandedCategories] = useState<Set<MacroCategory>>(
     new Set(['MONETARY_POLICY'])
   );
-  const [macroSidebarOpen, setMacroSidebarOpen] = useState(true);
+  const [showAllVariables, setShowAllVariables] = useState<Set<MacroCategory>>(
+    new Set()
+  );
 
-  const analysisTabs = ['Fundamental', 'Technical', 'Macro Impact'];
+  const analysisTabs = ['Fundamental', 'Technical', 'Analysis Report'];
   const filteredCompanies = useMemo(() => companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.ticker.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
 
   const toggleCategory = (category: MacroCategory) => {
@@ -147,31 +463,75 @@ export default function PlatformDashboard() {
     setExpandedCategories(newSet);
   };
 
-  const updateMacroVariable = (id: string, value: number) => {
-    setMacroState(prev => ({ ...prev, [id]: value }));
+  const toggleShowAllVariables = (category: MacroCategory) => {
+    const newSet = new Set(showAllVariables);
+    if (newSet.has(category)) {
+      newSet.delete(category);
+    } else {
+      newSet.add(category);
+    }
+    setShowAllVariables(newSet);
   };
 
   useEffect(() => {
-    setStockData(Array.from({ length: 30 }, (_, i) => ({ name: `Day ${i + 1}`, price: generateDeterministicMock(`${selectedCompany.ticker}-price-${i}`, selectedCompany.financials.equity / 200, selectedCompany.financials.equity / 100) })));
-  }, [selectedCompany]);
+    // Generate stock data with proper dates and volume, influenced by macro variables
+    const today = new Date();
+    const basePrice = selectedCompany.financials.equity / 200;
+
+    // Calculate macro impact factor
+    const fedRate = macroState.fed_funds_rate || 2.5;
+    const tariffRate = macroState.us_tariff_rate || 0;
+    const krwUsd = macroState.krw_usd || 1300;
+
+    // Sector-specific macro sensitivity
+    let macroImpact = 1.0;
+    if (selectedCompany.sector === 'BANKING') {
+      macroImpact = 1 + ((fedRate - 2.5) * 0.08); // Banks benefit from higher rates
+    } else if (selectedCompany.sector === 'REALESTATE') {
+      macroImpact = 1 - ((fedRate - 2.5) * 0.12); // Real estate hurt by higher rates
+    } else if (selectedCompany.sector === 'MANUFACTURING') {
+      macroImpact = 1 - (tariffRate * 0.005); // Tariffs hurt manufacturing
+    } else if (selectedCompany.sector === 'SEMICONDUCTOR') {
+      macroImpact = 1 + ((krwUsd - 1300) * 0.0002); // Currency impact
+    }
+
+    setStockData(Array.from({ length: 30 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - (29 - i));
+      const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+
+      // Apply macro impact to price with gradual effect over time
+      const timeProgress = i / 29; // 0 to 1
+      const progressiveMacroImpact = 1 + (macroImpact - 1) * timeProgress;
+
+      const rawPrice = generateDeterministicMock(`${selectedCompany.ticker}-price-${i}`, basePrice * 0.8, basePrice * 1.2);
+      const price = rawPrice * progressiveMacroImpact;
+      const volume = generateDeterministicMock(`${selectedCompany.ticker}-vol-${i}`, 1000000, 5000000);
+
+      return {
+        date: dateStr,
+        price: parseFloat(price.toFixed(2)),
+        volume: Math.floor(volume)
+      };
+    }));
+  }, [selectedCompany, macroState]);
 
   const renderAnalysisContent = () => {
     switch(analysisTab) {
       case 'Fundamental': return <FundamentalAnalysis company={selectedCompany} />;
       case 'Technical': return <TechnicalAnalysis ticker={selectedCompany.ticker} />;
-      case 'Macro Impact': return <MacroImpactAnalysis company={selectedCompany} macroVariables={macroVariables} />;
+      case 'Analysis Report': return <AnalysisReport company={selectedCompany} />;
       default: return null;
     }
   }
 
   return (
-    <div className="min-h-screen bg-black text-text-primary flex flex-col">
-      {/* Header */}
-      <div className="border-b border-border-primary px-6 py-3 bg-black/50 backdrop-blur">
-        <div className="flex items-center justify-between mb-3">
+    <div className="flex-1 bg-black text-text-primary flex flex-col">
+      {/* Compact Header - Selected Company Info */}
+      <div className="border-b border-border-primary px-6 py-2 bg-black/50 backdrop-blur">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-accent-cyan">Nexus-Alpha</h1>
-            <p className="text-xs text-text-secondary">Financial Simulation Platform</p>
+            <h2 className="text-sm font-semibold text-text-primary">Platform Dashboard</h2>
           </div>
           <div className="text-right">
             <p className="text-sm text-text-primary font-mono">{selectedCompany.name}</p>
@@ -183,10 +543,10 @@ export default function PlatformDashboard() {
       {/* Main Content: 20% | 60% | 20% */}
       <div className="flex-1 flex gap-4 px-4 py-4 overflow-hidden">
 
-        {/* LEFT SIDEBAR (20%) - Company Selector + News + Community */}
+        {/* LEFT SIDEBAR (20%) - Trending + Community */}
         <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Trending - 15% */}
-          <div className="h-[15%] min-h-0 overflow-hidden">
+          {/* Trending - 50% */}
+          <div className="h-[50%] min-h-0 overflow-hidden">
             <Card className="h-full flex flex-col">
               <CardTitle icon={<TrendingUp size={16}/>} className="text-xs">Trending</CardTitle>
               <div className="space-y-2 flex-1 overflow-y-auto pr-2">
@@ -209,8 +569,188 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Company List - 35% */}
-          <div className="h-[35%] min-h-0 overflow-hidden">
+          {/* Community Panel - 50% */}
+          <div className="h-[50%] min-h-0 overflow-hidden">
+            <CommunityPanel />
+          </div>
+        </div>
+
+        {/* CENTER (60%) - Main Analysis: Ontology-Focused */}
+        <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-hidden">
+          {/* Macro Impact Analysis (PRIMARY) - Fixed max height */}
+          <div className="h-[200px] max-h-[200px] flex-shrink-0">
+            <Card className="h-full flex flex-col p-4 overflow-hidden">
+              <h3 className="text-base font-semibold text-text-primary mb-4">
+                Macro Impact Analysis
+              </h3>
+              <div className="space-y-4">
+                {/* Scenario Display - Key Variables */}
+                <div className="grid grid-cols-3 gap-3 text-xs">
+                  <div className="bg-background-secondary rounded-lg p-2">
+                    <div className="text-text-tertiary mb-1">Fed Rate</div>
+                    <div className="text-accent-cyan font-mono font-semibold">
+                      {macroState.fed_funds_rate?.toFixed(2) || 'N/A'}%
+                    </div>
+                  </div>
+                  <div className="bg-background-secondary rounded-lg p-2">
+                    <div className="text-text-tertiary mb-1">US Tariff</div>
+                    <div className="text-accent-magenta font-mono font-semibold">
+                      {macroState.us_tariff_rate?.toFixed(0) || 'N/A'}%
+                    </div>
+                  </div>
+                  <div className="bg-background-secondary rounded-lg p-2">
+                    <div className="text-text-tertiary mb-1">KRW/USD</div>
+                    <div className="text-accent-emerald font-mono font-semibold">
+                      {macroState.krw_usd?.toFixed(0) || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Impact Result - NOW USING STORE! */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-text-secondary mb-2">
+                      Estimated Net Income Impact
+                    </p>
+                    {(() => {
+                      // Get impact from store based on company sector
+                      let impact = 0;
+
+                      if (selectedCompany.sector === 'BANKING') {
+                        impact = calculatedImpacts.banking;
+                      } else if (selectedCompany.sector === 'REALESTATE') {
+                        impact = calculatedImpacts.realEstate;
+                      } else if (selectedCompany.sector === 'MANUFACTURING') {
+                        impact = calculatedImpacts.manufacturing;
+                      } else if (selectedCompany.sector === 'SEMICONDUCTOR') {
+                        impact = calculatedImpacts.semiconductor;
+                      }
+
+                      return (
+                        <p className={`text-4xl font-bold ${
+                          impact >= 0 ? 'text-status-safe' : 'text-status-danger'
+                        }`}>
+                          {impact.toFixed(2)}%
+                        </p>
+                      );
+                    })()}
+                  </div>
+                  <div className="flex items-center justify-center p-4 bg-background-tertiary rounded-lg">
+                    <div className="text-center">
+                      <p className="text-xs text-text-secondary mb-2">Company</p>
+                      <p className="text-sm font-semibold text-text-primary">
+                        {selectedCompany.ticker}
+                      </p>
+                      <p className="text-xs text-accent-cyan mt-1">
+                        {selectedCompany.sector}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Stock Chart (Secondary) - Fixed max height */}
+          <div className="h-[300px] max-h-[300px] flex-shrink-0">
+            <Card className="h-full flex flex-col p-4">
+              <h3 className="text-sm font-semibold text-text-primary mb-2">{selectedCompany.name} ({selectedCompany.ticker})</h3>
+              <div className="flex-1 min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={stockData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#00E5FF" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1F" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={{ stroke: '#1A1A1F' }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis
+                      yAxisId="price"
+                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={{ stroke: '#1A1A1F' }}
+                      width={60}
+                      tickFormatter={(value) => `$${value.toFixed(0)}`}
+                    />
+                    <YAxis
+                      yAxisId="volume"
+                      orientation="right"
+                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={{ stroke: '#1A1A1F' }}
+                      width={60}
+                      tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                    />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F', borderRadius: '8px' }}
+                      labelStyle={{ color: '#00E5FF' }}
+                      formatter={(value: any, name: string) => {
+                        if (name === 'price') return [`$${value.toFixed(2)}`, 'Price'];
+                        if (name === 'volume') return [`${(value / 1000000).toFixed(2)}M`, 'Volume'];
+                        return value;
+                      }}
+                    />
+                    <Area
+                      yAxisId="price"
+                      type="monotone"
+                      dataKey="price"
+                      stroke="#00E5FF"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorPrice)"
+                    />
+                    <Bar
+                      yAxisId="volume"
+                      dataKey="volume"
+                      fill="#E6007A"
+                      opacity={0.3}
+                      barSize={4}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </div>
+
+          {/* Fundamental & Technical & Analysis Report Tabs (Supplementary) - Remaining space */}
+          <div className="flex-1 min-h-0 max-h-[400px] overflow-hidden">
+            <Card className="h-full flex flex-col overflow-hidden p-4">
+              <div className="flex gap-1 border-b border-border-primary pb-3 overflow-x-auto flex-shrink-0">
+                {analysisTabs.map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setAnalysisTab(tab)}
+                    className={`px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap ${
+                      analysisTab === tab
+                        ? 'text-accent-cyan border-b-2 border-accent-cyan'
+                        : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto pt-3 text-xs pr-2">
+                {renderAnalysisContent()}
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* RIGHT SIDEBAR (20%) - Company List + News Feed */}
+        <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
+          {/* Company List - 50% */}
+          <div className="h-[50%] min-h-0 overflow-hidden">
             <Card className="h-full flex flex-col overflow-hidden">
               <CardTitle className="text-xs mb-2 flex-shrink-0">Company List</CardTitle>
               <div className="relative mb-2 flex-shrink-0">
@@ -240,257 +780,9 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* News Feed - 25% */}
-          <div className="h-[25%] min-h-0 overflow-hidden">
+          {/* News Feed - 50% */}
+          <div className="h-[50%] min-h-0 overflow-hidden">
             <NewsFeed selectedSector={selectedCompany.sector} />
-          </div>
-
-          {/* Community Panel - 25% */}
-          <div className="h-[25%] min-h-0 overflow-hidden">
-            <CommunityPanel />
-          </div>
-        </div>
-
-        {/* CENTER (60%) - Main Analysis: Ontology-Focused */}
-        <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Macro Impact Analysis (PRIMARY) - 30% */}
-          <div className="h-[30%] min-h-0">
-            <Card className="h-full flex flex-col p-6">
-              <h3 className="text-base font-semibold text-text-primary mb-4">
-                Macro Impact Analysis
-              </h3>
-              <div className="space-y-4">
-                {/* Scenario Display - Key Variables */}
-                <div className="grid grid-cols-3 gap-3 text-xs">
-                  <div className="bg-background-secondary rounded-lg p-2">
-                    <div className="text-text-tertiary mb-1">Fed Rate</div>
-                    <div className="text-accent-cyan font-mono font-semibold">
-                      {macroState.fed_funds_rate?.toFixed(2) || 'N/A'}%
-                    </div>
-                  </div>
-                  <div className="bg-background-secondary rounded-lg p-2">
-                    <div className="text-text-tertiary mb-1">US Tariff</div>
-                    <div className="text-accent-magenta font-mono font-semibold">
-                      {macroState.us_tariff_rate?.toFixed(0) || 'N/A'}%
-                    </div>
-                  </div>
-                  <div className="bg-background-secondary rounded-lg p-2">
-                    <div className="text-text-tertiary mb-1">KRW/USD</div>
-                    <div className="text-accent-emerald font-mono font-semibold">
-                      {macroState.krw_usd?.toFixed(0) || 'N/A'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Impact Result */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-text-secondary mb-2">
-                      Estimated Net Income Impact
-                    </p>
-                    {(() => {
-                      const fedRate = macroState.fed_funds_rate || 5.25;
-                      const baseRate = 2.5;
-                      const rateChange = fedRate - baseRate;
-                      const tariff = macroState.us_tariff_rate || 0;
-                      const oilPrice = macroState.wti_oil || 78;
-                      const vix = macroState.vix || 15;
-
-                      let impact = 0;
-
-                      if (selectedCompany.sector === 'BANKING') {
-                        // Banking benefits from higher rates (NIM expansion)
-                        impact = rateChange * generateDeterministicMock(selectedCompany.ticker, 2.5, 3.5);
-                        // But high VIX hurts
-                        impact -= (vix - 15) * 0.3;
-                      } else if (selectedCompany.sector === 'REALESTATE') {
-                        // Real Estate hurt by higher rates (borrowing costs)
-                        impact = rateChange * generateDeterministicMock(selectedCompany.ticker, -4.5, -5.5);
-                      } else if (selectedCompany.sector === 'MANUFACTURING') {
-                        // Manufacturing hurt by tariffs
-                        impact = tariff * generateDeterministicMock(selectedCompany.ticker, -0.4, -0.6);
-                        // And higher oil prices
-                        impact -= (oilPrice - 60) * 0.05;
-                      } else if (selectedCompany.sector === 'SEMICONDUCTOR') {
-                        // Semiconductor affected by tariffs and trade
-                        impact = tariff * generateDeterministicMock(selectedCompany.ticker, -0.3, -0.5);
-                      }
-
-                      return (
-                        <p className={`text-4xl font-bold ${
-                          impact >= 0 ? 'text-status-safe' : 'text-status-danger'
-                        }`}>
-                          {impact.toFixed(2)}%
-                        </p>
-                      );
-                    })()}
-                  </div>
-                  <div className="flex items-center justify-center p-4 bg-background-tertiary rounded-lg">
-                    <div className="text-center">
-                      <p className="text-xs text-text-secondary mb-2">Company</p>
-                      <p className="text-sm font-semibold text-text-primary">
-                        {selectedCompany.ticker}
-                      </p>
-                      <p className="text-xs text-accent-cyan mt-1">
-                        {selectedCompany.sector}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Stock Chart (Secondary) - 35% */}
-          <div className="h-[35%] min-h-0">
-            <Card className="h-full flex flex-col">
-              <CardTitle className="text-sm">{selectedCompany.name} ({selectedCompany.ticker})</CardTitle>
-              <div className="flex-1 min-h-0 -ml-4 -mr-4 -mb-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={stockData} margin={{ top: 5, right: 15, left: 40, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#00E5FF" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <Tooltip contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F' }} />
-                    <YAxis tick={{ fill: '#9CA3AF', fontSize: 10 }} tickLine={false} axisLine={false} width={40} />
-                    <Area type="monotone" dataKey="price" stroke="#00E5FF" strokeWidth={2} fillOpacity={1} fill="url(#colorPrice)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </div>
-
-          {/* Fundamental & Technical Tabs (Supplementary) - 35% */}
-          <div className="h-[35%] min-h-0 overflow-hidden">
-            <Card className="h-full flex flex-col overflow-hidden">
-              <div className="flex gap-1 border-b border-border-primary pb-3 overflow-x-auto flex-shrink-0">
-                {['Fundamental', 'Technical'].map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setAnalysisTab(tab)}
-                    className={`px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap ${
-                      analysisTab === tab
-                        ? 'text-accent-cyan border-b-2 border-accent-cyan'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-              <div className="flex-1 min-h-0 overflow-y-auto pt-3 text-xs pr-2">
-                {analysisTab === 'Fundamental' && <FundamentalAnalysis company={selectedCompany} />}
-                {analysisTab === 'Technical' && <TechnicalAnalysis ticker={selectedCompany.ticker} />}
-              </div>
-            </Card>
-          </div>
-        </div>
-
-        {/* RIGHT SIDEBAR (20%) - Controls & Ratios */}
-        <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Key Ratios */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <Card className="h-full flex flex-col overflow-y-auto text-xs">
-              <CardTitle className="text-xs mb-2">Key Ratios</CardTitle>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="text-center p-2 bg-black rounded-lg">
-                  <div className="text-text-secondary text-xs mb-1">P/E</div>
-                  <div className="font-bold text-text-primary">{selectedCompany.ratios?.pe_ratio?.toFixed(1) || 'N/A'}</div>
-                </div>
-                <div className="text-center p-2 bg-black rounded-lg">
-                  <div className="text-text-secondary text-xs mb-1">ROE</div>
-                  <div className="font-bold text-text-primary">{selectedCompany.ratios?.roe?.toFixed(1) || 'N/A'}%</div>
-                </div>
-                <div className="text-center p-2 bg-black rounded-lg">
-                  <div className="text-text-secondary text-xs mb-1">D/E</div>
-                  <div className="font-bold text-text-primary">{selectedCompany.ratios?.de_ratio?.toFixed(1) || 'N/A'}</div>
-                </div>
-                <div className="text-center p-2 bg-black rounded-lg">
-                  <div className="text-text-secondary text-xs mb-1">ICR</div>
-                  <div className={`font-bold ${
-                    selectedCompany.ratios?.icr && selectedCompany.ratios.icr > 2
-                      ? 'text-status-safe'
-                      : selectedCompany.ratios?.icr && selectedCompany.ratios.icr > 0
-                      ? 'text-status-caution'
-                      : 'text-status-danger'
-                  }`}>
-                    {selectedCompany.ratios?.icr?.toFixed(1) || 'N/A'}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Macro Controls - Categorized */}
-          <div className="flex-[2] min-h-0 overflow-hidden">
-            <Card className="h-full flex flex-col text-xs">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Sliders size={14} className="text-accent-cyan" />
-                  <span className="text-xs font-semibold text-text-primary">Macro Variables (56)</span>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto pr-2 space-y-2">
-                {Object.entries(MACRO_CATEGORIES).map(([categoryKey, category]) => {
-                  const isExpanded = expandedCategories.has(categoryKey as MacroCategory);
-                  const variables = getVariablesByCategory(categoryKey as MacroCategory);
-
-                  return (
-                    <div key={categoryKey} className="border border-border-primary rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => toggleCategory(categoryKey as MacroCategory)}
-                        className="w-full px-3 py-2 flex items-center justify-between bg-background-secondary hover:bg-background-tertiary transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{category.icon}</span>
-                          <span className="text-xs font-medium text-text-primary">{category.label}</span>
-                          <span className="text-xs text-text-tertiary">({variables.length})</span>
-                        </div>
-                        {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                      </button>
-
-                      {isExpanded && (
-                        <div className="px-3 py-2 space-y-3 bg-[#0A0A0C]">
-                          {variables.slice(0, 5).map(variable => (
-                            <div key={variable.id}>
-                              <label className="text-text-secondary text-xs block mb-1 flex items-center justify-between">
-                                <span>{variable.name}</span>
-                                <span className="font-mono" style={{ color: category.color }}>
-                                  {macroState[variable.id]?.toFixed(variable.step < 1 ? 2 : 0) || variable.defaultValue.toFixed(variable.step < 1 ? 2 : 0)}
-                                  {variable.unit}
-                                </span>
-                              </label>
-                              <input
-                                type="range"
-                                min={variable.min}
-                                max={variable.max}
-                                step={variable.step}
-                                value={macroState[variable.id] || variable.defaultValue}
-                                onChange={(e) => updateMacroVariable(variable.id, parseFloat(e.target.value))}
-                                className="w-full h-1 rounded-lg appearance-none cursor-pointer"
-                                style={{
-                                  background: `linear-gradient(to right, ${category.color} 0%, ${category.color} ${((macroState[variable.id] || variable.defaultValue) - variable.min) / (variable.max - variable.min) * 100}%, #1A1A1F ${((macroState[variable.id] || variable.defaultValue) - variable.min) / (variable.max - variable.min) * 100}%, #1A1A1F 100%)`
-                                }}
-                              />
-                              <div className="text-xs text-text-tertiary mt-0.5 truncate">{variable.description}</div>
-                            </div>
-                          ))}
-                          {variables.length > 5 && (
-                            <div className="text-xs text-text-tertiary text-center pt-2 border-t border-border-primary">
-                              + {variables.length - 5} more variables
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
           </div>
         </div>
       </div>

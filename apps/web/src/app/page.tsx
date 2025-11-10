@@ -15,7 +15,10 @@ export default function LandingPage() {
     // Handle scroll for parallax effects
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   return (
@@ -43,8 +46,8 @@ export default function LandingPage() {
                   height: size + 'px',
                   top: Math.random() * 100 + '%',
                   left: Math.random() * 100 + '%',
-                  opacity: 0.3 + Math.random() * 0.5, // Increased from 0.08-0.35 to 0.3-0.8
-                  transform: `translateY(${scrollY * 0.02 * depth}px)`,
+                  opacity: 0.3 + Math.random() * 0.5,
+                  transform: `translateY(${Math.min(scrollY * 0.0008 * depth, 10)}px)`, // Capped at 10px max
                   transition: 'transform 0.1s ease-out',
                   boxShadow: `0 0 ${size * 2}px rgba(255, 255, 255, ${0.2 * depth})`,
                 }}
@@ -69,7 +72,7 @@ export default function LandingPage() {
             <a href="#platform" className="text-text-secondary hover:text-white transition-colors font-medium">Platform</a>
             <a href="#about" className="text-text-secondary hover:text-white transition-colors font-medium">About</a>
             <Link href="/learn" className="text-text-secondary hover:text-white transition-colors font-medium">Learn</Link>
-            <Link href="/dashboard" className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all text-xs font-medium border border-white/10">
+            <Link href="/dashboard" className="px-3 py-1.5 bg-[#313131]/80 hover:bg-[#313131]/95 backdrop-blur-md text-white rounded-lg transition-all text-xs font-medium border border-white/10">
               Launch Platform
             </Link>
           </div>
@@ -105,14 +108,14 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/dashboard"
-              className="group px-8 py-3 bg-white text-black font-medium rounded-lg hover:bg-white/90 transition-all inline-flex items-center gap-2 text-sm"
+              className="group px-8 py-3 bg-white text-black font-medium rounded-lg hover:bg-white/90 transition-all inline-flex items-center gap-2 text-sm shadow-lg shadow-white/20"
             >
               <span>Enter Platform</span>
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               href="/learn"
-              className="px-8 py-3 border border-white/20 text-white font-medium rounded-lg hover:bg-white/5 transition-all inline-flex items-center gap-2 text-sm backdrop-blur-sm"
+              className="px-8 py-3 bg-[#313131]/80 hover:bg-[#313131]/95 backdrop-blur-md border border-white/10 text-white font-medium rounded-lg transition-all inline-flex items-center gap-2 text-sm"
             >
               <span>Explore Docs</span>
             </Link>
@@ -165,13 +168,32 @@ export default function LandingPage() {
             ].map((feature, idx) => (
               <div
                 key={idx}
-                className="group relative bg-[#0A0A0F]/50 backdrop-blur-sm border border-white/5 rounded-xl p-6 hover:border-accent-cyan/30 hover:bg-[#0A0A0F]/80 transition-all duration-300"
+                className="group relative bg-[#0A0A0F]/50 backdrop-blur-sm border border-white/5 rounded-xl p-6 hover:border-accent-cyan/40 hover:bg-[#0A0A0F]/80 transition-all duration-500 hover:-translate-y-1"
+                style={{
+                  boxShadow: '0 0 0 0 rgba(0, 229, 255, 0)',
+                  transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 40px 2px rgba(0, 229, 255, 0.15), 0 0 80px 4px rgba(0, 229, 255, 0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 0 0 0 rgba(0, 229, 255, 0)';
+                }}
               >
-                <div className="text-accent-cyan mb-4">
-                  {feature.icon}
+                {/* Glow effect on hover */}
+                <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(0, 229, 255, 0.06), transparent 40%)'
+                  }}
+                />
+
+                <div className="relative z-10">
+                  <div className="text-accent-cyan mb-4 transition-all duration-500">
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-lg font-medium mb-2 text-white group-hover:text-accent-cyan transition-colors duration-300">{feature.title}</h3>
+                  <p className="text-text-secondary text-sm leading-relaxed font-light">{feature.description}</p>
                 </div>
-                <h3 className="text-lg font-medium mb-2 text-white">{feature.title}</h3>
-                <p className="text-text-secondary text-sm leading-relaxed font-light">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -203,10 +225,10 @@ export default function LandingPage() {
               </div>
               <Link
                 href="/ontology"
-                className="inline-flex items-center gap-2 text-accent-cyan hover:gap-3 transition-all text-sm font-medium"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#313131]/80 hover:bg-[#313131]/95 backdrop-blur-md border border-white/10 text-white rounded-lg transition-all text-sm font-medium"
               >
                 <span>Explore the Ontology</span>
-                <ArrowRight size={14} />
+                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
 
@@ -262,7 +284,7 @@ export default function LandingPage() {
           </p>
           <Link
             href="/dashboard"
-            className="group px-12 py-4 bg-white text-black font-medium rounded-lg hover:bg-white/90 transition-all inline-flex items-center gap-3 text-base"
+            className="group px-12 py-4 bg-white text-black font-medium rounded-lg hover:bg-white/90 transition-all inline-flex items-center gap-3 text-base shadow-lg shadow-white/20"
           >
             <span>Launch Platform</span>
             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />

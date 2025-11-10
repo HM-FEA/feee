@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Heart, MessageCircle, Share2, TrendingUp, Search, Filter, User, Check, BarChart, Bot, Newspaper, HelpCircle, ClipboardList, Star, Hash, Trophy, Plus, Flame } from 'lucide-react';
+import { Heart, MessageCircle, Share2, TrendingUp, Search, Filter, User, Check, BarChart, Bot, Newspaper, HelpCircle, ClipboardList, Star, Hash, Trophy, Plus, Flame, Users } from 'lucide-react';
 
 // Types
 interface Post {

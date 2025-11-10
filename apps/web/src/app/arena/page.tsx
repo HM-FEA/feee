@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { Trophy, Zap, Code, Target, TrendingUp, Users, Calendar, Award, Plus, Search, Filter, Swords, Bot, Crown, Rocket, Check } from 'lucide-react';
+import { GlobalTopNav } from '@/components/layout/GlobalTopNav';
+import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 // Types
 interface TradingBot {
@@ -48,6 +50,28 @@ const MOCK_TOURNAMENTS: Tournament[] = [
   { id: 't3', name: 'Q4 Championship', description: 'The grand finale! Largest prize pool.', period: 'Oct 15 - Dec 31', status: 'upcoming', participants: 0, prizePool: '$25,000', startDate: new Date(), endDate: new Date(), icon: 'crown', },
 ];
 
+// Generate performance data for charts
+const generatePerformanceData = (botId: string, finalReturn: number) => {
+  const days = 30;
+  const data = [];
+  let value = 100;
+
+  // Create a realistic growth curve
+  for (let i = 0; i < days; i++) {
+    const progress = i / (days - 1);
+    const targetValue = 100 + finalReturn;
+
+    // Add some volatility
+    const volatility = (Math.sin(botId.charCodeAt(2) * i * 0.5) * 2);
+    const trend = (targetValue - 100) * progress;
+
+    value = 100 + trend + volatility;
+    data.push({ day: i + 1, value: Math.max(95, value) });
+  }
+
+  return data;
+};
+
 const Card = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
   <div className={`bg-[#0D0D0F] border border-[#1A1A1F] rounded-2xl p-4 sm:p-6 ${className}`}>
     {children}
@@ -56,6 +80,8 @@ const Card = ({ children, className = '' }: { children: React.ReactNode, classNa
 
 const BotCard = ({ bot, onView }: { bot: TradingBot, onView: () => void }) => {
   const isPositive = bot.returns30d >= 0;
+  const performanceData = useMemo(() => generatePerformanceData(bot.id, bot.returns30d), [bot.id, bot.returns30d]);
+
   return (
     <div onClick={onView} className="cursor-pointer">
       <Card className="hover:border-[#2A2A3F] transition-all group h-full">
@@ -74,6 +100,23 @@ const BotCard = ({ bot, onView }: { bot: TradingBot, onView: () => void }) => {
             {bot.status.charAt(0).toUpperCase() + bot.status.slice(1)}
           </div>
         </div>
+
+        {/* Performance Chart */}
+        <div className="h-16 mb-3 -mx-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={performanceData}>
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke={isPositive ? '#10B981' : '#EF4444'}
+                strokeWidth={2}
+                dot={false}
+                animationDuration={300}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
         <div className="grid grid-cols-3 gap-2 mb-3 pt-3 border-t border-border-primary">
           <div>
             <div className="text-xs text-text-secondary mb-1">30D Return</div>
@@ -144,6 +187,7 @@ export default function ArenaPage() {
 
   return (
     <div className="relative min-h-screen bg-black text-text-primary">
+      <GlobalTopNav />
       <div className="relative z-10">
         <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur">
           <div className="flex items-center justify-between mb-4">

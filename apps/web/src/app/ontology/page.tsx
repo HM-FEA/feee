@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Globe, BarChart3, Building, Wrench, Landmark, TrendingUp, DollarSign, Users, Package } from 'lucide-react';
+import { GlobalTopNav } from '@/components/layout/GlobalTopNav';
 
 const Card = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
   <div className={`bg-[#0D0D0F] border border-[#1A1A1F] rounded-2xl p-4 sm:p-6 hover:border-[#2A2A3F] transition-all ${className}`}>
@@ -346,6 +347,7 @@ export default function OntologyPage() {
 
   return (
     <div className="relative min-h-screen bg-black text-text-primary">
+      <GlobalTopNav />
       <div className="relative z-10 flex flex-col h-screen">
         {/* Header */}
         <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur">

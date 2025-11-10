@@ -3,6 +3,7 @@
 import React from 'react';
 import { Bot, Wrench, BarChart, TrendingUp, Newspaper } from 'lucide-react';
 import StarfieldBackground from '@/components/background/StarfieldBackground';
+import { GlobalTopNav } from '@/components/layout/GlobalTopNav';
 
 const Card = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
   <div className={`bg-[#0D0D0F] border border-[#1A1A1F] rounded-2xl p-4 sm:p-6 ${className}`}>
@@ -13,6 +14,7 @@ const Card = ({ children, className = '' }: { children: React.ReactNode, classNa
 export default function TradingAgentsPage() {
   return (
     <div className="relative min-h-screen bg-black text-text-primary">
+      <GlobalTopNav />
       <div className="relative z-10 p-6">
         <div className="border-b border-border-primary pb-4 mb-4">
             <h1 className="text-2xl font-bold text-accent-cyan flex items-center gap-2"><Bot size={24} /> TradingAgents AI</h1>

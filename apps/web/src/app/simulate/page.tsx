@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Play, BarChart3, TrendingUp, Calendar, DollarSign, Target, Zap, Settings, ChevronRight, Clock, Check, ClipboardList } from 'lucide-react';
+import { GlobalTopNav } from '@/components/layout/GlobalTopNav';
 
 // Types
 interface SimulationMode {
@@ -206,9 +207,8 @@ export default function SimulatePage() {
   const availableModes = SIMULATION_MODES;
 
     return (
-
       <div className="relative min-h-screen bg-black text-text-primary">
-
+        <GlobalTopNav />
         <div className="relative z-10">
         <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur">
           <div className="flex items-center justify-between mb-4">
