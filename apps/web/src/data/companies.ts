@@ -978,9 +978,6 @@ export const ALL_COMPANIES: Company[] = [
   ...OPTIONS_COMPANIES,
 ];
 
-// Export as default for convenience
-export const companies = ALL_COMPANIES;
-
 export const COMPANY_LINKS: CompanyLink[] = [
   // Banking → Real Estate lending
   { source: 'SH_BANK', target: 'SH_REIT', amount: 100, type: 'LENDING' },
