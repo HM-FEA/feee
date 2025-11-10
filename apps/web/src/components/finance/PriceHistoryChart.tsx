@@ -4,14 +4,17 @@ import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 type Period = '1D' | '1W' | '1M' | '3M' | '1Y' | '5Y';
+type ScenarioMode = 'current' | 'macro';
 
 interface PriceHistoryChartProps {
   ticker: string;
   basePrice: number;
+  adjustedBasePrice?: number;
 }
 
-export default function PriceHistoryChart({ ticker, basePrice }: PriceHistoryChartProps) {
+export default function PriceHistoryChart({ ticker, basePrice, adjustedBasePrice }: PriceHistoryChartProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('1M');
+  const [scenarioMode, setScenarioMode] = useState<ScenarioMode>('current');
 
   const periods: { id: Period; label: string; days: number }[] = [
     { id: '1D', label: '1D', days: 1 },
@@ -51,32 +54,49 @@ export default function PriceHistoryChart({ ticker, basePrice }: PriceHistoryCha
       const volatility = (random - 0.5) * 0.15;
       const price = basePrice * (1 + trend + volatility);
 
+      // Calculate adjusted price if available
+      const adjustedPrice = adjustedBasePrice
+        ? adjustedBasePrice * (1 + trend + volatility)
+        : null;
+
       return {
         date: selectedPeriod === '1D'
           ? date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
           : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         price: parseFloat(price.toFixed(2)),
+        adjustedPrice: adjustedPrice ? parseFloat(adjustedPrice.toFixed(2)) : null,
         timestamp: date.getTime(),
       };
     });
-  }, [selectedPeriod, ticker, basePrice]);
+  }, [selectedPeriod, ticker, basePrice, adjustedBasePrice]);
 
   const priceRange = useMemo(() => {
     const prices = chartData.map(d => d.price);
+    const adjustedPrices = chartData.map(d => d.adjustedPrice).filter(p => p !== null) as number[];
+
+    const allPrices = scenarioMode === 'macro' && adjustedPrices.length > 0
+      ? [...prices, ...adjustedPrices]
+      : prices;
+
+    const currentPrices = scenarioMode === 'macro' && adjustedPrices.length > 0
+      ? adjustedPrices
+      : prices;
+
     return {
-      min: Math.min(...prices),
-      max: Math.max(...prices),
-      change: prices[prices.length - 1] - prices[0],
-      changePercent: ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100,
+      min: Math.min(...allPrices),
+      max: Math.max(...allPrices),
+      change: currentPrices[currentPrices.length - 1] - currentPrices[0],
+      changePercent: ((currentPrices[currentPrices.length - 1] - currentPrices[0]) / currentPrices[0]) * 100,
     };
-  }, [chartData]);
+  }, [chartData, scenarioMode]);
 
   const isPositive = priceRange.change >= 0;
+  const showMacroScenario = adjustedBasePrice && adjustedBasePrice !== basePrice;
 
   return (
     <div className="flex flex-col gap-4 h-full">
       {/* Period Selector */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div className="flex gap-1 bg-background-secondary rounded-lg p-1">
           {periods.map(period => (
             <button
@@ -92,6 +112,32 @@ export default function PriceHistoryChart({ ticker, basePrice }: PriceHistoryCha
             </button>
           ))}
         </div>
+
+        {/* Scenario Toggle */}
+        {showMacroScenario && (
+          <div className="flex gap-1 bg-background-secondary rounded-lg p-1">
+            <button
+              onClick={() => setScenarioMode('current')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                scenarioMode === 'current'
+                  ? 'bg-accent-magenta text-black'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
+              }`}
+            >
+              Current
+            </button>
+            <button
+              onClick={() => setScenarioMode('macro')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                scenarioMode === 'macro'
+                  ? 'bg-accent-magenta text-black'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
+              }`}
+            >
+              Macro Scenario
+            </button>
+          </div>
+        )}
 
         {/* Period Change */}
         <div className={`text-sm font-semibold ${
@@ -115,6 +161,18 @@ export default function PriceHistoryChart({ ticker, basePrice }: PriceHistoryCha
                 <stop
                   offset="100%"
                   stopColor={isPositive ? '#10b981' : '#ef4444'}
+                  stopOpacity={0}
+                />
+              </linearGradient>
+              <linearGradient id="adjustedPriceGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="0%"
+                  stopColor="#E6007A"
+                  stopOpacity={0.4}
+                />
+                <stop
+                  offset="100%"
+                  stopColor="#E6007A"
                   stopOpacity={0}
                 />
               </linearGradient>
@@ -143,16 +201,48 @@ export default function PriceHistoryChart({ ticker, basePrice }: PriceHistoryCha
               }}
               labelStyle={{ color: '#00E5FF', fontSize: '12px', marginBottom: '4px' }}
               itemStyle={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 'bold' }}
-              formatter={(value: any) => [`$${value.toFixed(2)}`, 'Price']}
+              formatter={(value: any, name: string) => {
+                const label = name === 'adjustedPrice' ? 'Macro Price' : 'Current Price';
+                return [`$${value.toFixed(2)}`, label];
+              }}
             />
-            <Area
-              type="monotone"
-              dataKey="price"
-              stroke={isPositive ? '#10b981' : '#ef4444'}
-              strokeWidth={2}
-              fill="url(#priceGradient)"
-              animationDuration={300}
-            />
+
+            {/* Show current price line in both modes */}
+            {scenarioMode === 'macro' && showMacroScenario && (
+              <Area
+                type="monotone"
+                dataKey="price"
+                stroke="#6B7280"
+                strokeWidth={1.5}
+                fill="none"
+                strokeDasharray="5 5"
+                animationDuration={300}
+                name="price"
+              />
+            )}
+
+            {/* Show adjusted price line when in macro mode */}
+            {scenarioMode === 'macro' && showMacroScenario ? (
+              <Area
+                type="monotone"
+                dataKey="adjustedPrice"
+                stroke="#E6007A"
+                strokeWidth={2}
+                fill="url(#adjustedPriceGradient)"
+                animationDuration={300}
+                name="adjustedPrice"
+              />
+            ) : (
+              <Area
+                type="monotone"
+                dataKey="price"
+                stroke={isPositive ? '#10b981' : '#ef4444'}
+                strokeWidth={2}
+                fill="url(#priceGradient)"
+                animationDuration={300}
+                name="price"
+              />
+            )}
           </AreaChart>
         </ResponsiveContainer>
       </div>

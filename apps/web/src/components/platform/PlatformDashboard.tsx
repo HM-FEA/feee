@@ -11,6 +11,7 @@ import PriceHistoryChart from '../finance/PriceHistoryChart';
 import Movers from '../finance/Movers';
 import Watchlist from '../finance/Watchlist';
 import PriceAlertModal from '../finance/PriceAlertModal';
+import MacroControlPanel from '../macro/MacroControlPanel';
 import {
   MACRO_VARIABLES,
   MACRO_CATEGORIES,
@@ -41,62 +42,170 @@ const generateDeterministicMock = (seed: string, min: number, max: number) => {
 };
 
 // Analysis Components
-const FundamentalAnalysis = ({ company }: { company: Company }) => (
-  <div className="space-y-6 text-sm">
-    {/* Key Ratios Section */}
-    <div>
-      <h4 className="font-bold text-text-primary mb-3">Key Ratios</h4>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
-          <div className="text-text-secondary text-xs mb-1">P/E Ratio</div>
-          <div className="font-bold text-text-primary text-lg">{company.ratios?.pe_ratio?.toFixed(1) || 'N/A'}</div>
+const FundamentalAnalysis = ({ company }: { company: Company }) => {
+  const calculateAdjustedFinancials = useMacroStore(state => state.calculateAdjustedFinancials);
+  const adjustedFinancials = calculateAdjustedFinancials(company);
+
+  // Calculate percentage changes
+  const calculateChange = (base: number, adjusted: number) => {
+    if (base === 0) return 0;
+    return ((adjusted - base) / base) * 100;
+  };
+
+  const revenueChange = calculateChange(company.financials.revenue, adjustedFinancials.revenue);
+  const operatingIncomeChange = calculateChange(
+    company.financials.operating_income || 0,
+    adjustedFinancials.operating_income
+  );
+  const netIncomeChange = calculateChange(company.financials.net_income, adjustedFinancials.net_income);
+  const baseEbitda = (company.financials.operating_income || 0) * 1.2;
+  const ebitdaChange = calculateChange(baseEbitda, adjustedFinancials.ebitda);
+  const assetsChange = calculateChange(company.financials.total_assets, adjustedFinancials.total_assets);
+  const debtChange = calculateChange(company.financials.total_debt, adjustedFinancials.total_debt);
+  const equityChange = calculateChange(company.financials.equity, adjustedFinancials.equity);
+
+  const ChangeIndicator = ({ change }: { change: number }) => {
+    if (Math.abs(change) < 0.01) return <span className="text-text-tertiary text-xs ml-2">—</span>;
+    return (
+      <span className={`text-xs font-semibold ml-2 ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+        {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-6 text-sm">
+      {/* Key Ratios Section */}
+      <div>
+        <h4 className="font-bold text-text-primary mb-3">Key Ratios</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+            <div className="text-text-secondary text-xs mb-1">P/E Ratio</div>
+            <div className="font-bold text-text-primary text-lg">{company.ratios?.pe_ratio?.toFixed(1) || 'N/A'}</div>
+          </div>
+          <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+            <div className="text-text-secondary text-xs mb-1">ROE</div>
+            <div className="font-bold text-text-primary text-lg">{company.ratios?.roe?.toFixed(1) || 'N/A'}%</div>
+          </div>
+          <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+            <div className="text-text-secondary text-xs mb-1">D/E Ratio</div>
+            <div className="font-bold text-text-primary text-lg">{company.ratios?.de_ratio?.toFixed(1) || 'N/A'}</div>
+          </div>
+          <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+            <div className="text-text-secondary text-xs mb-1">ICR</div>
+            <div className={`font-bold text-lg ${
+              company.ratios?.icr && company.ratios.icr > 2
+                ? 'text-status-safe'
+                : company.ratios?.icr && company.ratios.icr > 0
+                ? 'text-status-caution'
+                : 'text-status-danger'
+            }`}>
+              {company.ratios?.icr?.toFixed(1) || 'N/A'}
+            </div>
+          </div>
         </div>
-        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
-          <div className="text-text-secondary text-xs mb-1">ROE</div>
-          <div className="font-bold text-text-primary text-lg">{company.ratios?.roe?.toFixed(1) || 'N/A'}%</div>
+      </div>
+
+      {/* Financial Statements - Side-by-Side Comparison */}
+      <div>
+        <h4 className="font-bold text-text-primary mb-3">Income Statement</h4>
+        <div className="grid grid-cols-3 gap-2 mb-2 text-xs text-text-tertiary">
+          <div></div>
+          <div className="text-center font-semibold">Base</div>
+          <div className="text-center font-semibold">Macro-Adjusted</div>
         </div>
-        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
-          <div className="text-text-secondary text-xs mb-1">D/E Ratio</div>
-          <div className="font-bold text-text-primary text-lg">{company.ratios?.de_ratio?.toFixed(1) || 'N/A'}</div>
+        <div className="space-y-2 p-4 bg-black rounded-lg">
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Revenue:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.revenue.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${revenueChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.revenue.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={revenueChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Operating Income:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.operating_income?.toLocaleString() || 'N/A'} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${operatingIncomeChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.operating_income.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={operatingIncomeChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Net Income:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.net_income.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${netIncomeChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.net_income.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={netIncomeChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">EBITDA:</span>
+            <span className="font-mono text-text-primary text-center">${baseEbitda.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${ebitdaChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.ebitda.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={ebitdaChange} />
+            </div>
+          </div>
         </div>
-        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
-          <div className="text-text-secondary text-xs mb-1">ICR</div>
-          <div className={`font-bold text-lg ${
-            company.ratios?.icr && company.ratios.icr > 2
-              ? 'text-status-safe'
-              : company.ratios?.icr && company.ratios.icr > 0
-              ? 'text-status-caution'
-              : 'text-status-danger'
-          }`}>
-            {company.ratios?.icr?.toFixed(1) || 'N/A'}
+      </div>
+
+      <div>
+        <h4 className="font-bold text-text-primary mb-3">Balance Sheet</h4>
+        <div className="grid grid-cols-3 gap-2 mb-2 text-xs text-text-tertiary">
+          <div></div>
+          <div className="text-center font-semibold">Base</div>
+          <div className="text-center font-semibold">Macro-Adjusted</div>
+        </div>
+        <div className="space-y-2 p-4 bg-black rounded-lg">
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Total Assets:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.total_assets.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${assetsChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.total_assets.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={assetsChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Total Debt:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.total_debt.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${debtChange <= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.total_debt.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={debtChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Equity:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.equity.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${equityChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.equity.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={equityChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Current Ratio:</span>
+            <span className="font-mono text-text-primary text-center">{(company.financials.total_assets / company.financials.total_debt * 0.4).toFixed(2)}</span>
+            <span className="font-mono text-text-primary text-center">{(adjustedFinancials.total_assets / adjustedFinancials.total_debt * 0.4).toFixed(2)}</span>
           </div>
         </div>
       </div>
     </div>
-
-    {/* Financial Statements */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        <h4 className="font-bold text-text-primary mb-3">Income Statement</h4>
-        <div className="space-y-2 p-4 bg-black rounded-lg">
-          <div className="flex justify-between"><span className="text-text-secondary">Revenue:</span><span className="font-mono text-text-primary">${company.financials.revenue.toLocaleString()} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">Operating Income:</span><span className="font-mono text-text-primary">${company.financials.operating_income?.toLocaleString() || 'N/A'} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">Net Income:</span><span className="font-mono text-text-primary">${company.financials.net_income.toLocaleString()} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">EBITDA:</span><span className="font-mono text-text-primary">${(company.financials.operating_income ? company.financials.operating_income * 1.2 : 0).toLocaleString()} M</span></div>
-        </div>
-      </div>
-      <div>
-        <h4 className="font-bold text-text-primary mb-3">Balance Sheet</h4>
-        <div className="space-y-2 p-4 bg-black rounded-lg">
-          <div className="flex justify-between"><span className="text-text-secondary">Total Assets:</span><span className="font-mono text-text-primary">${company.financials.total_assets.toLocaleString()} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">Total Debt:</span><span className="font-mono text-text-primary">${company.financials.total_debt.toLocaleString()} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">Equity:</span><span className="font-mono text-text-primary">${company.financials.equity.toLocaleString()} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">Current Ratio:</span><span className="font-mono text-text-primary">{(company.financials.total_assets / company.financials.total_debt * 0.4).toFixed(2)}</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 const TechnicalAnalysis = ({ ticker }: { ticker: string }) => {
   const data = useMemo(() => Array.from({ length: 30 }, (_, i) => {
@@ -443,6 +552,7 @@ export default function PlatformDashboard() {
   const macroState = useMacroStore(state => state.macroState);
   const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
   const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+  const calculateAdjustedFinancials = useMacroStore(state => state.calculateAdjustedFinancials);
 
   const [selectedCompany, setSelectedCompany] = useState<Company>(companies[0]);
   const [analysisTab, setAnalysisTab] = useState('Fundamental');
@@ -525,76 +635,84 @@ export default function PlatformDashboard() {
 
         {/* CENTER (60%) - Main Analysis: Ontology-Focused */}
         <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Macro Impact Analysis (PRIMARY) - Fixed max height */}
-          <div className="h-[200px] max-h-[200px] flex-shrink-0">
-            <Card className="h-full flex flex-col p-4 overflow-hidden">
-              <h3 className="text-base font-semibold text-text-primary mb-4">
-                Macro Impact Analysis
-              </h3>
-              <div className="space-y-4">
-                {/* Scenario Display - Key Variables */}
-                <div className="grid grid-cols-3 gap-3 text-xs">
-                  <div className="bg-background-secondary rounded-lg p-2">
-                    <div className="text-text-tertiary mb-1">Fed Rate</div>
-                    <div className="text-accent-cyan font-mono font-semibold">
-                      {macroState.fed_funds_rate?.toFixed(2) || 'N/A'}%
+          {/* Macro Impact Analysis with Controls */}
+          <div className="h-[500px] max-h-[500px] flex-shrink-0">
+            <Card className="h-full flex gap-4 p-4 overflow-hidden">
+              {/* Left: Impact Display */}
+              <div className="flex-1 flex flex-col">
+                <h3 className="text-base font-semibold text-text-primary mb-4">
+                  Macro Impact Analysis
+                </h3>
+                <div className="space-y-4">
+                  {/* Scenario Display - Key Variables */}
+                  <div className="grid grid-cols-3 gap-3 text-xs">
+                    <div className="bg-background-secondary rounded-lg p-2">
+                      <div className="text-text-tertiary mb-1">Fed Rate</div>
+                      <div className="text-accent-cyan font-mono font-semibold">
+                        {macroState.fed_funds_rate?.toFixed(2) || 'N/A'}%
+                      </div>
+                    </div>
+                    <div className="bg-background-secondary rounded-lg p-2">
+                      <div className="text-text-tertiary mb-1">US Tariff</div>
+                      <div className="text-accent-magenta font-mono font-semibold">
+                        {macroState.us_tariff_rate?.toFixed(0) || 'N/A'}%
+                      </div>
+                    </div>
+                    <div className="bg-background-secondary rounded-lg p-2">
+                      <div className="text-text-tertiary mb-1">KRW/USD</div>
+                      <div className="text-accent-emerald font-mono font-semibold">
+                        {macroState.krw_usd?.toFixed(0) || 'N/A'}
+                      </div>
                     </div>
                   </div>
-                  <div className="bg-background-secondary rounded-lg p-2">
-                    <div className="text-text-tertiary mb-1">US Tariff</div>
-                    <div className="text-accent-magenta font-mono font-semibold">
-                      {macroState.us_tariff_rate?.toFixed(0) || 'N/A'}%
+
+                  {/* Impact Result */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-text-secondary mb-2">
+                        Estimated Net Income Impact
+                      </p>
+                      {(() => {
+                        // Get impact from store based on company sector
+                        let impact = 0;
+
+                        if (selectedCompany.sector === 'BANKING') {
+                          impact = calculatedImpacts.banking;
+                        } else if (selectedCompany.sector === 'REALESTATE') {
+                          impact = calculatedImpacts.realEstate;
+                        } else if (selectedCompany.sector === 'MANUFACTURING') {
+                          impact = calculatedImpacts.manufacturing;
+                        } else if (selectedCompany.sector === 'SEMICONDUCTOR') {
+                          impact = calculatedImpacts.semiconductor;
+                        }
+
+                        return (
+                          <p className={`text-4xl font-bold ${
+                            impact >= 0 ? 'text-status-safe' : 'text-status-danger'
+                          }`}>
+                            {impact.toFixed(2)}%
+                          </p>
+                        );
+                      })()}
                     </div>
-                  </div>
-                  <div className="bg-background-secondary rounded-lg p-2">
-                    <div className="text-text-tertiary mb-1">KRW/USD</div>
-                    <div className="text-accent-emerald font-mono font-semibold">
-                      {macroState.krw_usd?.toFixed(0) || 'N/A'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Impact Result - NOW USING STORE! */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-text-secondary mb-2">
-                      Estimated Net Income Impact
-                    </p>
-                    {(() => {
-                      // Get impact from store based on company sector
-                      let impact = 0;
-
-                      if (selectedCompany.sector === 'BANKING') {
-                        impact = calculatedImpacts.banking;
-                      } else if (selectedCompany.sector === 'REALESTATE') {
-                        impact = calculatedImpacts.realEstate;
-                      } else if (selectedCompany.sector === 'MANUFACTURING') {
-                        impact = calculatedImpacts.manufacturing;
-                      } else if (selectedCompany.sector === 'SEMICONDUCTOR') {
-                        impact = calculatedImpacts.semiconductor;
-                      }
-
-                      return (
-                        <p className={`text-4xl font-bold ${
-                          impact >= 0 ? 'text-status-safe' : 'text-status-danger'
-                        }`}>
-                          {impact.toFixed(2)}%
+                    <div className="flex items-center justify-center p-4 bg-background-tertiary rounded-lg">
+                      <div className="text-center">
+                        <p className="text-xs text-text-secondary mb-2">Company</p>
+                        <p className="text-sm font-semibold text-text-primary">
+                          {selectedCompany.ticker}
                         </p>
-                      );
-                    })()}
-                  </div>
-                  <div className="flex items-center justify-center p-4 bg-background-tertiary rounded-lg">
-                    <div className="text-center">
-                      <p className="text-xs text-text-secondary mb-2">Company</p>
-                      <p className="text-sm font-semibold text-text-primary">
-                        {selectedCompany.ticker}
-                      </p>
-                      <p className="text-xs text-accent-cyan mt-1">
-                        {selectedCompany.sector}
-                      </p>
+                        <p className="text-xs text-accent-cyan mt-1">
+                          {selectedCompany.sector}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Right: Macro Controls */}
+              <div className="w-[300px] border-l border-border-primary pl-4">
+                <MacroControlPanel />
               </div>
             </Card>
           </div>
@@ -618,6 +736,7 @@ export default function PlatformDashboard() {
                 <PriceHistoryChart
                   ticker={selectedCompany.ticker}
                   basePrice={selectedCompany.financials.equity / 200}
+                  adjustedBasePrice={calculateAdjustedFinancials(selectedCompany).equity / 200}
                 />
               </div>
             </Card>
