@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { companies } from '@/data/companies';
 import { MACRO_CATEGORIES } from '@/data/macroVariables';
 import { useMacroStore } from '@/lib/store/macroStore';
+import { useRelationshipStore, generateLinkId, getLinkColor } from '@/lib/store/relationshipStore';
 import {
   NVIDIA,
   NVIDIA_PRODUCTS,
@@ -32,6 +33,7 @@ interface GraphNode {
 }
 
 interface GraphLink {
+  id?: string;
   source: string;
   target: string;
   type: 'impact' | 'supply' | 'ownership' | 'loan' | 'competition';
@@ -105,27 +107,36 @@ function generateGraphData(): GraphData {
 
     // Connect macro to sectors (impact relationships)
     if (sector === 'BANKING' || sector === 'REALESTATE') {
+      const source = 'macro-MONETARY_POLICY';
+      const target = `sector-${sector}`;
       links.push({
-        source: 'macro-MONETARY_POLICY',
-        target: `sector-${sector}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'impact',
         strength: 5,
         color: 'rgba(255, 215, 0, 0.3)'
       });
     }
     if (sector === 'MANUFACTURING') {
+      const source = 'macro-COMMODITIES';
+      const target = `sector-${sector}`;
       links.push({
-        source: 'macro-COMMODITIES',
-        target: `sector-${sector}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'impact',
         strength: 4,
         color: 'rgba(139, 92, 246, 0.3)'
       });
     }
     if (sector === 'SEMICONDUCTOR') {
+      const source = 'macro-TECH_INNOVATION';
+      const target = `sector-${sector}`;
       links.push({
-        source: 'macro-TECH_INNOVATION',
-        target: `sector-${sector}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'impact',
         strength: 4,
         color: 'rgba(245, 158, 11, 0.3)'
@@ -147,9 +158,12 @@ function generateGraphData(): GraphData {
     });
 
     // Connect to sector
+    const source = `sector-${company.sector}`;
+    const target = `company-${company.ticker}`;
     links.push({
-      source: `sector-${company.sector}`,
-      target: `company-${company.ticker}`,
+      id: generateLinkId(source, target),
+      source,
+      target,
       type: 'ownership',
       strength: 2,
       color: 'rgba(0, 255, 159, 0.2)'
@@ -167,9 +181,12 @@ function generateGraphData(): GraphData {
     const fromCompany = companySample.find(c => c.ticker === from);
     const toCompany = companySample.find(c => c.ticker === to);
     if (fromCompany && toCompany) {
+      const source = `company-${from}`;
+      const target = `company-${to}`;
       links.push({
-        source: `company-${from}`,
-        target: `company-${to}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'supply',
         strength: 1,
         color: 'rgba(0, 229, 255, 0.4)'
@@ -185,9 +202,12 @@ function generateGraphData(): GraphData {
     // Each bank lends to 2-3 companies
     const startIdx = idx * 2;
     nonBankingCompanies.slice(startIdx, startIdx + 3).forEach(company => {
+      const source = `company-${bank.ticker}`;
+      const target = `company-${company.ticker}`;
       links.push({
-        source: `company-${bank.ticker}`,
-        target: `company-${company.ticker}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'loan',
         strength: 1.5,
         color: 'rgba(255, 215, 0, 0.35)'
@@ -206,9 +226,12 @@ function generateGraphData(): GraphData {
     const company1 = companySample.find(c => c.ticker === from);
     const company2 = companySample.find(c => c.ticker === to);
     if (company1 && company2) {
+      const source = `company-${from}`;
+      const target = `company-${to}`;
       links.push({
-        source: `company-${from}`,
-        target: `company-${to}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'competition',
         strength: 0.8,
         color: 'rgba(239, 68, 68, 0.4)'
@@ -245,6 +268,7 @@ function generateGraphData(): GraphData {
 
     // Link: Nvidia PRODUCES Product
     links.push({
+      id: generateLinkId(NVIDIA.id, product.id),
       source: NVIDIA.id,
       target: product.id,
       type: 'supply',
@@ -267,9 +291,12 @@ function generateGraphData(): GraphData {
 
     // Link: H100 USES HBM3E (example)
     if (component.id === 'component-hbm3e') {
+      const source = 'product-h100';
+      const target = component.id;
       links.push({
-        source: 'product-h100',
-        target: component.id,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'supply',
         strength: 1.5,
         color: 'rgba(255, 107, 0, 0.5)',
@@ -290,6 +317,7 @@ function generateGraphData(): GraphData {
 
   // Link: SK Hynix SUPPLIES HBM3E
   links.push({
+    id: generateLinkId(SK_HYNIX.id, 'component-hbm3e'),
     source: SK_HYNIX.id,
     target: 'component-hbm3e',
     type: 'supply',
@@ -311,6 +339,7 @@ function generateGraphData(): GraphData {
 
     // Link: Shareholder OWNS Nvidia
     links.push({
+      id: generateLinkId(shareholder.id, NVIDIA.id),
       source: shareholder.id,
       target: NVIDIA.id,
       type: 'ownership',
@@ -333,6 +362,7 @@ function generateGraphData(): GraphData {
 
     // Link: Customer BUYS H100
     links.push({
+      id: generateLinkId(customer.id, 'product-h100'),
       source: customer.id,
       target: 'product-h100',
       type: 'supply',
@@ -357,13 +387,24 @@ export default function ForceNetworkGraph3D({
   const containerRef = useRef<HTMLDivElement>(null);
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] });
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [selectedLink, setSelectedLink] = useState<GraphLink | null>(null);
   const [filterLevel, setFilterLevel] = useState<'all' | 'macro' | 'sector' | 'company'>('all');
   const [highlightNodes, setHighlightNodes] = useState(new Set<string>());
   const [highlightLinks, setHighlightLinks] = useState(new Set<GraphLink>());
   const [hoverNode, setHoverNode] = useState<GraphNode | null>(null);
+  const [hoverLink, setHoverLink] = useState<GraphLink | null>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
   const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+  const {
+    editedRelationships,
+    getRelationshipStrength,
+    isRelationshipEdited,
+    isRelationshipRemoved,
+    editRelationship,
+    removeRelationship,
+    restoreRelationship,
+  } = useRelationshipStore();
 
   // Measure container size
   useEffect(() => {
@@ -459,8 +500,20 @@ export default function ForceNetworkGraph3D({
     setHoverNode(node);
   }, []);
 
+  const handleLinkClick = useCallback((link: GraphLink) => {
+    setSelectedLink(link);
+    setSelectedNode(null); // Clear node selection when clicking link
+    setHighlightNodes(new Set());
+    setHighlightLinks(new Set());
+  }, []);
+
+  const handleLinkHover = useCallback((link: GraphLink | null) => {
+    setHoverLink(link);
+  }, []);
+
   const handleBackgroundClick = useCallback(() => {
     setSelectedNode(null);
+    setSelectedLink(null);
     setHighlightNodes(new Set());
     setHighlightLinks(new Set());
   }, []);
@@ -636,6 +689,137 @@ export default function ForceNetworkGraph3D({
         </div>
       )}
 
+      {/* Link Editor */}
+      {selectedLink && (
+        <div className="absolute top-4 right-4 z-10 w-80 bg-black/90 backdrop-blur border border-accent-magenta rounded-lg p-4 shadow-2xl shadow-accent-magenta/20">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-accent-magenta">Relationship Editor</h3>
+            <button
+              onClick={() => setSelectedLink(null)}
+              className="text-text-tertiary hover:text-accent-magenta transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            {/* Relationship Type */}
+            <div className="p-2 bg-background-secondary rounded-lg">
+              <div className="text-text-tertiary mb-1">Type:</div>
+              <div className="text-text-primary font-semibold uppercase">{selectedLink.type}</div>
+            </div>
+
+            {/* Source → Target */}
+            <div className="p-2 bg-background-secondary rounded-lg">
+              <div className="text-text-tertiary mb-1">Connection:</div>
+              <div className="flex items-center gap-2">
+                <span className="text-text-primary font-mono text-xs">{selectedLink.source}</span>
+                <span className="text-accent-cyan">→</span>
+                <span className="text-text-primary font-mono text-xs">{selectedLink.target}</span>
+              </div>
+            </div>
+
+            {/* Strength Slider */}
+            <div className="p-2 bg-background-secondary rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-text-tertiary">Strength:</span>
+                <span className="text-accent-cyan font-bold">
+                  {selectedLink.id && isRelationshipEdited(selectedLink.id)
+                    ? getRelationshipStrength(selectedLink.id, selectedLink.strength).toFixed(2)
+                    : selectedLink.strength.toFixed(2)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="10"
+                step="0.1"
+                value={selectedLink.id ? getRelationshipStrength(selectedLink.id, selectedLink.strength) : selectedLink.strength}
+                onChange={(e) => {
+                  const newStrength = parseFloat(e.target.value);
+                  if (selectedLink.id) {
+                    editRelationship({
+                      id: selectedLink.id,
+                      source: typeof selectedLink.source === 'string' ? selectedLink.source : (selectedLink.source as any).id,
+                      target: typeof selectedLink.target === 'string' ? selectedLink.target : (selectedLink.target as any).id,
+                      originalStrength: selectedLink.strength,
+                      editedStrength: newStrength,
+                      type: selectedLink.type,
+                      metadata: {
+                        editedAt: new Date().toISOString(),
+                      },
+                    });
+                  }
+                }}
+                className="w-full h-2 bg-background-tertiary rounded-lg appearance-none cursor-pointer accent-accent-cyan"
+              />
+              <div className="flex justify-between mt-1 text-xs text-text-tertiary">
+                <span>0</span>
+                <span>5</span>
+                <span>10</span>
+              </div>
+            </div>
+
+            {/* Status */}
+            {selectedLink.id && isRelationshipEdited(selectedLink.id) && (
+              <div className="p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-400">✓</span>
+                  <span className="text-green-400 text-xs">Modified by you</span>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2 border-t border-border-primary">
+              {selectedLink.id && isRelationshipEdited(selectedLink.id) && (
+                <button
+                  onClick={() => {
+                    if (selectedLink.id) {
+                      editRelationship({
+                        id: selectedLink.id,
+                        source: typeof selectedLink.source === 'string' ? selectedLink.source : (selectedLink.source as any).id,
+                        target: typeof selectedLink.target === 'string' ? selectedLink.target : (selectedLink.target as any).id,
+                        originalStrength: selectedLink.strength,
+                        editedStrength: selectedLink.strength, // Reset to original
+                        type: selectedLink.type,
+                      });
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-lg transition-colors text-xs"
+                >
+                  Reset
+                </button>
+              )}
+              {selectedLink.id && !isRelationshipRemoved(selectedLink.id) && (
+                <button
+                  onClick={() => {
+                    if (selectedLink.id) {
+                      removeRelationship(selectedLink.id);
+                      setSelectedLink(null);
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 bg-status-danger/20 hover:bg-status-danger/30 text-status-danger rounded-lg transition-colors text-xs"
+                >
+                  Remove Link
+                </button>
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-400">
+              <div className="flex items-start gap-2">
+                <span>💡</span>
+                <div>
+                  <p className="font-semibold mb-1">Polymarket-style Editing</p>
+                  <p>Adjust relationship strength based on your research. Your edits are saved locally.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="absolute bottom-4 left-4 z-10 bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
         <div className="grid grid-cols-3 gap-4 text-xs">
@@ -694,6 +878,16 @@ export default function ForceNetworkGraph3D({
         nodeOpacity={1}
         nodeResolution={32}
         linkColor={(link: any) => {
+          // Check edit status first
+          if (link.id) {
+            if (isRelationshipRemoved(link.id)) {
+              return 'rgba(239, 68, 68, 0.3)'; // Red for removed
+            }
+            if (isRelationshipEdited(link.id)) {
+              return 'rgba(34, 197, 94, 0.7)'; // Green for edited
+            }
+          }
+
           // Sector focus mode
           if (selectedSector) {
             const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
@@ -716,13 +910,34 @@ export default function ForceNetworkGraph3D({
 
           return link.color || 'rgba(255, 255, 255, 0.2)';
         }}
-        linkWidth={(link: any) => link.strength || 1}
-        linkOpacity={0.6}
-        linkDirectionalParticles={2}
+        linkWidth={(link: any) => {
+          const baseWidth = link.strength || 1;
+          // Make edited links thicker
+          if (link.id && isRelationshipEdited(link.id)) {
+            return baseWidth * 1.5;
+          }
+          return baseWidth;
+        }}
+        linkOpacity={(link: any) => {
+          // Dimout removed links
+          if (link.id && isRelationshipRemoved(link.id)) {
+            return 0.1;
+          }
+          return 0.6;
+        }}
+        linkDirectionalParticles={(link: any) => {
+          // More particles for edited links
+          if (link.id && isRelationshipEdited(link.id)) {
+            return 4;
+          }
+          return 2;
+        }}
         linkDirectionalParticleWidth={2}
         linkDirectionalParticleSpeed={0.005}
         onNodeClick={handleNodeClick}
         onNodeHover={handleNodeHover}
+        onLinkClick={handleLinkClick}
+        onLinkHover={handleLinkHover}
         onBackgroundClick={handleBackgroundClick}
         backgroundColor="rgba(0, 0, 0, 0)"
         showNavInfo={false}
