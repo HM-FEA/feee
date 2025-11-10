@@ -6,6 +6,8 @@ import { Search, TrendingUp } from 'lucide-react';
 import { ComposedChart, Area, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart } from 'recharts';
 import NewsFeed from './NewsFeed';
 import CommunityPanel from './CommunityPanel';
+import LivePriceIndicator from '../finance/LivePriceIndicator';
+import PriceHistoryChart from '../finance/PriceHistoryChart';
 import {
   MACRO_VARIABLES,
   MACRO_CATEGORIES,
@@ -442,7 +444,6 @@ export default function PlatformDashboard() {
   const [selectedCompany, setSelectedCompany] = useState<Company>(companies[0]);
   const [analysisTab, setAnalysisTab] = useState('Fundamental');
   const [searchTerm, setSearchTerm] = useState("");
-  const [stockData, setStockData] = useState<any[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<Set<MacroCategory>>(
     new Set(['MONETARY_POLICY'])
   );
@@ -651,73 +652,25 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Stock Chart (Secondary) - Fixed max height */}
-          <div className="h-[300px] max-h-[300px] flex-shrink-0">
+          {/* Live Price & Chart */}
+          <div className="h-[400px] max-h-[400px] flex-shrink-0">
             <Card className="h-full flex flex-col p-4">
-              <h3 className="text-sm font-semibold text-text-primary mb-2">{selectedCompany.name} ({selectedCompany.ticker})</h3>
+              {/* Live Price Indicator */}
+              <LivePriceIndicator
+                ticker={selectedCompany.ticker}
+                currentPrice={selectedCompany.financials.equity / 200}
+                previousClose={(selectedCompany.financials.equity / 200) * 0.99}
+              />
+
+              {/* Divider */}
+              <div className="border-b border-border-primary my-4"></div>
+
+              {/* Price History Chart */}
               <div className="flex-1 min-h-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={stockData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#00E5FF" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1F" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={{ stroke: '#1A1A1F' }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis
-                      yAxisId="price"
-                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={{ stroke: '#1A1A1F' }}
-                      width={60}
-                      tickFormatter={(value) => `$${value.toFixed(0)}`}
-                    />
-                    <YAxis
-                      yAxisId="volume"
-                      orientation="right"
-                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={{ stroke: '#1A1A1F' }}
-                      width={60}
-                      tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
-                    />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F', borderRadius: '8px' }}
-                      labelStyle={{ color: '#00E5FF' }}
-                      formatter={(value: any, name: string) => {
-                        if (name === 'price') return [`$${value.toFixed(2)}`, 'Price'];
-                        if (name === 'volume') return [`${(value / 1000000).toFixed(2)}M`, 'Volume'];
-                        return value;
-                      }}
-                    />
-                    <Area
-                      yAxisId="price"
-                      type="monotone"
-                      dataKey="price"
-                      stroke="#00E5FF"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorPrice)"
-                    />
-                    <Bar
-                      yAxisId="volume"
-                      dataKey="volume"
-                      fill="#E6007A"
-                      opacity={0.3}
-                      barSize={4}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <PriceHistoryChart
+                  ticker={selectedCompany.ticker}
+                  basePrice={selectedCompany.financials.equity / 200}
+                />
               </div>
             </Card>
           </div>
