@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Globe as GlobeIcon, Info, MapPin, TrendingUp } from 'lucide-react';
+import { Card, Button, SectionHeader } from '@/components/ui/DesignSystem';
 
 const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), {
   ssr: false,
@@ -18,43 +19,29 @@ export default function GlobePage() {
 
   return (
     <div className="relative min-h-screen bg-black text-text-primary">
-      {/* Header */}
-      <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur sticky top-0 z-20">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-light text-accent-cyan mb-1 flex items-center gap-2">
-              <GlobeIcon size={24} />
-              Global Capital Flow
-            </h1>
-            <p className="text-sm text-text-secondary font-light">
-              Visualize M2 money supply and capital flows across major economies
-            </p>
-          </div>
-
+      <SectionHeader
+        title="Global Capital Flow"
+        subtitle="Visualize M2 money supply and capital flows across major economies"
+        icon={<GlobeIcon size={24} />}
+        action={
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={() => setView('globe')}
-              className={`px-4 py-2 rounded-lg text-xs transition-all ${
-                view === 'globe'
-                  ? 'bg-accent-cyan text-black shadow-lg shadow-accent-cyan/50'
-                  : 'bg-background-secondary text-text-secondary hover:text-text-primary'
-              }`}
+              variant={view === 'globe' ? 'primary' : 'secondary'}
+              size="sm"
             >
               Globe View
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setView('info')}
-              className={`px-4 py-2 rounded-lg text-xs transition-all ${
-                view === 'info'
-                  ? 'bg-accent-cyan text-black shadow-lg shadow-accent-cyan/50'
-                  : 'bg-background-secondary text-text-secondary hover:text-text-primary'
-              }`}
+              variant={view === 'info' ? 'primary' : 'secondary'}
+              size="sm"
             >
               Info
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Main Content */}
       {view === 'globe' ? (
@@ -65,7 +52,7 @@ export default function GlobePage() {
         <div className="px-6 py-6 max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Overview */}
-            <div className="bg-[#0D0D0F] border border-[#1A1A1F] rounded-xl p-6">
+            <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <GlobeIcon size={18} className="text-accent-cyan" />
                 <h3 className="text-base font-semibold text-text-primary">Overview</h3>
@@ -81,10 +68,10 @@ export default function GlobePage() {
                   revealing the interconnected nature of global finance.
                 </p>
               </div>
-            </div>
+            </Card>
 
             {/* View Modes */}
-            <div className="bg-[#0D0D0F] border border-[#1A1A1F] rounded-xl p-6">
+            <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <MapPin size={18} className="text-accent-magenta" />
                 <h3 className="text-base font-semibold text-text-primary">View Modes</h3>
@@ -107,10 +94,10 @@ export default function GlobePage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Interaction Guide */}
-            <div className="bg-[#0D0D0F] border border-[#1A1A1F] rounded-xl p-6">
+            <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Info size={18} className="text-accent-emerald" />
                 <h3 className="text-base font-semibold text-text-primary">How to Use</h3>
@@ -157,10 +144,10 @@ export default function GlobePage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Key Metrics */}
-            <div className="bg-[#0D0D0F] border border-[#1A1A1F] rounded-xl p-6">
+            <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp size={18} className="text-accent-emerald" />
                 <h3 className="text-base font-semibold text-text-primary">Key Metrics</h3>
@@ -188,7 +175,7 @@ export default function GlobePage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         </div>
       )}

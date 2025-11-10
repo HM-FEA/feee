@@ -33,7 +33,7 @@
     "recharts": "^2.13.3",
     "swr": "^2.2.5",
     "tailwind-merge": "^2.6.0",
-    "three": "^0.160.0",
+    "three": "^0.181.1",
     "three-globe": "^2.45.0",
     "zustand": "^5.0.1"
   },

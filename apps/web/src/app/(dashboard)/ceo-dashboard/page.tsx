@@ -14,15 +14,10 @@ import {
   getVariablesByCategory
 } from '@/data/macroVariables';
 import { companies, Company } from '@/data/companies';
+import { Card, Button, Badge, SectionHeader } from '@/components/ui/DesignSystem';
 
 type AdminTab = 'overview' | 'companies' | 'macros' | 'connections' | 'add-data';
 type ViewMode = 'list' | 'grid' | 'circuit';
-
-const Card = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
-  <div className={`bg-[#0D0D0F] border border-[#1A1A1F] rounded-xl p-4 ${className}`}>
-    {children}
-  </div>
-);
 
 // Sector colors for visualization
 const SECTOR_COLORS: Record<string, string> = {
@@ -249,27 +244,33 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="space-y-2">
-                <button
+                <Button
                   onClick={() => setActiveTab('add-data')}
-                  className="w-full px-4 py-3 bg-accent-cyan/10 hover:bg-accent-cyan/20 border border-accent-cyan rounded-lg text-sm text-accent-cyan transition-all flex items-center gap-2"
+                  variant="secondary"
+                  size="md"
+                  className="w-full justify-start bg-accent-cyan/10 hover:bg-accent-cyan/20 border border-accent-cyan text-accent-cyan"
                 >
-                  <Plus size={16} />
+                  <Plus size={16} className="mr-2" />
                   Add New Company
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setActiveTab('connections')}
-                  className="w-full px-4 py-3 bg-accent-magenta/10 hover:bg-accent-magenta/20 border border-accent-magenta rounded-lg text-sm text-accent-magenta transition-all flex items-center gap-2"
+                  variant="secondary"
+                  size="md"
+                  className="w-full justify-start bg-accent-magenta/10 hover:bg-accent-magenta/20 border border-accent-magenta text-accent-magenta"
                 >
-                  <GitBranch size={16} />
+                  <GitBranch size={16} className="mr-2" />
                   View Connections
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setActiveTab('macros')}
-                  className="w-full px-4 py-3 bg-accent-emerald/10 hover:bg-accent-emerald/20 border border-accent-emerald rounded-lg text-sm text-accent-emerald transition-all flex items-center gap-2"
+                  variant="secondary"
+                  size="md"
+                  className="w-full justify-start bg-accent-emerald/10 hover:bg-accent-emerald/20 border border-accent-emerald text-accent-emerald"
                 >
-                  <Sliders size={16} />
+                  <Sliders size={16} className="mr-2" />
                   Configure Macros
-                </button>
+                </Button>
               </div>
 
               <div className="mt-6 p-3 bg-background-secondary rounded-lg">
@@ -791,12 +792,14 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
-                <button
+                <Button
                   onClick={() => window.location.href = '/network-graph'}
-                  className="mt-8 px-6 py-3 bg-accent-cyan text-black font-semibold rounded-lg hover:bg-accent-cyan/90 transition-all"
+                  variant="primary"
+                  size="lg"
+                  className="mt-8"
                 >
                   Open Interactive Network Graph
-                </button>
+                </Button>
               </div>
             </Card>
           </div>
@@ -880,18 +883,22 @@ export default function AdminDashboardPage() {
 
                 {/* Submit Buttons */}
                 <div className="flex gap-3 pt-4 border-t border-border-primary">
-                  <button
+                  <Button
                     type="button"
-                    className="flex-1 px-4 py-2 bg-background-secondary text-text-secondary rounded-lg hover:bg-background-tertiary transition-all"
+                    variant="secondary"
+                    size="md"
+                    className="flex-1"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
-                    className="flex-1 px-4 py-2 bg-accent-cyan text-black font-semibold rounded-lg hover:bg-accent-cyan/90 transition-all"
+                    variant="primary"
+                    size="md"
+                    className="flex-1"
                   >
                     Add Company
-                  </button>
+                  </Button>
                 </div>
               </form>
 

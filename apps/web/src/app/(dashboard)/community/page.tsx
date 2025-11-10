@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Heart, MessageCircle, Share2, TrendingUp, Search, Filter, User, Check, BarChart, Bot, Newspaper, HelpCircle, ClipboardList, Star, Hash, Trophy, Plus, Flame, Users } from 'lucide-react';
+import { Card, Button, Badge, SectionHeader } from '@/components/ui/DesignSystem';
 
 // Types
 interface Post {
@@ -108,12 +109,6 @@ const TRENDING_TAGS = [
   { tag: '#bots', posts: 76 },
   { tag: '#semiconductor', posts: 64 },
 ];
-
-const Card = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
-  <div className={`bg-[#0D0D0F] border border-[#1A1A1F] rounded-2xl p-4 sm:p-6 ${className}`}>
-    {children}
-  </div>
-);
 
 const PostCard = ({ post }: { post: Post }) => {
   const [hasLiked, setHasLiked] = useState(post.hasLiked || false);
@@ -227,21 +222,19 @@ export default function CommunityPage() {
     <div className="relative min-h-screen bg-black text-text-primary">
       <div className="relative z-10">
         {/* Header */}
-        <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-accent-cyan flex items-center gap-2">
-                <Users size={24} />
-                Community
-              </h1>
-              <p className="text-sm text-text-secondary">Connect, share, and learn from fellow traders</p>
-            </div>
-            <button className="px-4 py-2 bg-accent-cyan text-black font-semibold rounded-lg hover:bg-accent-cyan/80 transition-all text-sm flex items-center gap-2">
-              <Plus size={16} />
+        <SectionHeader
+          title="Community"
+          subtitle="Connect, share, and learn from fellow traders"
+          icon={<Users size={24} />}
+          action={
+            <Button variant="primary" size="md">
+              <Plus size={16} className="mr-2" />
               New Post
-            </button>
-          </div>
+            </Button>
+          }
+        />
 
+        <div className="px-6 py-4 border-b border-border-primary bg-black/50 backdrop-blur">
           {/* Filters */}
           <div className="flex gap-3 mb-4">
             <div className="flex-1 relative">
