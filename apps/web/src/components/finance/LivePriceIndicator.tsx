@@ -1,20 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Bell } from 'lucide-react';
 
 interface LivePriceIndicatorProps {
   ticker: string;
   currentPrice: number;
   previousClose?: number;
   currency?: string;
+  onOpenAlert?: () => void;
 }
 
 export default function LivePriceIndicator({
   ticker,
   currentPrice,
   previousClose = 0,
-  currency = 'USD'
+  currency = 'USD',
+  onOpenAlert
 }: LivePriceIndicatorProps) {
   const [price, setPrice] = useState(currentPrice);
   const [flash, setFlash] = useState<'up' | 'down' | null>(null);
@@ -94,8 +96,19 @@ export default function LivePriceIndicator({
         </div>
       </div>
 
+      {/* Alert Button */}
+      {onOpenAlert && (
+        <button
+          onClick={onOpenAlert}
+          className="ml-auto p-2 rounded-lg bg-accent-cyan/10 hover:bg-accent-cyan/20 text-accent-cyan transition-all border border-accent-cyan/30"
+          title="Set Price Alert"
+        >
+          <Bell size={16} />
+        </button>
+      )}
+
       {/* Market Status */}
-      <div className="ml-auto">
+      <div className={onOpenAlert ? '' : 'ml-auto'}>
         <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-400 font-medium">
           Market Open
         </span>

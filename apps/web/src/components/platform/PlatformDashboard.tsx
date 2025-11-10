@@ -2,12 +2,15 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { companies, Company } from '@/data/companies';
-import { Search, TrendingUp } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { ComposedChart, Area, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart } from 'recharts';
 import NewsFeed from './NewsFeed';
 import CommunityPanel from './CommunityPanel';
 import LivePriceIndicator from '../finance/LivePriceIndicator';
 import PriceHistoryChart from '../finance/PriceHistoryChart';
+import Movers from '../finance/Movers';
+import Watchlist from '../finance/Watchlist';
+import PriceAlertModal from '../finance/PriceAlertModal';
 import {
   MACRO_VARIABLES,
   MACRO_CATEGORIES,
@@ -444,6 +447,7 @@ export default function PlatformDashboard() {
   const [selectedCompany, setSelectedCompany] = useState<Company>(companies[0]);
   const [analysisTab, setAnalysisTab] = useState('Fundamental');
   const [searchTerm, setSearchTerm] = useState("");
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<MacroCategory>>(
     new Set(['MONETARY_POLICY'])
   );
@@ -544,29 +548,15 @@ export default function PlatformDashboard() {
       {/* Main Content: 20% | 60% | 20% */}
       <div className="flex-1 flex gap-4 px-4 py-4 overflow-hidden">
 
-        {/* LEFT SIDEBAR (20%) - Trending + Community */}
+        {/* LEFT SIDEBAR (20%) - Movers + Community */}
         <div className="w-[20%] min-w-0 flex flex-col gap-4">
-          {/* Trending - max 400px */}
+          {/* Movers (Gainers/Losers) - max 400px */}
           <div className="max-h-[400px] flex-shrink-0">
-            <Card className="h-full flex flex-col">
-              <CardTitle icon={<TrendingUp size={16}/>} className="text-xs">Trending</CardTitle>
-              <div className="space-y-2 flex-1 overflow-y-auto pr-2">
-                {['TSLA', 'NVDA', 'AAPL', 'MSFT', 'META'].map(ticker => {
-                  const company = companies.find(c => c.ticker === ticker);
-                  return company ? (
-                    <button
-                      key={ticker}
-                      onClick={() => setSelectedCompany(company)}
-                      className={`w-full p-2 rounded text-left transition-all text-xs ${
-                        selectedCompany.ticker === ticker ? 'bg-accent-cyan/10 border border-accent-cyan' : 'hover:bg-background-tertiary'
-                      }`}
-                    >
-                      <div className="font-semibold text-text-primary">{ticker}</div>
-                      <div className="text-text-secondary text-xs truncate">{company.name}</div>
-                    </button>
-                  ) : null;
-                })}
-              </div>
+            <Card className="h-full flex flex-col p-4">
+              <Movers onSelectCompany={(stock) => {
+                const company = companies.find(c => c.ticker === stock.ticker);
+                if (company) setSelectedCompany(company);
+              }} />
             </Card>
           </div>
 
@@ -660,6 +650,7 @@ export default function PlatformDashboard() {
                 ticker={selectedCompany.ticker}
                 currentPrice={selectedCompany.financials.equity / 200}
                 previousClose={(selectedCompany.financials.equity / 200) * 0.99}
+                onOpenAlert={() => setIsAlertModalOpen(true)}
               />
 
               {/* Divider */}
@@ -700,8 +691,18 @@ export default function PlatformDashboard() {
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR (20%) - Company List + News Feed */}
+        {/* RIGHT SIDEBAR (20%) - Watchlist + Company List + News Feed */}
         <div className="w-[20%] min-w-0 flex flex-col gap-4">
+          {/* Watchlist - max 300px */}
+          <div className="max-h-[300px] flex-shrink-0">
+            <Card className="h-full flex flex-col p-4">
+              <Watchlist onSelectCompany={(stock) => {
+                const company = companies.find(c => c.ticker === stock.ticker);
+                if (company) setSelectedCompany(company);
+              }} />
+            </Card>
+          </div>
+
           {/* Company List - max 400px */}
           <div className="max-h-[400px] flex-shrink-0">
             <Card className="h-full flex flex-col overflow-hidden">
@@ -739,6 +740,14 @@ export default function PlatformDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Price Alert Modal */}
+      <PriceAlertModal
+        isOpen={isAlertModalOpen}
+        onClose={() => setIsAlertModalOpen(false)}
+        ticker={selectedCompany.ticker}
+        currentPrice={selectedCompany.financials.equity / 200}
+      />
     </div>
   );
 }
