@@ -1,8 +1,17 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Heart, MessageCircle, Share2, TrendingUp, Search, Filter, User, Check, BarChart, Bot, Newspaper, HelpCircle, ClipboardList, Star, Hash, Trophy, Plus, Flame, Users } from 'lucide-react';
+import { Heart, MessageCircle, Share2, TrendingUp, Search, Filter, User, Check, BarChart, Bot, Newspaper, HelpCircle, ClipboardList, Star, Hash, Trophy, Plus, Flame, Users, ThumbsUp, ThumbsDown, Clock, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 import { Card, Button, Badge, SectionHeader } from '@/components/ui/DesignSystem';
+import {
+  useProposalStore,
+  Proposal,
+  ProposalType,
+  ProposalStatus,
+  getNetVotes,
+  getApprovalRate,
+  hasUserVoted
+} from '@/lib/store/proposalStore';
 
 // Types
 interface Post {
@@ -195,9 +204,64 @@ const PostCard = ({ post }: { post: Post }) => {
   );
 };
 
+const PROPOSAL_TYPE_LABELS: Record<ProposalType, { label: string; icon: string; color: string }> = {
+  add_relationship: { label: 'Add Link', icon: '🔗', color: '#10B981' },
+  edit_relationship: { label: 'Edit Link', icon: '✏️', color: '#06B6D4' },
+  remove_relationship: { label: 'Remove Link', icon: '🗑️', color: '#EF4444' },
+  add_entity: { label: 'Add Entity', icon: '➕', color: '#8B5CF6' },
+};
+
 export default function CommunityPage() {
+  const [mainTab, setMainTab] = useState<'feed' | 'proposals'>('feed');
   const [activeFilter, setActiveFilter] = useState<'all' | 'discussion' | 'question' | 'analysis' | 'news'>('all');
+  const [proposalFilter, setProposalFilter] = useState<'trending' | 'pending' | 'approved' | 'rejected'>('trending');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
+
+  const {
+    proposals,
+    currentUserId,
+    createProposal,
+    voteProposal,
+    removeVote,
+    getTrendingProposals,
+    getProposalsByStatus,
+  } = useProposalStore();
+
+  // Add initial proposals if empty
+  useMemo(() => {
+    if (Object.keys(proposals).length === 0) {
+      createProposal({
+        type: 'add_relationship',
+        title: 'Add Microsoft → Azure AI relationship',
+        description: 'Microsoft heavily invests in Azure AI infrastructure.',
+        relationship: {
+          source: 'company-microsoft',
+          target: 'product-azure-ai',
+          type: 'supply',
+          strength: 8.5,
+        },
+        createdBy: 'user-alice',
+        reasoning: 'Microsoft has committed $10B+ to Azure AI infrastructure in 2024.',
+        sources: ['https://azure.microsoft.com'],
+      });
+
+      createProposal({
+        type: 'edit_relationship',
+        title: 'Increase Fed Rate → Banking impact strength',
+        description: 'Banking sector is more sensitive to rate changes.',
+        relationship: {
+          source: 'macro-fed_rate',
+          target: 'sector-banking',
+          type: 'impact',
+          strength: 9.2,
+          originalStrength: 7.5,
+        },
+        createdBy: 'user-bob',
+        reasoning: 'Q4 2024 data shows 15% increase in bank profitability per 1% rate hike.',
+      });
+    }
+  }, []);
 
   const filteredPosts = useMemo(() => {
     let filtered = MOCK_POSTS;
