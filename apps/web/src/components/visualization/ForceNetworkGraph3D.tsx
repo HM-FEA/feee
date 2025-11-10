@@ -23,7 +23,7 @@ interface GraphNode {
 interface GraphLink {
   source: string;
   target: string;
-  type: 'impact' | 'supply' | 'ownership';
+  type: 'impact' | 'supply' | 'ownership' | 'loan' | 'competition';
   strength: number;
   color?: string;
 }
@@ -159,7 +159,46 @@ function generateGraphData(): GraphData {
         target: `company-${to}`,
         type: 'supply',
         strength: 1,
-        color: 'rgba(0, 229, 255, 0.3)'
+        color: 'rgba(0, 229, 255, 0.4)'
+      });
+    }
+  });
+
+  // Add loan relationships (Banks -> Companies)
+  const bankingCompanies = companySample.filter(c => c.sector === 'BANKING');
+  const nonBankingCompanies = companySample.filter(c => c.sector !== 'BANKING').slice(0, 8);
+
+  bankingCompanies.forEach((bank, idx) => {
+    // Each bank lends to 2-3 companies
+    const startIdx = idx * 2;
+    nonBankingCompanies.slice(startIdx, startIdx + 3).forEach(company => {
+      links.push({
+        source: `company-${bank.ticker}`,
+        target: `company-${company.ticker}`,
+        type: 'loan',
+        strength: 1.5,
+        color: 'rgba(255, 215, 0, 0.35)'
+      });
+    });
+  });
+
+  // Add competition relationships (same sector companies)
+  const competitionPairs = [
+    ['005930', '000660'], // Samsung vs SK Hynix (Semiconductor)
+    ['086790', '035420'], // KB Financial vs Shinhan (Banking)
+    ['051910', '034730'], // LG Chem vs SK (Manufacturing)
+  ];
+
+  competitionPairs.forEach(([from, to]) => {
+    const company1 = companySample.find(c => c.ticker === from);
+    const company2 = companySample.find(c => c.ticker === to);
+    if (company1 && company2) {
+      links.push({
+        source: `company-${from}`,
+        target: `company-${to}`,
+        type: 'competition',
+        strength: 0.8,
+        color: 'rgba(239, 68, 68, 0.4)'
       });
     }
   });
@@ -187,6 +226,25 @@ export default function ForceNetworkGraph3D() {
     if (fgRef.current) {
       fgRef.current.d3Force('charge').strength(-300);
       fgRef.current.d3Force('link').distance(100);
+
+      // Add radial positioning force for better clustering
+      fgRef.current.d3Force('radial', null);
+
+      // Add collision force to prevent overlapping
+      fgRef.current.d3Force('collision',
+        fgRef.current.d3Force('charge').strength(-50).radius(20)
+      );
+
+      // Group nodes by level in concentric circles
+      fgRef.current.d3Force('center-x', (node: any) => {
+        const radius = node.level === 'macro' ? 0 : node.level === 'sector' ? 300 : 600;
+        return radius * Math.cos(node.angle || 0);
+      });
+
+      fgRef.current.d3Force('center-y', (node: any) => {
+        const radius = node.level === 'macro' ? 0 : node.level === 'sector' ? 300 : 600;
+        return radius * Math.sin(node.angle || 0);
+      });
     }
   }, []);
 
@@ -261,9 +319,9 @@ export default function ForceNetworkGraph3D() {
           </div>
         </div>
 
-        {/* Legend */}
+        {/* Node Legend */}
         <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
-          <div className="text-xs text-text-tertiary mb-2 font-semibold">Legend</div>
+          <div className="text-xs text-text-tertiary mb-2 font-semibold">Nodes</div>
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full shadow-lg" style={{ backgroundColor: LEVEL_COLORS.macro, boxShadow: `0 0 10px ${LEVEL_COLORS.macro}` }} />
@@ -276,6 +334,33 @@ export default function ForceNetworkGraph3D() {
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full shadow-lg" style={{ backgroundColor: LEVEL_COLORS.company, boxShadow: `0 0 10px ${LEVEL_COLORS.company}` }} />
               <span className="text-xs text-text-primary">Companies</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Link Legend */}
+        <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
+          <div className="text-xs text-text-tertiary mb-2 font-semibold">Relationships</div>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: 'rgba(255, 215, 0, 0.8)' }} />
+              <span className="text-xs text-text-primary">Impact</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: 'rgba(0, 255, 159, 0.8)' }} />
+              <span className="text-xs text-text-primary">Ownership</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: 'rgba(0, 229, 255, 0.8)' }} />
+              <span className="text-xs text-text-primary">Supply Chain</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: 'rgba(255, 215, 0, 0.7)' }} />
+              <span className="text-xs text-text-primary">Loan</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5 border-t-2 border-dashed" style={{ borderColor: 'rgba(239, 68, 68, 0.8)' }} />
+              <span className="text-xs text-text-primary">Competition</span>
             </div>
           </div>
         </div>

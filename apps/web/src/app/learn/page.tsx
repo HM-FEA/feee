@@ -5,6 +5,13 @@ import { BookOpen, Video, Code, BarChart3, ChevronRight, Search, Lock, Book, Glo
 import { GlobalTopNav } from '@/components/layout/GlobalTopNav';
 
 // Types
+interface Quiz {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+}
+
 interface Lesson {
   id: string;
   title: string;
@@ -19,13 +26,92 @@ interface Lesson {
   completed: boolean;
   tags: string[];
   icon: string;
+  quiz?: Quiz[];
 }
 
 // Mock Data
 const MOCK_LESSONS: Lesson[] = [
-  { id: 'l1', title: 'Understanding the 4-Level Economic Ontology', description: 'The foundational framework that powers Nexus-Alpha.', category: 'Foundations', subcategory: 'Ontology', difficulty: 'beginner', duration: 15, type: 'article', content: '', requiredTier: 'free', completed: true, tags: ['ontology', 'foundations'], icon: 'diamond' },
-  { id: 'l2', title: 'Macro Variables: Interest Rates & Tariffs', description: 'Explore how global interest rate changes impact sectors.', category: 'Foundations', subcategory: 'Macro Variables', difficulty: 'beginner', duration: 12, type: 'video', content: '', requiredTier: 'free', completed: true, tags: ['interest-rates', 'macro'], icon: 'globe' },
-  { id: 'l3', title: 'Financial Ratios 101', description: 'Master P/E, ROE, D/E, and ICR.', category: 'Foundations', subcategory: 'Financial Ratios', difficulty: 'beginner', duration: 18, type: 'interactive', content: '', requiredTier: 'free', completed: false, tags: ['ratios', 'valuation'], icon: 'barchart' },
+  {
+    id: 'l1',
+    title: 'Understanding the 4-Level Economic Ontology',
+    description: 'The foundational framework that powers Nexus-Alpha.',
+    category: 'Foundations',
+    subcategory: 'Ontology',
+    difficulty: 'beginner',
+    duration: 15,
+    type: 'article',
+    content: '',
+    requiredTier: 'free',
+    completed: true,
+    tags: ['ontology', 'foundations'],
+    icon: 'diamond',
+    quiz: [
+      {
+        question: 'What are the 4 levels in the Economic Ontology?',
+        options: ['Macro, Sector, Company, Asset', 'Country, Industry, Firm, Product', 'Global, National, Regional, Local', 'Fundamental, Technical, Sentiment, News'],
+        correctAnswer: 0,
+        explanation: 'The 4-Level Ontology consists of Macro variables → Sectors → Companies → Individual Assets.'
+      },
+      {
+        question: 'What happens when the Fed raises interest rates in our model?',
+        options: ['All sectors benefit equally', 'Banking benefits, Real Estate suffers', 'Technology stocks go up', 'No impact on companies'],
+        correctAnswer: 1,
+        explanation: 'Higher interest rates increase Net Interest Margin for banks (positive) but hurt Real Estate through higher mortgage rates (negative).'
+      }
+    ]
+  },
+  {
+    id: 'l2',
+    title: 'Macro Variables: Interest Rates & Tariffs',
+    description: 'Explore how global interest rate changes impact sectors.',
+    category: 'Foundations',
+    subcategory: 'Macro Variables',
+    difficulty: 'beginner',
+    duration: 12,
+    type: 'video',
+    content: '',
+    requiredTier: 'free',
+    completed: true,
+    tags: ['interest-rates', 'macro'],
+    icon: 'globe',
+    quiz: [
+      {
+        question: 'How do tariffs typically affect manufacturing companies?',
+        options: ['Always positive', 'Always negative', 'Depends on supply chain exposure', 'No effect'],
+        correctAnswer: 2,
+        explanation: 'Tariffs impact depends on whether a company imports raw materials (negative) or exports finished goods (positive/negative depending on retaliation).'
+      }
+    ]
+  },
+  {
+    id: 'l3',
+    title: 'Financial Ratios 101',
+    description: 'Master P/E, ROE, D/E, and ICR.',
+    category: 'Foundations',
+    subcategory: 'Financial Ratios',
+    difficulty: 'beginner',
+    duration: 18,
+    type: 'interactive',
+    content: '',
+    requiredTier: 'free',
+    completed: false,
+    tags: ['ratios', 'valuation'],
+    icon: 'barchart',
+    quiz: [
+      {
+        question: 'What does ICR (Interest Coverage Ratio) measure?',
+        options: ['Stock price performance', 'Ability to pay interest on debt', 'Cash flow generation', 'Market sentiment'],
+        correctAnswer: 1,
+        explanation: 'ICR = EBIT / Interest Expense. It shows how many times a company can cover its interest payments with operating income.'
+      },
+      {
+        question: 'An ICR below 2.0 generally indicates:',
+        options: ['Excellent financial health', 'Potential debt servicing issues', 'High growth potential', 'Low valuation'],
+        correctAnswer: 1,
+        explanation: 'ICR < 2.0 suggests a company may struggle to meet interest obligations, especially if earnings decline.'
+      }
+    ]
+  },
   { id: 'l4', title: 'Fundamental Analysis: Banking Sector', description: 'Learn sector-specific equations for banking.', category: 'Sector Analysis', subcategory: 'Banking', difficulty: 'intermediate', duration: 25, type: 'article', content: '', requiredTier: 'pro', completed: false, tags: ['banking', 'nim'], icon: 'banknote' },
   { id: 'l5', title: 'Real Estate Valuation Methods', description: 'Explore occupancy rates, cap rates, and more.', category: 'Sector Analysis', subcategory: 'Real Estate', difficulty: 'intermediate', duration: 20, type: 'video', content: '', requiredTier: 'pro', completed: false, tags: ['real-estate', 'valuation'], icon: 'home' },
   { id: 'l6', title: 'Technical Analysis: RSI, MACD, etc.', description: 'Master the essential technical indicators.', category: 'Technical Analysis', subcategory: 'Indicators', difficulty: 'intermediate', duration: 22, type: 'interactive', content: '', requiredTier: 'pro', completed: false, tags: ['technical-analysis', 'indicators'], icon: 'trendingup' },
@@ -73,6 +159,123 @@ const LessonCard = ({ lesson, userTier = 'pro', onClick }: { lesson: Lesson, use
         {lesson.tags.length > 0 && <div className="flex gap-1 mb-3 flex-wrap">{lesson.tags.slice(0, 2).map(tag => <span key={tag} className="text-xs bg-accent-cyan/10 text-accent-cyan px-2 py-0.5 rounded-full">#{tag}</span>)}</div>}
         <div className="flex items-center justify-between pt-3 border-t border-border-primary text-xs"><span className="text-text-tertiary">{lesson.subcategory && `${lesson.subcategory}`}</span><ChevronRight size={14} className="text-text-tertiary group-hover:text-accent-cyan transition-colors" /></div>
       </Card>
+    </div>
+  );
+};
+
+const QuizSection = ({ quiz }: { quiz: Quiz[] }) => {
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [score, setScore] = useState(0);
+  const [quizComplete, setQuizComplete] = useState(false);
+
+  const handleAnswer = (answerIndex: number) => {
+    setSelectedAnswer(answerIndex);
+    setShowExplanation(true);
+    if (answerIndex === quiz[currentQuestion].correctAnswer) {
+      setScore(score + 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentQuestion < quiz.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+      setSelectedAnswer(null);
+      setShowExplanation(false);
+    } else {
+      setQuizComplete(true);
+    }
+  };
+
+  const handleRetake = () => {
+    setCurrentQuestion(0);
+    setSelectedAnswer(null);
+    setShowExplanation(false);
+    setScore(0);
+    setQuizComplete(false);
+  };
+
+  if (quizComplete) {
+    const percentage = Math.round((score / quiz.length) * 100);
+    return (
+      <div className="bg-background-secondary border border-border-primary rounded-lg p-6 text-center">
+        <h3 className="text-xl font-bold text-text-primary mb-2">Quiz Complete!</h3>
+        <div className={`text-4xl font-bold mb-4 ${percentage >= 70 ? 'text-status-safe' : 'text-status-caution'}`}>
+          {score} / {quiz.length}
+        </div>
+        <p className="text-sm text-text-secondary mb-6">
+          You scored {percentage}%. {percentage >= 70 ? 'Great job!' : 'Consider reviewing the lesson.'}
+        </p>
+        <button
+          onClick={handleRetake}
+          className="px-6 py-2 bg-accent-cyan text-black font-semibold rounded-lg hover:bg-accent-cyan/80 transition-all text-sm"
+        >
+          Retake Quiz
+        </button>
+      </div>
+    );
+  }
+
+  const current = quiz[currentQuestion];
+
+  return (
+    <div className="bg-background-secondary border border-border-primary rounded-lg p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-accent-cyan">Knowledge Check</h3>
+        <span className="text-xs text-text-tertiary">
+          Question {currentQuestion + 1} of {quiz.length}
+        </span>
+      </div>
+
+      <p className="text-base text-text-primary mb-4 font-medium">{current.question}</p>
+
+      <div className="space-y-2 mb-4">
+        {current.options.map((option, index) => (
+          <button
+            key={index}
+            onClick={() => !showExplanation && handleAnswer(index)}
+            disabled={showExplanation}
+            className={`w-full text-left px-4 py-3 rounded-lg border transition-all text-sm ${
+              showExplanation
+                ? index === current.correctAnswer
+                  ? 'bg-status-safe/20 border-status-safe text-status-safe'
+                  : index === selectedAnswer
+                  ? 'bg-status-danger/20 border-status-danger text-status-danger'
+                  : 'bg-background-tertiary border-border-primary text-text-tertiary'
+                : 'bg-background-tertiary border-border-primary text-text-primary hover:border-accent-cyan cursor-pointer'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">{String.fromCharCode(65 + index)}.</span>
+              <span>{option}</span>
+              {showExplanation && index === current.correctAnswer && (
+                <Check size={16} className="ml-auto" />
+              )}
+              {showExplanation && index === selectedAnswer && index !== current.correctAnswer && (
+                <X size={16} className="ml-auto" />
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {showExplanation && (
+        <div className="bg-accent-cyan/10 border border-accent-cyan/20 rounded-lg p-4 mb-4">
+          <p className="text-xs text-accent-cyan">
+            <strong>Explanation:</strong> {current.explanation}
+          </p>
+        </div>
+      )}
+
+      {showExplanation && (
+        <button
+          onClick={handleNext}
+          className="w-full px-4 py-2 bg-accent-cyan text-black font-semibold rounded-lg hover:bg-accent-cyan/80 transition-all text-sm"
+        >
+          {currentQuestion < quiz.length - 1 ? 'Next Question' : 'Finish Quiz'}
+        </button>
+      )}
     </div>
   );
 };
@@ -164,6 +367,14 @@ const LessonDetailView = ({ lesson, onClose, onComplete, onNext, onPrev }: { les
                 </p>
               </div>
             </div>
+
+            {/* Quiz Section */}
+            {lesson.quiz && lesson.quiz.length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Test Your Knowledge</h3>
+                <QuizSection quiz={lesson.quiz} />
+              </div>
+            )}
           </div>
         </div>
 
