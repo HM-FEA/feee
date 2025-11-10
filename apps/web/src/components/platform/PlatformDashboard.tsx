@@ -544,9 +544,9 @@ export default function PlatformDashboard() {
       <div className="flex-1 flex gap-4 px-4 py-4 overflow-hidden">
 
         {/* LEFT SIDEBAR (20%) - Trending + Community */}
-        <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Trending - 50% */}
-          <div className="h-[50%] min-h-0 overflow-hidden">
+        <div className="w-[20%] min-w-0 flex flex-col gap-4">
+          {/* Trending - max 400px */}
+          <div className="max-h-[400px] flex-shrink-0">
             <Card className="h-full flex flex-col">
               <CardTitle icon={<TrendingUp size={16}/>} className="text-xs">Trending</CardTitle>
               <div className="space-y-2 flex-1 overflow-y-auto pr-2">
@@ -569,8 +569,8 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Community Panel - 50% */}
-          <div className="h-[50%] min-h-0 overflow-hidden">
+          {/* Community Panel - max 400px */}
+          <div className="max-h-[400px] flex-shrink-0">
             <CommunityPanel />
           </div>
         </div>
@@ -723,7 +723,7 @@ export default function PlatformDashboard() {
           </div>
 
           {/* Fundamental & Technical & Analysis Report Tabs (Supplementary) - Remaining space */}
-          <div className="flex-1 min-h-0 max-h-[400px] overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <Card className="h-full flex flex-col overflow-hidden p-4">
               <div className="flex gap-1 border-b border-border-primary pb-3 overflow-x-auto flex-shrink-0">
                 {analysisTabs.map(tab => (
@@ -748,9 +748,9 @@ export default function PlatformDashboard() {
         </div>
 
         {/* RIGHT SIDEBAR (20%) - Company List + News Feed */}
-        <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Company List - 50% */}
-          <div className="h-[50%] min-h-0 overflow-hidden">
+        <div className="w-[20%] min-w-0 flex flex-col gap-4">
+          {/* Company List - max 400px */}
+          <div className="max-h-[400px] flex-shrink-0">
             <Card className="h-full flex flex-col overflow-hidden">
               <CardTitle className="text-xs mb-2 flex-shrink-0">Company List</CardTitle>
               <div className="relative mb-2 flex-shrink-0">
@@ -780,8 +780,8 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* News Feed - 50% */}
-          <div className="h-[50%] min-h-0 overflow-hidden">
+          {/* News Feed - max 400px */}
+          <div className="max-h-[400px] flex-shrink-0">
             <NewsFeed selectedSector={selectedCompany.sector} />
           </div>
         </div>
