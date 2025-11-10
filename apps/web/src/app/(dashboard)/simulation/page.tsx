@@ -35,39 +35,39 @@ export default function SimulationPage() {
   const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
   const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
 
-  // Key macro controls
+  // Key macro controls (using correct variable IDs from macroVariables.ts)
   const macroControls: MacroControl[] = [
     {
-      id: 'fed_rate',
-      label: 'Fed Interest Rate',
-      value: (macroState['fed_rate'] || 0.055) * 100,
+      id: 'fed_funds_rate',
+      label: 'Fed Funds Rate',
+      value: macroState['fed_funds_rate'] || 5.25,
       min: 0,
       max: 10,
       step: 0.25,
       unit: '%'
     },
     {
-      id: 'gdp_growth_us',
+      id: 'us_gdp_growth',
       label: 'US GDP Growth',
-      value: (macroState['gdp_growth_us'] || 0.021) * 100,
+      value: macroState['us_gdp_growth'] || 2.5,
       min: -5,
-      max: 10,
+      max: 7,
       step: 0.1,
       unit: '%'
     },
     {
-      id: 'global_m2_growth',
-      label: 'Global M2 Growth',
-      value: macroState['global_m2_growth'] || 5,
-      min: -10,
-      max: 20,
+      id: 'us_m2_money_supply',
+      label: 'US M2 Money Supply',
+      value: macroState['us_m2_money_supply'] || 21.4,
+      min: 10,
+      max: 40,
       step: 0.5,
-      unit: '%'
+      unit: 'T'
     },
     {
-      id: 'oil_price_wti',
+      id: 'wti_oil',
       label: 'Oil Price (WTI)',
-      value: macroState['oil_price_wti'] || 85,
+      value: macroState['wti_oil'] || 85,
       min: 20,
       max: 200,
       step: 5,
@@ -84,17 +84,12 @@ export default function SimulationPage() {
     }
   ];
 
-  const handleMacroChange = (id: string, displayValue: number) => {
+  const handleMacroChange = (id: string, value: number) => {
     setMacroChanging(true);
     setChangedMacroId(id);
 
-    // Convert display value back to actual value
-    let actualValue = displayValue;
-    if (id === 'fed_rate' || id === 'gdp_growth_us') {
-      actualValue = displayValue / 100;
-    }
-
-    updateMacroVariable(id, actualValue);
+    // Update macro variable with actual value (no conversion needed)
+    updateMacroVariable(id, value);
 
     // Reset bright effect after animation
     setTimeout(() => {
@@ -430,7 +425,7 @@ export default function SimulationPage() {
                 <div className="flex justify-between">
                   <span className="text-text-tertiary">Fed Rate:</span>
                   <span className="text-accent-emerald font-mono font-bold">
-                    {((macroState['fed_rate'] || 0.055) * 100).toFixed(2)}%
+                    {(macroState['fed_funds_rate'] || 5.25).toFixed(2)}%
                   </span>
                 </div>
                 <div className="flex justify-between">

@@ -243,7 +243,7 @@ export default function Globe3D({
       // Calculate average impact for this sector
       const avgImpact = macroVars.reduce((sum, varId) => sum + (macroImpacts[varId] || 0), 0) / macroVars.length;
 
-      if (avgImpact > 0.1) { // Only show if significant impact (>10% change)
+      if (avgImpact > 0.05) { // Only show if significant impact (>5% change)
         const sectorCompanies = companyPoints.filter(c => c.sector === sector);
 
         // Create arcs between top companies in the sector
@@ -447,7 +447,7 @@ export default function Globe3D({
             </div>
             <div className="space-y-1 text-xs">
               {Object.entries(macroImpacts)
-                .filter(([_, impact]) => impact > 0.15)
+                .filter(([_, impact]) => impact > 0.08)
                 .slice(0, 5)
                 .map(([varId, impact]) => {
                   const variable = MACRO_VARIABLES.find(v => v.id === varId);
@@ -465,7 +465,7 @@ export default function Globe3D({
                     </div>
                   );
                 })}
-              {Object.values(macroImpacts).filter(v => v > 0.15).length === 0 && (
+              {Object.values(macroImpacts).filter(v => v > 0.08).length === 0 && (
                 <div className="text-text-tertiary text-xs italic">
                   Adjust macro variables in Simulation to see impacts
                 </div>
