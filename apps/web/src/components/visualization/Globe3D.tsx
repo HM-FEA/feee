@@ -64,12 +64,28 @@ const CAPITAL_FLOWS: CapitalFlow[] = [
   { startLat: 37.5665, startLng: 126.9780, endLat: 39.9042, endLng: 116.4074, amount: 65, color: 'rgba(0, 229, 255, 0.6)', label: 'Korea → China' },
 ];
 
-export default function Globe3D() {
+interface Globe3DProps {
+  selectedSector?: string | null;
+  showControls?: boolean;
+}
+
+export default function Globe3D({
+  selectedSector = null,
+  showControls = true
+}: Globe3DProps) {
   const globeRef = useRef<any>();
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [viewMode, setViewMode] = useState<'m2' | 'flows'>('m2');
   const [autoRotate, setAutoRotate] = useState(true);
   const macroState = useMacroStore(state => state.macroState);
+
+  // Sector-to-country mapping (which countries are important for each sector)
+  const sectorCountries: Record<string, string[]> = {
+    SEMICONDUCTOR: ['KR', 'US', 'JP', 'CN'], // Korea, US, Japan, China
+    BANKING: ['US', 'GB', 'DE', 'JP', 'CN'], // Major financial centers
+    MANUFACTURING: ['CN', 'DE', 'JP', 'KR', 'US'], // Manufacturing powerhouses
+    REALESTATE: ['US', 'CN', 'GB', 'FR', 'BR'] // Major real estate markets
+  };
 
   // Auto-rotate globe
   useEffect(() => {
@@ -108,9 +124,48 @@ export default function Globe3D() {
     setSelectedCountry(null);
   };
 
+  // Filter countries based on selected sector
+  const visibleCountries = useMemo(() => {
+    if (!selectedSector) return adjustedCountries;
+    const relevantCodes = sectorCountries[selectedSector] || [];
+    return adjustedCountries.map(country => ({
+      ...country,
+      // Dim countries not relevant to selected sector
+      color: relevantCodes.includes(country.code) ? country.color : 'rgba(100, 100, 100, 0.3)',
+      size: relevantCodes.includes(country.code) ? country.size : country.size * 0.5
+    }));
+  }, [adjustedCountries, selectedSector]);
+
+  // Filter capital flows based on selected sector
+  const visibleFlows = useMemo(() => {
+    if (!selectedSector) return CAPITAL_FLOWS;
+    const relevantCodes = sectorCountries[selectedSector] || [];
+    return CAPITAL_FLOWS.map(flow => {
+      const startCountry = COUNTRIES.find(c => c.lat === flow.startLat && c.lng === flow.startLng);
+      const endCountry = COUNTRIES.find(c => c.lat === flow.endLat && c.lng === flow.endLng);
+      const isRelevant =
+        (startCountry && relevantCodes.includes(startCountry.code)) ||
+        (endCountry && relevantCodes.includes(endCountry.code));
+      return {
+        ...flow,
+        color: isRelevant ? flow.color : 'rgba(100, 100, 100, 0.1)'
+      };
+    });
+  }, [selectedSector]);
+
   return (
     <div className="w-full h-full relative bg-black">
+      {/* Sector Focus Indicator */}
+      {selectedSector && (
+        <div className="absolute top-2 right-2 z-10 bg-accent-cyan/20 backdrop-blur border border-accent-cyan rounded-lg px-3 py-1.5">
+          <span className="text-xs font-semibold text-accent-cyan">
+            Focus: {selectedSector}
+          </span>
+        </div>
+      )}
+
       {/* Controls */}
+      {showControls && (
       <div className="absolute top-4 left-4 z-10 space-y-2">
         <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
           <div className="text-xs text-text-tertiary mb-2 font-semibold">View Mode</div>
@@ -193,6 +248,7 @@ export default function Globe3D() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Country Details */}
       {selectedCountry && (
@@ -282,7 +338,7 @@ export default function Globe3D() {
         bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
 
         // Points (M2 Supply)
-        pointsData={viewMode === 'm2' ? adjustedCountries : []}
+        pointsData={viewMode === 'm2' ? visibleCountries : []}
         pointLat="lat"
         pointLng="lng"
         pointAltitude={(d: any) => d.size * 0.01}
@@ -298,7 +354,7 @@ export default function Globe3D() {
         onPointClick={(point: any) => handleCountryClick(point as Country)}
 
         // Arcs (Capital Flows)
-        arcsData={viewMode === 'flows' ? CAPITAL_FLOWS : []}
+        arcsData={viewMode === 'flows' ? visibleFlows : []}
         arcStartLat="startLat"
         arcStartLng="startLng"
         arcEndLat="endLat"

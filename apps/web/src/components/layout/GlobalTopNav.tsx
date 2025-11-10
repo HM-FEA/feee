@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Network, Trophy, BookOpen, Zap, Landmark, Bot, BarChart, Globe } from 'lucide-react';
+import { Home, Network, Trophy, BookOpen, Zap, Landmark, Bot, BarChart, Globe, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const mainNavigation = [
@@ -10,6 +10,7 @@ const mainNavigation = [
   { name: 'Network', href: '/network-graph', icon: Network },
   { name: 'Globe', href: '/globe', icon: Globe },
   { name: 'Ontology', href: '/ontology', icon: Landmark },
+  { name: 'Sim Lab', href: '/simulation', icon: Sparkles },
   { name: 'Simulate', href: '/simulate', icon: Zap },
   { name: 'Arena', href: '/arena', icon: Trophy },
   { name: 'Learn', href: '/learn', icon: BookOpen },

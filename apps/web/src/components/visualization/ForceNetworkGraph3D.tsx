@@ -206,7 +206,15 @@ function generateGraphData(): GraphData {
   return { nodes, links };
 }
 
-export default function ForceNetworkGraph3D() {
+interface ForceNetworkGraph3DProps {
+  selectedSector?: string | null;
+  showControls?: boolean;
+}
+
+export default function ForceNetworkGraph3D({
+  selectedSector = null,
+  showControls = true
+}: ForceNetworkGraph3DProps) {
   const fgRef = useRef<any>();
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] });
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
@@ -299,6 +307,7 @@ export default function ForceNetworkGraph3D() {
   return (
     <div className="w-full h-full relative bg-black">
       {/* Controls */}
+      {showControls && (
       <div className="absolute top-4 left-4 z-10 space-y-2">
         <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
           <div className="text-xs text-text-tertiary mb-2 font-semibold">Filter by Level</div>
@@ -365,6 +374,7 @@ export default function ForceNetworkGraph3D() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Node Details */}
       {selectedNode && (
@@ -491,17 +501,56 @@ export default function ForceNetworkGraph3D() {
         nodeVal="val"
         nodeColor={(node: any) => {
           const n = node as GraphNode;
+
+          // Sector focus mode
+          if (selectedSector) {
+            // Highlight nodes related to selected sector
+            if (n.level === 'sector' && n.sector === selectedSector) {
+              return n.color; // Full brightness for selected sector
+            } else if (n.level === 'company' && n.sector === selectedSector) {
+              return n.color; // Full brightness for companies in sector
+            } else if (n.level === 'macro') {
+              // Check if macro variable affects selected sector
+              const affectsSector = graphData.links.some(link => {
+                const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
+                return link.source === n.id && targetId === `sector-${selectedSector}`;
+              });
+              return affectsSector ? n.color : 'rgba(100, 100, 100, 0.2)';
+            } else {
+              return 'rgba(100, 100, 100, 0.2)'; // Dim out unrelated nodes
+            }
+          }
+
+          // Node click highlight mode
           if (highlightNodes.size > 0) {
             return highlightNodes.has(n.id) ? n.color : 'rgba(100, 100, 100, 0.3)';
           }
+
           return n.color;
         }}
         nodeOpacity={1}
         nodeResolution={32}
         linkColor={(link: any) => {
+          // Sector focus mode
+          if (selectedSector) {
+            const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
+            const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id;
+
+            // Highlight links connected to selected sector
+            const isRelated =
+              sourceId === `sector-${selectedSector}` ||
+              targetId === `sector-${selectedSector}` ||
+              sourceId.includes(`company-`) && graphData.nodes.find(n => n.id === sourceId && n.sector === selectedSector) ||
+              targetId.includes(`company-`) && graphData.nodes.find(n => n.id === targetId && n.sector === selectedSector);
+
+            return isRelated ? link.color : 'rgba(100, 100, 100, 0.05)';
+          }
+
+          // Node click highlight mode
           if (highlightLinks.size > 0) {
             return highlightLinks.has(link as GraphLink) ? link.color : 'rgba(100, 100, 100, 0.1)';
           }
+
           return link.color || 'rgba(255, 255, 255, 0.2)';
         }}
         linkWidth={(link: any) => link.strength || 1}
