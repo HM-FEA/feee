@@ -478,49 +478,6 @@ export default function PlatformDashboard() {
     setShowAllVariables(newSet);
   };
 
-  useEffect(() => {
-    // Generate stock data with proper dates and volume, influenced by macro variables
-    const today = new Date();
-    const basePrice = selectedCompany.financials.equity / 200;
-
-    // Calculate macro impact factor
-    const fedRate = macroState.fed_funds_rate || 2.5;
-    const tariffRate = macroState.us_tariff_rate || 0;
-    const krwUsd = macroState.krw_usd || 1300;
-
-    // Sector-specific macro sensitivity
-    let macroImpact = 1.0;
-    if (selectedCompany.sector === 'BANKING') {
-      macroImpact = 1 + ((fedRate - 2.5) * 0.08); // Banks benefit from higher rates
-    } else if (selectedCompany.sector === 'REALESTATE') {
-      macroImpact = 1 - ((fedRate - 2.5) * 0.12); // Real estate hurt by higher rates
-    } else if (selectedCompany.sector === 'MANUFACTURING') {
-      macroImpact = 1 - (tariffRate * 0.005); // Tariffs hurt manufacturing
-    } else if (selectedCompany.sector === 'SEMICONDUCTOR') {
-      macroImpact = 1 + ((krwUsd - 1300) * 0.0002); // Currency impact
-    }
-
-    setStockData(Array.from({ length: 30 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() - (29 - i));
-      const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
-
-      // Apply macro impact to price with gradual effect over time
-      const timeProgress = i / 29; // 0 to 1
-      const progressiveMacroImpact = 1 + (macroImpact - 1) * timeProgress;
-
-      const rawPrice = generateDeterministicMock(`${selectedCompany.ticker}-price-${i}`, basePrice * 0.8, basePrice * 1.2);
-      const price = rawPrice * progressiveMacroImpact;
-      const volume = generateDeterministicMock(`${selectedCompany.ticker}-vol-${i}`, 1000000, 5000000);
-
-      return {
-        date: dateStr,
-        price: parseFloat(price.toFixed(2)),
-        volume: Math.floor(volume)
-      };
-    }));
-  }, [selectedCompany, macroState]);
-
   const renderAnalysisContent = () => {
     switch(analysisTab) {
       case 'Fundamental': return <FundamentalAnalysis company={selectedCompany} />;
