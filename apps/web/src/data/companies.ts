@@ -12,7 +12,7 @@
  * - Options: 0개 → 목표 5개
  */
 
-export type Sector = 'BANKING' | 'REALESTATE' | 'MANUFACTURING' | 'SEMICONDUCTOR' | 'OPTIONS' | 'CRYPTO';
+export type Sector = 'BANKING' | 'REALESTATE' | 'MANUFACTURING' | 'SEMICONDUCTOR' | 'OPTIONS' | 'CRYPTO' | 'COMMODITIES';
 
 export interface Company {
   id: string;
@@ -69,6 +69,13 @@ export interface Company {
     gamma?: number;
     vega?: number;
     theta?: number;
+
+    // Commodities
+    production_volume?: number;      // Annual production (MT, barrels, oz, etc.)
+    reserves?: number;                // Proven reserves (years at current production)
+    price_sensitivity?: number;       // Beta to commodity price
+    extraction_cost?: number;         // Cost per unit ($/oz, $/barrel, $/MT)
+    capacity_mta?: number;            // Production capacity (Million Tonnes per Annum)
   };
 
   // Location (for globe visualization)
@@ -957,6 +964,646 @@ export const CRYPTO_COMPANIES: Company[] = [
 ];
 
 // ========================================
+// COMMODITIES SECTOR (20 companies)
+// ========================================
+
+export const COMMODITIES_COMPANIES: Company[] = [
+  // GOLD MINING
+  {
+    id: 'BARRICK_GOLD',
+    ticker: 'GOLD',
+    name: '배릭골드',
+    name_en: 'Barrick Gold Corporation',
+    sector: 'COMMODITIES',
+    country: 'CA',
+    financials: {
+      revenue: 11600,         // $11.6B (2023)
+      net_income: 1800,       // $1.8B
+      total_assets: 46500,    // $46.5B
+      total_debt: 5200,       // $5.2B
+      equity: 27300,          // $27.3B
+      ebitda: 5800,
+      operating_income: 3200,
+    },
+    ratios: {
+      icr: 12.5,
+      de_ratio: 0.19,
+      roe: 6.6,
+      roa: 3.9,
+      pe_ratio: 18.2,
+    },
+    sector_metrics: {
+      production_volume: 4.05, // Million oz gold (2023)
+      reserves: 14.2,          // Years at current production
+      price_sensitivity: 1.35, // High correlation to gold price
+      extraction_cost: 1250,   // $1,250/oz all-in sustaining cost
+    },
+    location: { lat: 43.6532, lng: -79.3832 }, // Toronto
+  },
+  {
+    id: 'NEWMONT',
+    ticker: 'NEM',
+    name: '뉴몬트',
+    name_en: 'Newmont Corporation',
+    sector: 'COMMODITIES',
+    country: 'US',
+    financials: {
+      revenue: 12200,         // $12.2B (2023)
+      net_income: 2100,       // $2.1B
+      total_assets: 51800,    // $51.8B
+      total_debt: 6800,       // $6.8B
+      equity: 32500,          // $32.5B
+      ebitda: 6200,
+      operating_income: 3500,
+    },
+    ratios: {
+      icr: 14.8,
+      de_ratio: 0.21,
+      roe: 6.5,
+      roa: 4.1,
+      pe_ratio: 19.5,
+    },
+    sector_metrics: {
+      production_volume: 5.83, // Million oz gold
+      reserves: 16.5,
+      price_sensitivity: 1.42,
+      extraction_cost: 1180,   // $1,180/oz AISC
+    },
+    location: { lat: 39.7392, lng: -104.9903 }, // Denver
+  },
+  {
+    id: 'ANGLOGOLD',
+    ticker: 'AU',
+    name: '앵글로골드 애쉰티',
+    name_en: 'AngloGold Ashanti',
+    sector: 'COMMODITIES',
+    country: 'ZA',
+    financials: {
+      revenue: 4300,
+      net_income: 620,
+      total_assets: 12500,
+      total_debt: 2800,
+      equity: 7200,
+      ebitda: 1800,
+      operating_income: 1100,
+    },
+    ratios: {
+      icr: 8.5,
+      de_ratio: 0.39,
+      roe: 8.6,
+      roa: 5.0,
+      pe_ratio: 14.8,
+    },
+    sector_metrics: {
+      production_volume: 2.62, // Million oz
+      reserves: 12.8,
+      price_sensitivity: 1.38,
+      extraction_cost: 1320,
+    },
+    location: { lat: -26.2041, lng: 28.0473 }, // Johannesburg
+  },
+
+  // SILVER MINING
+  {
+    id: 'FIRST_MAJESTIC',
+    ticker: 'AG',
+    name: '퍼스트 마제스틱',
+    name_en: 'First Majestic Silver Corp.',
+    sector: 'COMMODITIES',
+    country: 'CA',
+    financials: {
+      revenue: 680,
+      net_income: 85,
+      total_assets: 1800,
+      total_debt: 320,
+      equity: 1250,
+      ebitda: 280,
+      operating_income: 150,
+    },
+    ratios: {
+      icr: 9.2,
+      de_ratio: 0.26,
+      roe: 6.8,
+      roa: 4.7,
+      pe_ratio: 22.5,
+    },
+    sector_metrics: {
+      production_volume: 25.5, // Million oz silver
+      reserves: 18.5,
+      price_sensitivity: 1.52, // High beta to silver prices
+      extraction_cost: 15.8,   // $/oz silver
+    },
+    location: { lat: 49.2827, lng: -123.1207 }, // Vancouver
+  },
+  {
+    id: 'PAN_AMERICAN',
+    ticker: 'PAAS',
+    name: '팬 아메리칸 실버',
+    name_en: 'Pan American Silver Corp.',
+    sector: 'COMMODITIES',
+    country: 'CA',
+    financials: {
+      revenue: 1850,
+      net_income: 220,
+      total_assets: 5200,
+      total_debt: 850,
+      equity: 3800,
+      ebitda: 720,
+      operating_income: 420,
+    },
+    ratios: {
+      icr: 11.5,
+      de_ratio: 0.22,
+      roe: 5.8,
+      roa: 4.2,
+      pe_ratio: 24.2,
+    },
+    sector_metrics: {
+      production_volume: 24.2, // Million oz silver
+      reserves: 22.0,
+      price_sensitivity: 1.48,
+      extraction_cost: 16.2,
+    },
+    location: { lat: 49.2827, lng: -123.1207 },
+  },
+
+  // IRON ORE / STEEL
+  {
+    id: 'VALE',
+    ticker: 'VALE',
+    name: '발레',
+    name_en: 'Vale S.A.',
+    sector: 'COMMODITIES',
+    country: 'BR',
+    financials: {
+      revenue: 40100,         // $40.1B (2023)
+      net_income: 5800,       // $5.8B
+      total_assets: 115600,   // $115.6B
+      total_debt: 18500,      // $18.5B
+      equity: 62800,          // $62.8B
+      ebitda: 18200,
+      operating_income: 12500,
+    },
+    ratios: {
+      icr: 15.2,
+      de_ratio: 0.29,
+      roe: 9.2,
+      roa: 5.0,
+      pe_ratio: 5.8,
+    },
+    sector_metrics: {
+      production_volume: 310, // Million MT iron ore
+      capacity_mta: 340,      // 340 MT capacity
+      reserves: 42.0,         // Years
+      price_sensitivity: 1.28,
+      extraction_cost: 18.5,  // $/MT
+    },
+    location: { lat: -22.9068, lng: -43.1729 }, // Rio de Janeiro
+  },
+  {
+    id: 'BHP',
+    ticker: 'BHP',
+    name: 'BHP',
+    name_en: 'BHP Group Limited',
+    sector: 'COMMODITIES',
+    country: 'AU',
+    financials: {
+      revenue: 55700,         // $55.7B (2023)
+      net_income: 13400,      // $13.4B
+      total_assets: 139200,   // $139.2B
+      total_debt: 12800,      // $12.8B
+      equity: 78500,          // $78.5B
+      ebitda: 28500,
+      operating_income: 20200,
+    },
+    ratios: {
+      icr: 22.5,
+      de_ratio: 0.16,
+      roe: 17.1,
+      roa: 9.6,
+      pe_ratio: 10.2,
+    },
+    sector_metrics: {
+      production_volume: 249, // Million MT iron ore
+      capacity_mta: 290,
+      reserves: 38.5,
+      price_sensitivity: 1.22,
+      extraction_cost: 17.2,
+    },
+    location: { lat: -33.8688, lng: 151.2093 }, // Sydney
+  },
+  {
+    id: 'RIO_TINTO',
+    ticker: 'RIO',
+    name: '리오 틴토',
+    name_en: 'Rio Tinto Group',
+    sector: 'COMMODITIES',
+    country: 'UK',
+    financials: {
+      revenue: 54040,         // $54.04B (2023)
+      net_income: 11800,      // $11.8B
+      total_assets: 112500,   // $112.5B
+      total_debt: 11200,      // $11.2B
+      equity: 58600,          // $58.6B
+      ebitda: 24500,
+      operating_income: 18200,
+    },
+    ratios: {
+      icr: 20.8,
+      de_ratio: 0.19,
+      roe: 20.1,
+      roa: 10.5,
+      pe_ratio: 8.5,
+    },
+    sector_metrics: {
+      production_volume: 321, // Million MT iron ore
+      capacity_mta: 360,
+      reserves: 45.0,
+      price_sensitivity: 1.25,
+      extraction_cost: 16.8,
+    },
+    location: { lat: 51.5074, lng: -0.1278 }, // London
+  },
+  {
+    id: 'ARCELORMITTAL',
+    ticker: 'MT',
+    name: '아르셀로미탈',
+    name_en: 'ArcelorMittal',
+    sector: 'COMMODITIES',
+    country: 'LU',
+    financials: {
+      revenue: 68300,         // $68.3B (2023)
+      net_income: 6100,       // $6.1B
+      total_assets: 112800,   // $112.8B
+      total_debt: 8500,       // $8.5B
+      equity: 58200,          // $58.2B
+      ebitda: 12800,
+      operating_income: 8200,
+    },
+    ratios: {
+      icr: 16.5,
+      de_ratio: 0.15,
+      roe: 10.5,
+      roa: 5.4,
+      pe_ratio: 4.2,
+    },
+    sector_metrics: {
+      production_volume: 58.1, // Million MT crude steel
+      capacity_mta: 78.0,
+      reserves: 28.0,
+      price_sensitivity: 1.18,
+      extraction_cost: 485,    // $/MT steel
+    },
+    location: { lat: 49.6116, lng: 6.1319 }, // Luxembourg
+  },
+
+  // OIL & GAS
+  {
+    id: 'SAUDI_ARAMCO',
+    ticker: 'ARAMCO',
+    name: '사우디 아람코',
+    name_en: 'Saudi Arabian Oil Company',
+    sector: 'COMMODITIES',
+    country: 'SA',
+    financials: {
+      revenue: 400400,        // $400.4B (2023)
+      net_income: 121300,     // $121.3B
+      total_assets: 576000,   // $576B
+      total_debt: 165000,     // $165B
+      equity: 285000,         // $285B
+      ebitda: 235000,
+      operating_income: 180000,
+    },
+    ratios: {
+      icr: 38.5,
+      de_ratio: 0.58,
+      roe: 42.6,
+      roa: 21.1,
+      pe_ratio: 15.8,
+    },
+    sector_metrics: {
+      production_volume: 3650, // Million barrels oil equivalent
+      reserves: 65.0,          // Years at current production
+      price_sensitivity: 1.45, // High oil price correlation
+      extraction_cost: 12.5,   // $/barrel lifting cost
+    },
+    location: { lat: 26.3927, lng: 50.0331 }, // Dhahran
+  },
+  {
+    id: 'EXXONMOBIL',
+    ticker: 'XOM',
+    name: '엑슨모빌',
+    name_en: 'Exxon Mobil Corporation',
+    sector: 'COMMODITIES',
+    country: 'US',
+    financials: {
+      revenue: 344600,        // $344.6B (2023)
+      net_income: 36010,      // $36.0B
+      total_assets: 376300,   // $376.3B
+      total_debt: 35000,      // $35B
+      equity: 194300,         // $194.3B
+      ebitda: 78500,
+      operating_income: 52500,
+    },
+    ratios: {
+      icr: 28.5,
+      de_ratio: 0.18,
+      roe: 18.5,
+      roa: 9.6,
+      pe_ratio: 12.5,
+    },
+    sector_metrics: {
+      production_volume: 1390, // Million barrels oil equivalent
+      reserves: 18.5,
+      price_sensitivity: 1.38,
+      extraction_cost: 28.5,   // $/barrel
+    },
+    location: { lat: 32.7767, lng: -96.7970 }, // Irving, TX
+  },
+  {
+    id: 'SHELL',
+    ticker: 'SHEL',
+    name: '쉘',
+    name_en: 'Shell plc',
+    sector: 'COMMODITIES',
+    country: 'UK',
+    financials: {
+      revenue: 316614,        // $316.6B (2023)
+      net_income: 28252,      // $28.3B
+      total_assets: 404800,   // $404.8B
+      total_debt: 68500,      // $68.5B
+      equity: 202800,         // $202.8B
+      ebitda: 68200,
+      operating_income: 48500,
+    },
+    ratios: {
+      icr: 22.8,
+      de_ratio: 0.34,
+      roe: 13.9,
+      roa: 7.0,
+      pe_ratio: 9.8,
+    },
+    sector_metrics: {
+      production_volume: 1095, // Million barrels
+      reserves: 14.2,
+      price_sensitivity: 1.32,
+      extraction_cost: 32.8,
+    },
+    location: { lat: 51.5074, lng: -0.1278 }, // London
+  },
+  {
+    id: 'CHEVRON',
+    ticker: 'CVX',
+    name: '쉐브론',
+    name_en: 'Chevron Corporation',
+    sector: 'COMMODITIES',
+    country: 'US',
+    financials: {
+      revenue: 200958,        // $201.0B (2023)
+      net_income: 21370,      // $21.4B
+      total_assets: 261762,   // $261.8B
+      total_debt: 21000,      // $21B
+      equity: 148000,         // $148B
+      ebitda: 48500,
+      operating_income: 34200,
+    },
+    ratios: {
+      icr: 32.5,
+      de_ratio: 0.14,
+      roe: 14.4,
+      roa: 8.2,
+      pe_ratio: 10.8,
+    },
+    sector_metrics: {
+      production_volume: 1120, // Million barrels
+      reserves: 16.8,
+      price_sensitivity: 1.35,
+      extraction_cost: 30.2,
+    },
+    location: { lat: 37.7749, lng: -122.4194 }, // San Francisco
+  },
+  {
+    id: 'BP',
+    ticker: 'BP',
+    name: 'BP',
+    name_en: 'BP plc',
+    sector: 'COMMODITIES',
+    country: 'UK',
+    financials: {
+      revenue: 248900,        // $248.9B (2023)
+      net_income: 13800,      // $13.8B
+      total_assets: 285200,   // $285.2B
+      total_debt: 58500,      // $58.5B
+      equity: 108500,         // $108.5B
+      ebitda: 42500,
+      operating_income: 25800,
+    },
+    ratios: {
+      icr: 18.5,
+      de_ratio: 0.54,
+      roe: 12.7,
+      roa: 4.8,
+      pe_ratio: 8.2,
+    },
+    sector_metrics: {
+      production_volume: 902, // Million barrels
+      reserves: 12.5,
+      price_sensitivity: 1.28,
+      extraction_cost: 35.5,
+    },
+    location: { lat: 51.5074, lng: -0.1278 }, // London
+  },
+
+  // COPPER
+  {
+    id: 'FREEPORT',
+    ticker: 'FCX',
+    name: '프리포트 맥모란',
+    name_en: 'Freeport-McMoRan Inc.',
+    sector: 'COMMODITIES',
+    country: 'US',
+    financials: {
+      revenue: 22800,         // $22.8B (2023)
+      net_income: 2900,       // $2.9B
+      total_assets: 48500,    // $48.5B
+      total_debt: 9200,       // $9.2B
+      equity: 27800,          // $27.8B
+      ebitda: 8500,
+      operating_income: 5200,
+    },
+    ratios: {
+      icr: 14.5,
+      de_ratio: 0.33,
+      roe: 10.4,
+      roa: 6.0,
+      pe_ratio: 18.5,
+    },
+    sector_metrics: {
+      production_volume: 4.18, // Million MT copper
+      reserves: 32.5,
+      price_sensitivity: 1.52, // High correlation to copper
+      extraction_cost: 5850,   // $/MT copper
+    },
+    location: { lat: 33.4484, lng: -112.0740 }, // Phoenix
+  },
+  {
+    id: 'SOUTHERN_COPPER',
+    ticker: 'SCCO',
+    name: '서던 코퍼',
+    name_en: 'Southern Copper Corporation',
+    sector: 'COMMODITIES',
+    country: 'US',
+    financials: {
+      revenue: 9850,
+      net_income: 2450,
+      total_assets: 18500,
+      total_debt: 4200,
+      equity: 13800,
+      ebitda: 5200,
+      operating_income: 3800,
+    },
+    ratios: {
+      icr: 18.5,
+      de_ratio: 0.30,
+      roe: 17.8,
+      roa: 13.2,
+      pe_ratio: 16.5,
+    },
+    sector_metrics: {
+      production_volume: 1.02, // Million MT copper
+      reserves: 48.0,
+      price_sensitivity: 1.48,
+      extraction_cost: 5200,
+    },
+    location: { lat: 33.4484, lng: -112.0740 },
+  },
+
+  // LITHIUM (Battery Materials)
+  {
+    id: 'ALBEMARLE',
+    ticker: 'ALB',
+    name: '알버말',
+    name_en: 'Albemarle Corporation',
+    sector: 'COMMODITIES',
+    country: 'US',
+    financials: {
+      revenue: 7318,          // $7.3B (2023)
+      net_income: 1850,       // $1.85B
+      total_assets: 15200,    // $15.2B
+      total_debt: 3800,       // $3.8B
+      equity: 8500,           // $8.5B
+      ebitda: 3200,
+      operating_income: 2450,
+    },
+    ratios: {
+      icr: 16.8,
+      de_ratio: 0.45,
+      roe: 21.8,
+      roa: 12.2,
+      pe_ratio: 8.5,
+    },
+    sector_metrics: {
+      production_volume: 0.088, // Million MT lithium (LCE)
+      reserves: 22.0,
+      price_sensitivity: 1.85,  // High EV market correlation
+      extraction_cost: 8500,    // $/MT LCE
+    },
+    location: { lat: 35.2271, lng: -80.8431 }, // Charlotte, NC
+  },
+  {
+    id: 'SQM',
+    ticker: 'SQM',
+    name: 'SQM',
+    name_en: 'Sociedad Química y Minera de Chile',
+    sector: 'COMMODITIES',
+    country: 'CL',
+    financials: {
+      revenue: 9180,
+      net_income: 3250,
+      total_assets: 12800,
+      total_debt: 1850,
+      equity: 9200,
+      ebitda: 5200,
+      operating_income: 4500,
+    },
+    ratios: {
+      icr: 28.5,
+      de_ratio: 0.20,
+      roe: 35.3,
+      roa: 25.4,
+      pe_ratio: 6.2,
+    },
+    sector_metrics: {
+      production_volume: 0.182, // Million MT lithium
+      reserves: 38.0,
+      price_sensitivity: 1.92,
+      extraction_cost: 6200,
+    },
+    location: { lat: -33.4489, lng: -70.6693 }, // Santiago
+  },
+
+  // AGRICULTURAL COMMODITIES
+  {
+    id: 'CARGILL_PROXY',
+    ticker: 'CARG-P',
+    name: '카길',
+    name_en: 'Cargill (Proxy - Private Company)',
+    sector: 'COMMODITIES',
+    country: 'US',
+    financials: {
+      revenue: 177000,        // $177B (2024 est, private)
+      net_income: 4500,       // Est
+      total_assets: 85000,    // Est
+      total_debt: 18000,      // Est
+      equity: 38000,          // Est
+      ebitda: 12500,
+      operating_income: 8200,
+    },
+    ratios: {
+      icr: 12.5,
+      de_ratio: 0.47,
+      roe: 11.8,
+      roa: 5.3,
+      pe_ratio: 14.2,
+    },
+    sector_metrics: {
+      production_volume: 125, // Million MT grains/oilseeds handled
+      price_sensitivity: 0.85, // Moderate commodity correlation
+    },
+    location: { lat: 44.9778, lng: -93.2650 }, // Minneapolis
+  },
+  {
+    id: 'ADM',
+    ticker: 'ADM',
+    name: 'ADM',
+    name_en: 'Archer-Daniels-Midland Company',
+    sector: 'COMMODITIES',
+    country: 'US',
+    financials: {
+      revenue: 101848,        // $101.8B (2023)
+      net_income: 3462,       // $3.5B
+      total_assets: 52786,    // $52.8B
+      total_debt: 9200,       // $9.2B
+      equity: 24500,          // $24.5B
+      ebitda: 7800,
+      operating_income: 5200,
+    },
+    ratios: {
+      icr: 14.2,
+      de_ratio: 0.38,
+      roe: 14.1,
+      roa: 6.6,
+      pe_ratio: 11.8,
+    },
+    sector_metrics: {
+      production_volume: 180, // Million MT processed
+      price_sensitivity: 0.92,
+    },
+    location: { lat: 41.8781, lng: -87.6298 }, // Chicago
+  },
+];
+
+// ========================================
 // OPTIONS SECTOR (5/5 companies)
 // ========================================
 
@@ -1133,6 +1780,7 @@ export const ALL_COMPANIES: Company[] = [
   ...MANUFACTURING_COMPANIES,
   ...SEMICONDUCTOR_COMPANIES,
   ...CRYPTO_COMPANIES,
+  ...COMMODITIES_COMPANIES,
   ...OPTIONS_COMPANIES,
 ];
 
@@ -1173,6 +1821,7 @@ export function getCompanyCount(): { total: number; by_sector: Record<Sector, nu
       MANUFACTURING: MANUFACTURING_COMPANIES.length,
       SEMICONDUCTOR: SEMICONDUCTOR_COMPANIES.length,
       CRYPTO: CRYPTO_COMPANIES.length,
+      COMMODITIES: COMMODITIES_COMPANIES.length,
       OPTIONS: OPTIONS_COMPANIES.length,
     },
   };
@@ -1232,6 +1881,7 @@ const SYNTHETIC_REALESTATE = generateSyntheticCompanies(REALESTATE_COMPANIES, 20
 const SYNTHETIC_MANUFACTURING = generateSyntheticCompanies(MANUFACTURING_COMPANIES, 20);
 const SYNTHETIC_SEMICONDUCTOR = generateSyntheticCompanies(SEMICONDUCTOR_COMPANIES, 20);
 const SYNTHETIC_CRYPTO = generateSyntheticCompanies(CRYPTO_COMPANIES, 15);
+const SYNTHETIC_COMMODITIES = generateSyntheticCompanies(COMMODITIES_COMPANIES, 25);
 
 export const EXTENDED_COMPANIES: Company[] = [
   ...ALL_COMPANIES,
@@ -1240,6 +1890,7 @@ export const EXTENDED_COMPANIES: Company[] = [
   ...SYNTHETIC_MANUFACTURING,
   ...SYNTHETIC_SEMICONDUCTOR,
   ...SYNTHETIC_CRYPTO,
+  ...SYNTHETIC_COMMODITIES,
 ];
 
 // Use extended dataset by default
