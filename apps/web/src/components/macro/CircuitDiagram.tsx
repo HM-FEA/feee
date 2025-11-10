@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import anime from 'animejs';
 import { useMacroStore } from '@/lib/store/macroStore';
 
 interface CircuitNode {
@@ -136,60 +135,74 @@ export default function CircuitDiagram() {
     if (animating) return;
     setAnimating(true);
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    // Get all pulse elements
+    const macroElements = document.querySelectorAll('.circuit-pulse-macro');
+    const sectorElements = document.querySelectorAll('.circuit-pulse-sector');
+    const companyElements = document.querySelectorAll('.circuit-pulse-company');
+    const signalElements = document.querySelectorAll('.circuit-signal');
 
     // Animate macro nodes first
-    anime({
-      targets: '.circuit-pulse-macro',
-      scale: [1, 1.2, 1],
-      opacity: [0.2, 1, 0.2],
-      duration: 600,
-      easing: 'easeOutQuad',
-      complete: () => {
-        // Then animate sector nodes
-        anime({
-          targets: '.circuit-pulse-sector',
-          scale: [1, 1.15, 1],
-          opacity: [0.2, 0.8, 0.2],
-          duration: 500,
-          delay: anime.stagger(100),
-          easing: 'easeOutQuad',
-          complete: () => {
-            // Finally animate company nodes
-            anime({
-              targets: '.circuit-pulse-company',
-              scale: [1, 1.1, 1],
-              opacity: [0.2, 0.6, 0.2],
-              duration: 400,
-              delay: anime.stagger(80),
-              easing: 'easeOutQuad',
-              complete: () => {
-                setAnimating(false);
-              }
-            });
-          }
-        });
-      }
+    macroElements.forEach(el => {
+      el.classList.add('animate-pulse-scale');
     });
 
-    // Animate signal flow along connections
-    const signalElements = document.querySelectorAll('.circuit-signal');
-    signalElements.forEach((el, index) => {
-      anime({
-        targets: el,
-        translateX: [0, 250],
-        opacity: [0, 1, 0],
-        duration: 1000,
-        delay: index * 100,
-        easing: 'easeInOutQuad'
+    setTimeout(() => {
+      macroElements.forEach(el => el.classList.remove('animate-pulse-scale'));
+
+      // Animate sector nodes
+      sectorElements.forEach((el, index) => {
+        setTimeout(() => {
+          el.classList.add('animate-pulse-scale');
+          setTimeout(() => el.classList.remove('animate-pulse-scale'), 500);
+        }, index * 100);
       });
+    }, 600);
+
+    setTimeout(() => {
+      // Animate company nodes
+      companyElements.forEach((el, index) => {
+        setTimeout(() => {
+          el.classList.add('animate-pulse-scale');
+          setTimeout(() => el.classList.remove('animate-pulse-scale'), 400);
+        }, index * 80);
+      });
+    }, 1100);
+
+    // Animate signal particles
+    signalElements.forEach((el, index) => {
+      setTimeout(() => {
+        (el as HTMLElement).style.animation = 'signalFlow 1s ease-in-out forwards';
+      }, index * 100);
     });
+
+    setTimeout(() => {
+      setAnimating(false);
+      // Reset signal animations
+      signalElements.forEach(el => {
+        (el as HTMLElement).style.animation = '';
+      });
+    }, 2500);
   };
 
   return (
-    <div className="relative w-full h-full bg-black rounded-lg border border-border-primary p-4 overflow-hidden" ref={containerRef}>
-      {/* Title */}
+    <>
+      <style>{`
+        @keyframes pulseScale {
+          0%, 100% { transform: scale(1); opacity: 0.2; }
+          50% { transform: scale(1.2); opacity: 1; }
+        }
+        @keyframes signalFlow {
+          0% { transform: translateX(0); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateX(250px); opacity: 0; }
+        }
+        .animate-pulse-scale {
+          animation: pulseScale 0.6s ease-out;
+        }
+      `}</style>
+
+      <div className="relative w-full h-full bg-black rounded-lg border border-border-primary p-4 overflow-hidden" ref={containerRef}>
+        {/* Title */}
       <div className="absolute top-4 left-4 z-10">
         <h3 className="text-sm font-semibold text-accent-cyan mb-1">Circuit Diagram</h3>
         <p className="text-xs text-text-tertiary">Macro → Sector → Company Impact Flow</p>
@@ -285,6 +298,7 @@ export default function CircuitDiagram() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
