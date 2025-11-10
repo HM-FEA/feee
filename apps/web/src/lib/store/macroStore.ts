@@ -1,5 +1,17 @@
 import { create } from 'zustand';
 import { getDefaultMacroState, MacroState, MACRO_VARIABLES } from '@/data/macroVariables';
+import { Company } from '@/data/companies';
+
+export interface AdjustedFinancials {
+  revenue: number;
+  operating_income: number;
+  net_income: number;
+  total_assets: number;
+  total_debt: number;
+  equity: number;
+  market_cap?: number;
+  ebitda: number;
+}
 
 interface MacroStore {
   // Current macro variable values
@@ -17,7 +29,11 @@ interface MacroStore {
     realEstate: number;   // % impact on real estate sector
     manufacturing: number; // % impact on manufacturing sector
     semiconductor: number; // % impact on semiconductor sector
+    crypto: number;       // % impact on crypto sector
   };
+
+  // Calculate adjusted financials based on macro impact
+  calculateAdjustedFinancials: (company: Company) => AdjustedFinancials;
 
   // Trigger recalculation
   recalculateImpacts: () => void;
@@ -44,11 +60,16 @@ const calculateSectorImpacts = (macroState: MacroState) => {
   // Semiconductor: Affected by tech cycle and demand
   const semiconductorImpact = (gdpGrowth - 0.021) * 100 * 40 + (vix - 18.5) / 18.5 * -15;
 
+  // Crypto: Hurt by higher rates (risk-off), benefits from liquidity
+  const m2Growth = macroState['global_m2_growth'] || 5;
+  const cryptoImpact = -(fedRate - 0.025) * 100 * 25 + (m2Growth - 5) * 2 + (vix - 18.5) / 18.5 * -20;
+
   return {
     banking: bankingImpact,
     realEstate: realEstateImpact,
     manufacturing: manufacturingImpact,
     semiconductor: semiconductorImpact,
+    crypto: cryptoImpact,
   };
 };
 
@@ -60,6 +81,7 @@ export const useMacroStore = create<MacroStore>((set, get) => ({
     realEstate: 0,
     manufacturing: 0,
     semiconductor: 0,
+    crypto: 0,
   },
 
   updateMacroVariable: (id: string, value: number) => {
@@ -87,8 +109,45 @@ export const useMacroStore = create<MacroStore>((set, get) => ({
         realEstate: 0,
         manufacturing: 0,
         semiconductor: 0,
+        crypto: 0,
       },
     });
+  },
+
+  calculateAdjustedFinancials: (company: Company) => {
+    const state = get();
+    const impacts = state.calculatedImpacts;
+
+    // Get sector-specific impact
+    let sectorImpact = 0;
+    if (company.sector === 'BANKING') {
+      sectorImpact = impacts.banking;
+    } else if (company.sector === 'REALESTATE') {
+      sectorImpact = impacts.realEstate;
+    } else if (company.sector === 'MANUFACTURING') {
+      sectorImpact = impacts.manufacturing;
+    } else if (company.sector === 'SEMICONDUCTOR') {
+      sectorImpact = impacts.semiconductor;
+    } else if (company.sector === 'CRYPTO') {
+      sectorImpact = impacts.crypto;
+    }
+
+    // Apply impact as percentage change
+    const impactMultiplier = 1 + (sectorImpact / 100);
+
+    // Calculate adjusted financials
+    const baseFinancials = company.financials;
+
+    return {
+      revenue: baseFinancials.revenue * impactMultiplier,
+      operating_income: (baseFinancials.operating_income || 0) * impactMultiplier,
+      net_income: baseFinancials.net_income * impactMultiplier,
+      total_assets: baseFinancials.total_assets * (1 + (sectorImpact / 200)), // Assets grow slower
+      total_debt: baseFinancials.total_debt * (1 + (sectorImpact / 300)), // Debt changes even slower
+      equity: baseFinancials.equity * impactMultiplier,
+      market_cap: baseFinancials.market_cap ? baseFinancials.market_cap * impactMultiplier : undefined,
+      ebitda: (baseFinancials.operating_income || 0) * 1.2 * impactMultiplier, // EBITDA estimation
+    };
   },
 
   recalculateImpacts: () => {

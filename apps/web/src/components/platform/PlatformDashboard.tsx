@@ -2,10 +2,17 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { companies, Company } from '@/data/companies';
-import { Search, TrendingUp } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { ComposedChart, Area, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart } from 'recharts';
 import NewsFeed from './NewsFeed';
 import CommunityPanel from './CommunityPanel';
+import LivePriceIndicator from '../finance/LivePriceIndicator';
+import PriceHistoryChart from '../finance/PriceHistoryChart';
+import Movers from '../finance/Movers';
+import Watchlist from '../finance/Watchlist';
+import PriceAlertModal from '../finance/PriceAlertModal';
+import MacroControlPanel from '../macro/MacroControlPanel';
+import CircuitDiagram from '../macro/CircuitDiagram';
 import {
   MACRO_VARIABLES,
   MACRO_CATEGORIES,
@@ -36,62 +43,170 @@ const generateDeterministicMock = (seed: string, min: number, max: number) => {
 };
 
 // Analysis Components
-const FundamentalAnalysis = ({ company }: { company: Company }) => (
-  <div className="space-y-6 text-sm">
-    {/* Key Ratios Section */}
-    <div>
-      <h4 className="font-bold text-text-primary mb-3">Key Ratios</h4>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
-          <div className="text-text-secondary text-xs mb-1">P/E Ratio</div>
-          <div className="font-bold text-text-primary text-lg">{company.ratios?.pe_ratio?.toFixed(1) || 'N/A'}</div>
+const FundamentalAnalysis = ({ company }: { company: Company }) => {
+  const calculateAdjustedFinancials = useMacroStore(state => state.calculateAdjustedFinancials);
+  const adjustedFinancials = calculateAdjustedFinancials(company);
+
+  // Calculate percentage changes
+  const calculateChange = (base: number, adjusted: number) => {
+    if (base === 0) return 0;
+    return ((adjusted - base) / base) * 100;
+  };
+
+  const revenueChange = calculateChange(company.financials.revenue, adjustedFinancials.revenue);
+  const operatingIncomeChange = calculateChange(
+    company.financials.operating_income || 0,
+    adjustedFinancials.operating_income
+  );
+  const netIncomeChange = calculateChange(company.financials.net_income, adjustedFinancials.net_income);
+  const baseEbitda = (company.financials.operating_income || 0) * 1.2;
+  const ebitdaChange = calculateChange(baseEbitda, adjustedFinancials.ebitda);
+  const assetsChange = calculateChange(company.financials.total_assets, adjustedFinancials.total_assets);
+  const debtChange = calculateChange(company.financials.total_debt, adjustedFinancials.total_debt);
+  const equityChange = calculateChange(company.financials.equity, adjustedFinancials.equity);
+
+  const ChangeIndicator = ({ change }: { change: number }) => {
+    if (Math.abs(change) < 0.01) return <span className="text-text-tertiary text-xs ml-2">—</span>;
+    return (
+      <span className={`text-xs font-semibold ml-2 ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+        {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-6 text-sm">
+      {/* Key Ratios Section */}
+      <div>
+        <h4 className="font-bold text-text-primary mb-3">Key Ratios</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+            <div className="text-text-secondary text-xs mb-1">P/E Ratio</div>
+            <div className="font-bold text-text-primary text-lg">{company.ratios?.pe_ratio?.toFixed(1) || 'N/A'}</div>
+          </div>
+          <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+            <div className="text-text-secondary text-xs mb-1">ROE</div>
+            <div className="font-bold text-text-primary text-lg">{company.ratios?.roe?.toFixed(1) || 'N/A'}%</div>
+          </div>
+          <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+            <div className="text-text-secondary text-xs mb-1">D/E Ratio</div>
+            <div className="font-bold text-text-primary text-lg">{company.ratios?.de_ratio?.toFixed(1) || 'N/A'}</div>
+          </div>
+          <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
+            <div className="text-text-secondary text-xs mb-1">ICR</div>
+            <div className={`font-bold text-lg ${
+              company.ratios?.icr && company.ratios.icr > 2
+                ? 'text-status-safe'
+                : company.ratios?.icr && company.ratios.icr > 0
+                ? 'text-status-caution'
+                : 'text-status-danger'
+            }`}>
+              {company.ratios?.icr?.toFixed(1) || 'N/A'}
+            </div>
+          </div>
         </div>
-        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
-          <div className="text-text-secondary text-xs mb-1">ROE</div>
-          <div className="font-bold text-text-primary text-lg">{company.ratios?.roe?.toFixed(1) || 'N/A'}%</div>
+      </div>
+
+      {/* Financial Statements - Side-by-Side Comparison */}
+      <div>
+        <h4 className="font-bold text-text-primary mb-3">Income Statement</h4>
+        <div className="grid grid-cols-3 gap-2 mb-2 text-xs text-text-tertiary">
+          <div></div>
+          <div className="text-center font-semibold">Base</div>
+          <div className="text-center font-semibold">Macro-Adjusted</div>
         </div>
-        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
-          <div className="text-text-secondary text-xs mb-1">D/E Ratio</div>
-          <div className="font-bold text-text-primary text-lg">{company.ratios?.de_ratio?.toFixed(1) || 'N/A'}</div>
+        <div className="space-y-2 p-4 bg-black rounded-lg">
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Revenue:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.revenue.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${revenueChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.revenue.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={revenueChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Operating Income:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.operating_income?.toLocaleString() || 'N/A'} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${operatingIncomeChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.operating_income.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={operatingIncomeChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Net Income:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.net_income.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${netIncomeChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.net_income.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={netIncomeChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">EBITDA:</span>
+            <span className="font-mono text-text-primary text-center">${baseEbitda.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${ebitdaChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.ebitda.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={ebitdaChange} />
+            </div>
+          </div>
         </div>
-        <div className="text-center p-3 bg-black rounded-lg border border-border-primary">
-          <div className="text-text-secondary text-xs mb-1">ICR</div>
-          <div className={`font-bold text-lg ${
-            company.ratios?.icr && company.ratios.icr > 2
-              ? 'text-status-safe'
-              : company.ratios?.icr && company.ratios.icr > 0
-              ? 'text-status-caution'
-              : 'text-status-danger'
-          }`}>
-            {company.ratios?.icr?.toFixed(1) || 'N/A'}
+      </div>
+
+      <div>
+        <h4 className="font-bold text-text-primary mb-3">Balance Sheet</h4>
+        <div className="grid grid-cols-3 gap-2 mb-2 text-xs text-text-tertiary">
+          <div></div>
+          <div className="text-center font-semibold">Base</div>
+          <div className="text-center font-semibold">Macro-Adjusted</div>
+        </div>
+        <div className="space-y-2 p-4 bg-black rounded-lg">
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Total Assets:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.total_assets.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${assetsChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.total_assets.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={assetsChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Total Debt:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.total_debt.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${debtChange <= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.total_debt.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={debtChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Equity:</span>
+            <span className="font-mono text-text-primary text-center">${company.financials.equity.toLocaleString()} M</span>
+            <div className="text-center">
+              <span className={`font-mono ${equityChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${adjustedFinancials.equity.toLocaleString()} M
+              </span>
+              <ChangeIndicator change={equityChange} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 items-center">
+            <span className="text-text-secondary">Current Ratio:</span>
+            <span className="font-mono text-text-primary text-center">{(company.financials.total_assets / company.financials.total_debt * 0.4).toFixed(2)}</span>
+            <span className="font-mono text-text-primary text-center">{(adjustedFinancials.total_assets / adjustedFinancials.total_debt * 0.4).toFixed(2)}</span>
           </div>
         </div>
       </div>
     </div>
-
-    {/* Financial Statements */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        <h4 className="font-bold text-text-primary mb-3">Income Statement</h4>
-        <div className="space-y-2 p-4 bg-black rounded-lg">
-          <div className="flex justify-between"><span className="text-text-secondary">Revenue:</span><span className="font-mono text-text-primary">${company.financials.revenue.toLocaleString()} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">Operating Income:</span><span className="font-mono text-text-primary">${company.financials.operating_income?.toLocaleString() || 'N/A'} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">Net Income:</span><span className="font-mono text-text-primary">${company.financials.net_income.toLocaleString()} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">EBITDA:</span><span className="font-mono text-text-primary">${(company.financials.operating_income ? company.financials.operating_income * 1.2 : 0).toLocaleString()} M</span></div>
-        </div>
-      </div>
-      <div>
-        <h4 className="font-bold text-text-primary mb-3">Balance Sheet</h4>
-        <div className="space-y-2 p-4 bg-black rounded-lg">
-          <div className="flex justify-between"><span className="text-text-secondary">Total Assets:</span><span className="font-mono text-text-primary">${company.financials.total_assets.toLocaleString()} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">Total Debt:</span><span className="font-mono text-text-primary">${company.financials.total_debt.toLocaleString()} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">Equity:</span><span className="font-mono text-text-primary">${company.financials.equity.toLocaleString()} M</span></div>
-          <div className="flex justify-between"><span className="text-text-secondary">Current Ratio:</span><span className="font-mono text-text-primary">{(company.financials.total_assets / company.financials.total_debt * 0.4).toFixed(2)}</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 const TechnicalAnalysis = ({ ticker }: { ticker: string }) => {
   const data = useMemo(() => Array.from({ length: 30 }, (_, i) => {
@@ -438,11 +553,12 @@ export default function PlatformDashboard() {
   const macroState = useMacroStore(state => state.macroState);
   const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
   const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+  const calculateAdjustedFinancials = useMacroStore(state => state.calculateAdjustedFinancials);
 
   const [selectedCompany, setSelectedCompany] = useState<Company>(companies[0]);
   const [analysisTab, setAnalysisTab] = useState('Fundamental');
   const [searchTerm, setSearchTerm] = useState("");
-  const [stockData, setStockData] = useState<any[]>([]);
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<MacroCategory>>(
     new Set(['MONETARY_POLICY'])
   );
@@ -473,49 +589,6 @@ export default function PlatformDashboard() {
     setShowAllVariables(newSet);
   };
 
-  useEffect(() => {
-    // Generate stock data with proper dates and volume, influenced by macro variables
-    const today = new Date();
-    const basePrice = selectedCompany.financials.equity / 200;
-
-    // Calculate macro impact factor
-    const fedRate = macroState.fed_funds_rate || 2.5;
-    const tariffRate = macroState.us_tariff_rate || 0;
-    const krwUsd = macroState.krw_usd || 1300;
-
-    // Sector-specific macro sensitivity
-    let macroImpact = 1.0;
-    if (selectedCompany.sector === 'BANKING') {
-      macroImpact = 1 + ((fedRate - 2.5) * 0.08); // Banks benefit from higher rates
-    } else if (selectedCompany.sector === 'REALESTATE') {
-      macroImpact = 1 - ((fedRate - 2.5) * 0.12); // Real estate hurt by higher rates
-    } else if (selectedCompany.sector === 'MANUFACTURING') {
-      macroImpact = 1 - (tariffRate * 0.005); // Tariffs hurt manufacturing
-    } else if (selectedCompany.sector === 'SEMICONDUCTOR') {
-      macroImpact = 1 + ((krwUsd - 1300) * 0.0002); // Currency impact
-    }
-
-    setStockData(Array.from({ length: 30 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() - (29 - i));
-      const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
-
-      // Apply macro impact to price with gradual effect over time
-      const timeProgress = i / 29; // 0 to 1
-      const progressiveMacroImpact = 1 + (macroImpact - 1) * timeProgress;
-
-      const rawPrice = generateDeterministicMock(`${selectedCompany.ticker}-price-${i}`, basePrice * 0.8, basePrice * 1.2);
-      const price = rawPrice * progressiveMacroImpact;
-      const volume = generateDeterministicMock(`${selectedCompany.ticker}-vol-${i}`, 1000000, 5000000);
-
-      return {
-        date: dateStr,
-        price: parseFloat(price.toFixed(2)),
-        volume: Math.floor(volume)
-      };
-    }));
-  }, [selectedCompany, macroState]);
-
   const renderAnalysisContent = () => {
     switch(analysisTab) {
       case 'Fundamental': return <FundamentalAnalysis company={selectedCompany} />;
@@ -543,187 +616,140 @@ export default function PlatformDashboard() {
       {/* Main Content: 20% | 60% | 20% */}
       <div className="flex-1 flex gap-4 px-4 py-4 overflow-hidden">
 
-        {/* LEFT SIDEBAR (20%) - Trending + Community */}
-        <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Trending - 50% */}
-          <div className="h-[50%] min-h-0 overflow-hidden">
-            <Card className="h-full flex flex-col">
-              <CardTitle icon={<TrendingUp size={16}/>} className="text-xs">Trending</CardTitle>
-              <div className="space-y-2 flex-1 overflow-y-auto pr-2">
-                {['TSLA', 'NVDA', 'AAPL', 'MSFT', 'META'].map(ticker => {
-                  const company = companies.find(c => c.ticker === ticker);
-                  return company ? (
-                    <button
-                      key={ticker}
-                      onClick={() => setSelectedCompany(company)}
-                      className={`w-full p-2 rounded text-left transition-all text-xs ${
-                        selectedCompany.ticker === ticker ? 'bg-accent-cyan/10 border border-accent-cyan' : 'hover:bg-background-tertiary'
-                      }`}
-                    >
-                      <div className="font-semibold text-text-primary">{ticker}</div>
-                      <div className="text-text-secondary text-xs truncate">{company.name}</div>
-                    </button>
-                  ) : null;
-                })}
-              </div>
+        {/* LEFT SIDEBAR (20%) - Movers + Community */}
+        <div className="w-[20%] min-w-0 flex flex-col gap-4">
+          {/* Movers (Gainers/Losers) - max 400px */}
+          <div className="max-h-[400px] flex-shrink-0">
+            <Card className="h-full flex flex-col p-4">
+              <Movers onSelectCompany={(stock) => {
+                const company = companies.find(c => c.ticker === stock.ticker);
+                if (company) setSelectedCompany(company);
+              }} />
             </Card>
           </div>
 
-          {/* Community Panel - 50% */}
-          <div className="h-[50%] min-h-0 overflow-hidden">
+          {/* Community Panel - max 400px */}
+          <div className="max-h-[400px] flex-shrink-0">
             <CommunityPanel />
           </div>
         </div>
 
         {/* CENTER (60%) - Main Analysis: Ontology-Focused */}
         <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Macro Impact Analysis (PRIMARY) - Fixed max height */}
-          <div className="h-[200px] max-h-[200px] flex-shrink-0">
-            <Card className="h-full flex flex-col p-4 overflow-hidden">
-              <h3 className="text-base font-semibold text-text-primary mb-4">
-                Macro Impact Analysis
-              </h3>
-              <div className="space-y-4">
-                {/* Scenario Display - Key Variables */}
-                <div className="grid grid-cols-3 gap-3 text-xs">
-                  <div className="bg-background-secondary rounded-lg p-2">
-                    <div className="text-text-tertiary mb-1">Fed Rate</div>
-                    <div className="text-accent-cyan font-mono font-semibold">
-                      {macroState.fed_funds_rate?.toFixed(2) || 'N/A'}%
+          {/* Circuit Diagram */}
+          <div className="h-[350px] max-h-[350px] flex-shrink-0">
+            <CircuitDiagram />
+          </div>
+
+          {/* Macro Impact Analysis with Controls */}
+          <div className="h-[500px] max-h-[500px] flex-shrink-0">
+            <Card className="h-full flex gap-4 p-4 overflow-hidden">
+              {/* Left: Impact Display */}
+              <div className="flex-1 flex flex-col">
+                <h3 className="text-base font-semibold text-text-primary mb-4">
+                  Macro Impact Analysis
+                </h3>
+                <div className="space-y-4">
+                  {/* Scenario Display - Key Variables */}
+                  <div className="grid grid-cols-3 gap-3 text-xs">
+                    <div className="bg-background-secondary rounded-lg p-2">
+                      <div className="text-text-tertiary mb-1">Fed Rate</div>
+                      <div className="text-accent-cyan font-mono font-semibold">
+                        {macroState.fed_funds_rate?.toFixed(2) || 'N/A'}%
+                      </div>
+                    </div>
+                    <div className="bg-background-secondary rounded-lg p-2">
+                      <div className="text-text-tertiary mb-1">US Tariff</div>
+                      <div className="text-accent-magenta font-mono font-semibold">
+                        {macroState.us_tariff_rate?.toFixed(0) || 'N/A'}%
+                      </div>
+                    </div>
+                    <div className="bg-background-secondary rounded-lg p-2">
+                      <div className="text-text-tertiary mb-1">KRW/USD</div>
+                      <div className="text-accent-emerald font-mono font-semibold">
+                        {macroState.krw_usd?.toFixed(0) || 'N/A'}
+                      </div>
                     </div>
                   </div>
-                  <div className="bg-background-secondary rounded-lg p-2">
-                    <div className="text-text-tertiary mb-1">US Tariff</div>
-                    <div className="text-accent-magenta font-mono font-semibold">
-                      {macroState.us_tariff_rate?.toFixed(0) || 'N/A'}%
+
+                  {/* Impact Result */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-text-secondary mb-2">
+                        Estimated Net Income Impact
+                      </p>
+                      {(() => {
+                        // Get impact from store based on company sector
+                        let impact = 0;
+
+                        if (selectedCompany.sector === 'BANKING') {
+                          impact = calculatedImpacts.banking;
+                        } else if (selectedCompany.sector === 'REALESTATE') {
+                          impact = calculatedImpacts.realEstate;
+                        } else if (selectedCompany.sector === 'MANUFACTURING') {
+                          impact = calculatedImpacts.manufacturing;
+                        } else if (selectedCompany.sector === 'SEMICONDUCTOR') {
+                          impact = calculatedImpacts.semiconductor;
+                        }
+
+                        return (
+                          <p className={`text-4xl font-bold ${
+                            impact >= 0 ? 'text-status-safe' : 'text-status-danger'
+                          }`}>
+                            {impact.toFixed(2)}%
+                          </p>
+                        );
+                      })()}
                     </div>
-                  </div>
-                  <div className="bg-background-secondary rounded-lg p-2">
-                    <div className="text-text-tertiary mb-1">KRW/USD</div>
-                    <div className="text-accent-emerald font-mono font-semibold">
-                      {macroState.krw_usd?.toFixed(0) || 'N/A'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Impact Result - NOW USING STORE! */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-text-secondary mb-2">
-                      Estimated Net Income Impact
-                    </p>
-                    {(() => {
-                      // Get impact from store based on company sector
-                      let impact = 0;
-
-                      if (selectedCompany.sector === 'BANKING') {
-                        impact = calculatedImpacts.banking;
-                      } else if (selectedCompany.sector === 'REALESTATE') {
-                        impact = calculatedImpacts.realEstate;
-                      } else if (selectedCompany.sector === 'MANUFACTURING') {
-                        impact = calculatedImpacts.manufacturing;
-                      } else if (selectedCompany.sector === 'SEMICONDUCTOR') {
-                        impact = calculatedImpacts.semiconductor;
-                      }
-
-                      return (
-                        <p className={`text-4xl font-bold ${
-                          impact >= 0 ? 'text-status-safe' : 'text-status-danger'
-                        }`}>
-                          {impact.toFixed(2)}%
+                    <div className="flex items-center justify-center p-4 bg-background-tertiary rounded-lg">
+                      <div className="text-center">
+                        <p className="text-xs text-text-secondary mb-2">Company</p>
+                        <p className="text-sm font-semibold text-text-primary">
+                          {selectedCompany.ticker}
                         </p>
-                      );
-                    })()}
-                  </div>
-                  <div className="flex items-center justify-center p-4 bg-background-tertiary rounded-lg">
-                    <div className="text-center">
-                      <p className="text-xs text-text-secondary mb-2">Company</p>
-                      <p className="text-sm font-semibold text-text-primary">
-                        {selectedCompany.ticker}
-                      </p>
-                      <p className="text-xs text-accent-cyan mt-1">
-                        {selectedCompany.sector}
-                      </p>
+                        <p className="text-xs text-accent-cyan mt-1">
+                          {selectedCompany.sector}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Right: Macro Controls */}
+              <div className="w-[300px] border-l border-border-primary pl-4">
+                <MacroControlPanel />
+              </div>
             </Card>
           </div>
 
-          {/* Stock Chart (Secondary) - Fixed max height */}
-          <div className="h-[300px] max-h-[300px] flex-shrink-0">
+          {/* Live Price & Chart */}
+          <div className="h-[400px] max-h-[400px] flex-shrink-0">
             <Card className="h-full flex flex-col p-4">
-              <h3 className="text-sm font-semibold text-text-primary mb-2">{selectedCompany.name} ({selectedCompany.ticker})</h3>
+              {/* Live Price Indicator */}
+              <LivePriceIndicator
+                ticker={selectedCompany.ticker}
+                currentPrice={selectedCompany.financials.equity / 200}
+                previousClose={(selectedCompany.financials.equity / 200) * 0.99}
+                onOpenAlert={() => setIsAlertModalOpen(true)}
+              />
+
+              {/* Divider */}
+              <div className="border-b border-border-primary my-4"></div>
+
+              {/* Price History Chart */}
               <div className="flex-1 min-h-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={stockData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#00E5FF" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1A1A1F" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={{ stroke: '#1A1A1F' }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                    />
-                    <YAxis
-                      yAxisId="price"
-                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={{ stroke: '#1A1A1F' }}
-                      width={60}
-                      tickFormatter={(value) => `$${value.toFixed(0)}`}
-                    />
-                    <YAxis
-                      yAxisId="volume"
-                      orientation="right"
-                      tick={{ fill: '#9CA3AF', fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={{ stroke: '#1A1A1F' }}
-                      width={60}
-                      tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
-                    />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#0D0D0F', border: '1px solid #1A1A1F', borderRadius: '8px' }}
-                      labelStyle={{ color: '#00E5FF' }}
-                      formatter={(value: any, name: string) => {
-                        if (name === 'price') return [`$${value.toFixed(2)}`, 'Price'];
-                        if (name === 'volume') return [`${(value / 1000000).toFixed(2)}M`, 'Volume'];
-                        return value;
-                      }}
-                    />
-                    <Area
-                      yAxisId="price"
-                      type="monotone"
-                      dataKey="price"
-                      stroke="#00E5FF"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorPrice)"
-                    />
-                    <Bar
-                      yAxisId="volume"
-                      dataKey="volume"
-                      fill="#E6007A"
-                      opacity={0.3}
-                      barSize={4}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <PriceHistoryChart
+                  ticker={selectedCompany.ticker}
+                  basePrice={selectedCompany.financials.equity / 200}
+                  adjustedBasePrice={calculateAdjustedFinancials(selectedCompany).equity / 200}
+                />
               </div>
             </Card>
           </div>
 
           {/* Fundamental & Technical & Analysis Report Tabs (Supplementary) - Remaining space */}
-          <div className="flex-1 min-h-0 max-h-[400px] overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <Card className="h-full flex flex-col overflow-hidden p-4">
               <div className="flex gap-1 border-b border-border-primary pb-3 overflow-x-auto flex-shrink-0">
                 {analysisTabs.map(tab => (
@@ -747,10 +773,20 @@ export default function PlatformDashboard() {
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR (20%) - Company List + News Feed */}
-        <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Company List - 50% */}
-          <div className="h-[50%] min-h-0 overflow-hidden">
+        {/* RIGHT SIDEBAR (20%) - Watchlist + Company List + News Feed */}
+        <div className="w-[20%] min-w-0 flex flex-col gap-4">
+          {/* Watchlist - max 300px */}
+          <div className="max-h-[300px] flex-shrink-0">
+            <Card className="h-full flex flex-col p-4">
+              <Watchlist onSelectCompany={(stock) => {
+                const company = companies.find(c => c.ticker === stock.ticker);
+                if (company) setSelectedCompany(company);
+              }} />
+            </Card>
+          </div>
+
+          {/* Company List - max 400px */}
+          <div className="max-h-[400px] flex-shrink-0">
             <Card className="h-full flex flex-col overflow-hidden">
               <CardTitle className="text-xs mb-2 flex-shrink-0">Company List</CardTitle>
               <div className="relative mb-2 flex-shrink-0">
@@ -780,12 +816,20 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* News Feed - 50% */}
-          <div className="h-[50%] min-h-0 overflow-hidden">
+          {/* News Feed - max 400px */}
+          <div className="max-h-[400px] flex-shrink-0">
             <NewsFeed selectedSector={selectedCompany.sector} />
           </div>
         </div>
       </div>
+
+      {/* Price Alert Modal */}
+      <PriceAlertModal
+        isOpen={isAlertModalOpen}
+        onClose={() => setIsAlertModalOpen(false)}
+        ticker={selectedCompany.ticker}
+        currentPrice={selectedCompany.financials.equity / 200}
+      />
     </div>
   );
 }

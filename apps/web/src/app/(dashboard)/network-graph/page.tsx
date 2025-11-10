@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { BarChart3, Info, Network as NetworkIcon, Layers } from 'lucide-react';
+import { Card, Button, SectionHeader } from '@/components/ui/DesignSystem';
 
-const NetworkGraph3D = dynamic(() => import('@/components/visualization/NetworkGraph3D'), {
+const ForceNetworkGraph3D = dynamic(() => import('@/components/visualization/ForceNetworkGraph3D'), {
   ssr: false,
   loading: () => (
     <div className="h-full flex items-center justify-center">
-      <div className="text-accent-cyan animate-pulse">Loading 3D Visualization...</div>
+      <div className="text-accent-cyan animate-pulse">Loading 3D Force Graph...</div>
     </div>
   ),
 });
@@ -18,54 +19,40 @@ export default function NetworkGraphPage() {
 
   return (
     <div className="relative min-h-screen bg-black text-text-primary">
-      {/* Header */}
-      <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur sticky top-0 z-20">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-light text-accent-cyan mb-1 flex items-center gap-2">
-              <NetworkIcon size={24} />
-              3D Network Graph
-            </h1>
-            <p className="text-sm text-text-secondary font-light">
-              Obsidian-style 4-Level Ontology Visualization: Macro → Sector → Company → Asset
-            </p>
-          </div>
-
+      <SectionHeader
+        title="3D Network Graph"
+        subtitle="Obsidian-style 4-Level Ontology Visualization: Macro → Sector → Company → Asset"
+        icon={<NetworkIcon size={24} />}
+        action={
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={() => setView('3d')}
-              className={`px-4 py-2 rounded-lg text-xs transition-all ${
-                view === '3d'
-                  ? 'bg-accent-cyan text-black'
-                  : 'bg-background-secondary text-text-secondary hover:text-text-primary'
-              }`}
+              variant={view === '3d' ? 'primary' : 'secondary'}
+              size="sm"
             >
               3D View
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setView('info')}
-              className={`px-4 py-2 rounded-lg text-xs transition-all ${
-                view === 'info'
-                  ? 'bg-accent-cyan text-black'
-                  : 'bg-background-secondary text-text-secondary hover:text-text-primary'
-              }`}
+              variant={view === 'info' ? 'primary' : 'secondary'}
+              size="sm"
             >
               Info
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Main Content */}
       {view === '3d' ? (
         <div className="h-[calc(100vh-120px)]">
-          <NetworkGraph3D />
+          <ForceNetworkGraph3D />
         </div>
       ) : (
         <div className="px-6 py-6 max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Overview */}
-            <div className="bg-[#0D0D0F] border border-[#1A1A1F] rounded-xl p-6">
+            <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <BarChart3 size={18} className="text-accent-cyan" />
                 <h3 className="text-base font-semibold text-text-primary">Overview</h3>
@@ -81,10 +68,10 @@ export default function NetworkGraphPage() {
                   connections show relationships such as impact, ownership, supply chains, and competition.
                 </p>
               </div>
-            </div>
+            </Card>
 
             {/* 4 Levels */}
-            <div className="bg-[#0D0D0F] border border-[#1A1A1F] rounded-xl p-6">
+            <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Layers size={18} className="text-accent-magenta" />
                 <h3 className="text-base font-semibold text-text-primary">4-Level Ontology</h3>
@@ -123,10 +110,10 @@ export default function NetworkGraphPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Interaction Guide */}
-            <div className="bg-[#0D0D0F] border border-[#1A1A1F] rounded-xl p-6">
+            <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Info size={18} className="text-accent-emerald" />
                 <h3 className="text-base font-semibold text-text-primary">How to Use</h3>
@@ -181,10 +168,10 @@ export default function NetworkGraphPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Connection Types */}
-            <div className="bg-[#0D0D0F] border border-[#1A1A1F] rounded-xl p-6">
+            <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <NetworkIcon size={18} className="text-accent-magenta" />
                 <h3 className="text-base font-semibold text-text-primary">Connection Types</h3>
@@ -223,7 +210,7 @@ export default function NetworkGraphPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         </div>
       )}
