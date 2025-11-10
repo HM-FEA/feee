@@ -540,13 +540,13 @@ export default function PlatformDashboard() {
         </div>
       </div>
 
-      {/* Main Content: 20% | 80% */}
+      {/* Main Content: 20% | 60% | 20% */}
       <div className="flex-1 flex gap-4 px-4 py-4 overflow-hidden">
 
-        {/* LEFT SIDEBAR (20%) - Company Selector + News + Community */}
+        {/* LEFT SIDEBAR (20%) - Trending + Community */}
         <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
-          {/* Trending - 15% */}
-          <div className="h-[15%] min-h-0 overflow-hidden">
+          {/* Trending - 50% */}
+          <div className="h-[50%] min-h-0 overflow-hidden">
             <Card className="h-full flex flex-col">
               <CardTitle icon={<TrendingUp size={16}/>} className="text-xs">Trending</CardTitle>
               <div className="space-y-2 flex-1 overflow-y-auto pr-2">
@@ -569,44 +569,8 @@ export default function PlatformDashboard() {
             </Card>
           </div>
 
-          {/* Company List - 35% */}
-          <div className="h-[35%] min-h-0 overflow-hidden">
-            <Card className="h-full flex flex-col overflow-hidden">
-              <CardTitle className="text-xs mb-2 flex-shrink-0">Company List</CardTitle>
-              <div className="relative mb-2 flex-shrink-0">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-text-tertiary"/>
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-black border border-border-primary rounded-lg pl-6 pr-2 py-1 text-xs focus:outline-none focus:border-accent-cyan"
-                />
-              </div>
-              <div className="space-y-1 flex-1 overflow-y-auto pr-1 min-h-0">
-                {filteredCompanies.map(company => (
-                  <button
-                    key={company.ticker}
-                    onClick={() => setSelectedCompany(company)}
-                    className={`w-full p-1.5 rounded text-left transition-all text-xs ${
-                      selectedCompany.ticker === company.ticker ? 'bg-accent-cyan/10' : 'hover:bg-background-tertiary'
-                    }`}
-                  >
-                    <div className="font-semibold text-text-primary">{company.ticker}</div>
-                    <div className="text-text-secondary text-xs">{company.sector}</div>
-                  </button>
-                ))}
-              </div>
-            </Card>
-          </div>
-
-          {/* News Feed - 25% */}
-          <div className="h-[25%] min-h-0 overflow-hidden">
-            <NewsFeed selectedSector={selectedCompany.sector} />
-          </div>
-
-          {/* Community Panel - 25% */}
-          <div className="h-[25%] min-h-0 overflow-hidden">
+          {/* Community Panel - 50% */}
+          <div className="h-[50%] min-h-0 overflow-hidden">
             <CommunityPanel />
           </div>
         </div>
@@ -780,6 +744,45 @@ export default function PlatformDashboard() {
                 {renderAnalysisContent()}
               </div>
             </Card>
+          </div>
+        </div>
+
+        {/* RIGHT SIDEBAR (20%) - Company List + News Feed */}
+        <div className="w-[20%] min-w-0 flex flex-col gap-4 overflow-hidden">
+          {/* Company List - 50% */}
+          <div className="h-[50%] min-h-0 overflow-hidden">
+            <Card className="h-full flex flex-col overflow-hidden">
+              <CardTitle className="text-xs mb-2 flex-shrink-0">Company List</CardTitle>
+              <div className="relative mb-2 flex-shrink-0">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-text-tertiary"/>
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-black border border-border-primary rounded-lg pl-6 pr-2 py-1 text-xs focus:outline-none focus:border-accent-cyan"
+                />
+              </div>
+              <div className="space-y-1 flex-1 overflow-y-auto pr-1 min-h-0">
+                {filteredCompanies.map(company => (
+                  <button
+                    key={company.ticker}
+                    onClick={() => setSelectedCompany(company)}
+                    className={`w-full p-1.5 rounded text-left transition-all text-xs ${
+                      selectedCompany.ticker === company.ticker ? 'bg-accent-cyan/10' : 'hover:bg-background-tertiary'
+                    }`}
+                  >
+                    <div className="font-semibold text-text-primary">{company.ticker}</div>
+                    <div className="text-text-secondary text-xs">{company.sector}</div>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* News Feed - 50% */}
+          <div className="h-[50%] min-h-0 overflow-hidden">
+            <NewsFeed selectedSector={selectedCompany.sector} />
           </div>
         </div>
       </div>
