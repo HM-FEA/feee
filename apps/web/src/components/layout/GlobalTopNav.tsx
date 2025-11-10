@@ -2,57 +2,123 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Network, Trophy, BookOpen, Zap, Landmark, Bot, BarChart, Globe, Sparkles } from 'lucide-react';
+import { Home, Network, Trophy, BookOpen, Zap, Landmark, Bot, BarChart, Globe, Sparkles, Users, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const mainNavigation = [
-  { name: 'Platform', href: '/dashboard', icon: Home },
-  { name: 'Network', href: '/network-graph', icon: Network },
-  { name: 'Globe', href: '/globe', icon: Globe },
-  { name: 'Ontology', href: '/ontology', icon: Landmark },
-  { name: 'Sim Lab', href: '/simulation', icon: Sparkles },
-  { name: 'Simulate', href: '/simulate', icon: Zap },
-  { name: 'Arena', href: '/arena', icon: Trophy },
-  { name: 'Learn', href: '/learn', icon: BookOpen },
-  { name: 'Trading', href: '/trading', icon: BarChart },
+  { name: 'Home', href: '/dashboard', icon: Home, group: 'core' },
+  { name: 'Sim Lab', href: '/simulation', icon: Sparkles, group: 'core' },
+  { name: 'Network', href: '/network-graph', icon: Network, group: 'visualization' },
+  { name: 'Globe', href: '/globe', icon: Globe, group: 'visualization' },
+  { name: 'Ontology', href: '/ontology', icon: Landmark, group: 'platform' },
+  { name: 'Arena', href: '/arena', icon: Trophy, group: 'platform' },
+  { name: 'Learn', href: '/learn', icon: BookOpen, group: 'platform' },
+  { name: 'Community', href: '/community', icon: Users, group: 'social' },
+  { name: 'Admin', href: '/ceo-dashboard', icon: Settings, group: 'admin' },
 ];
 
 export function GlobalTopNav() {
   const pathname = usePathname();
 
+  // Group navigation items
+  const coreItems = mainNavigation.filter(item => item.group === 'core');
+  const vizItems = mainNavigation.filter(item => item.group === 'visualization');
+  const platformItems = mainNavigation.filter(item => item.group === 'platform');
+  const socialItems = mainNavigation.filter(item => item.group === 'social');
+  const adminItems = mainNavigation.filter(item => item.group === 'admin');
+
+  const renderNavItems = (items: typeof mainNavigation) => {
+    return items.map((item) => {
+      const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+      return (
+        <Link
+          key={item.name}
+          href={item.href}
+          className={cn(
+            'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
+            isActive
+              ? 'bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20'
+              : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
+          )}
+        >
+          <item.icon className="h-4 w-4" />
+          <span className="hidden lg:inline">{item.name}</span>
+        </Link>
+      );
+    });
+  };
+
   return (
     <nav className="sticky top-0 z-50 w-full bg-black/95 backdrop-blur border-b border-border-primary">
-      <div className="flex items-center justify-between px-6 py-3">
+      <div className="flex items-center justify-between px-4 lg:px-6 py-3">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <h1 className="text-xl font-bold text-accent-cyan">Nexus-Alpha</h1>
+        <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-cyan to-accent-magenta flex items-center justify-center">
+            <span className="text-white font-bold text-lg">N</span>
+          </div>
+          <h1 className="text-lg lg:text-xl font-bold text-accent-cyan hidden sm:block">Nexus-Alpha</h1>
         </Link>
 
         {/* Navigation Links */}
-        <div className="flex items-center gap-1">
-          {mainNavigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
-                  isActive
-                    ? 'bg-accent-cyan/10 text-accent-cyan'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-background-tertiary'
-                )}
-              >
-                <item.icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{item.name}</span>
-              </Link>
-            );
-          })}
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide flex-1 mx-4">
+          {/* Core */}
+          <div className="flex items-center gap-1">
+            {renderNavItems(coreItems)}
+          </div>
+
+          {/* Visualization */}
+          {vizItems.length > 0 && (
+            <>
+              <div className="h-6 w-px bg-border-primary" />
+              <div className="flex items-center gap-1">
+                {renderNavItems(vizItems)}
+              </div>
+            </>
+          )}
+
+          {/* Platform */}
+          {platformItems.length > 0 && (
+            <>
+              <div className="h-6 w-px bg-border-primary" />
+              <div className="flex items-center gap-1">
+                {renderNavItems(platformItems)}
+              </div>
+            </>
+          )}
+
+          {/* Social */}
+          {socialItems.length > 0 && (
+            <>
+              <div className="h-6 w-px bg-border-primary" />
+              <div className="flex items-center gap-1">
+                {renderNavItems(socialItems)}
+              </div>
+            </>
+          )}
+
+          {/* Admin */}
+          {adminItems.length > 0 && (
+            <>
+              <div className="h-6 w-px bg-border-primary" />
+              <div className="flex items-center gap-1">
+                {renderNavItems(adminItems)}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* User Menu Placeholder */}
-        <div className="w-8 h-8 rounded-full bg-accent-cyan/10 border border-accent-cyan flex items-center justify-center">
-          <span className="text-xs font-semibold text-accent-cyan">U</span>
+        {/* User Menu */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <button className="relative p-2 text-text-secondary hover:text-text-primary transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <span className="absolute top-1 right-1 w-2 h-2 bg-accent-magenta rounded-full"></span>
+          </button>
+
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-cyan to-accent-magenta flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
+            <span className="text-xs font-semibold text-white">U</span>
+          </div>
         </div>
       </div>
     </nav>
