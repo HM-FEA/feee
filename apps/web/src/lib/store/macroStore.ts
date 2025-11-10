@@ -3,6 +3,7 @@ import { getDefaultMacroState, MACRO_VARIABLES } from '@/data/macroVariables';
 import { Company } from '@/data/companies';
 import { calculateAllImpacts, getSectorImpactBreakdown, ImpactBreakdown } from '@/lib/utils/impactCalculation';
 import { useLinkageStore } from './linkageStore';
+import { calculateAdjustedFinancials as calculateFinancialTheory, calculateImpliedValuation } from '@/lib/finance/macroImpact';
 
 export type MacroState = Record<string, number>;
 
@@ -15,6 +16,11 @@ export interface AdjustedFinancials {
   equity: number;
   market_cap?: number;
   ebitda: number;
+  fcf?: number;                // Free Cash Flow
+  costOfEquity?: number;       // CAPM-based
+  fairValue?: number;          // DCF valuation
+  evToEbitda?: number;         // EV/EBITDA multiple
+  peRatio?: number;            // P/E ratio
 }
 
 interface MacroStore {
@@ -114,21 +120,28 @@ export const useMacroStore = create<MacroStore>((set, get) => ({
       sectorImpact = impacts.crypto;
     }
 
-    // Apply impact as percentage change
-    const impactMultiplier = 1 + (sectorImpact / 100);
+    // Use financial theory-based calculation
+    const advancedMetrics = calculateFinancialTheory(company, state.macroState, sectorImpact);
+    const valuation = calculateImpliedValuation(company, advancedMetrics, state.macroState);
 
-    // Calculate adjusted financials
+    // Apply impact as percentage change for assets/debt (less sensitive)
+    const impactMultiplier = 1 + (sectorImpact / 100);
     const baseFinancials = company.financials;
 
     return {
-      revenue: baseFinancials.revenue * impactMultiplier,
-      operating_income: (baseFinancials.operating_income || 0) * impactMultiplier,
-      net_income: baseFinancials.net_income * impactMultiplier,
-      total_assets: baseFinancials.total_assets * (1 + (sectorImpact / 200)), // Assets grow slower
-      total_debt: baseFinancials.total_debt * (1 + (sectorImpact / 300)), // Debt changes even slower
+      revenue: advancedMetrics.revenue,
+      operating_income: advancedMetrics.operatingIncome,
+      net_income: advancedMetrics.netIncome,
+      ebitda: advancedMetrics.ebitda,
+      fcf: advancedMetrics.fcf,
+      costOfEquity: advancedMetrics.costOfEquity,
+      fairValue: advancedMetrics.fairValue,
+      evToEbitda: valuation.evToEbitda,
+      peRatio: valuation.peRatio,
+      total_assets: baseFinancials.total_assets * (1 + (sectorImpact / 200)),
+      total_debt: baseFinancials.total_debt * (1 + (sectorImpact / 300)),
       equity: baseFinancials.equity * impactMultiplier,
-      market_cap: baseFinancials.market_cap ? baseFinancials.market_cap * impactMultiplier : undefined,
-      ebitda: (baseFinancials.operating_income || 0) * 1.2 * impactMultiplier, // EBITDA estimation
+      market_cap: valuation.impliedMarketCap,
     };
   },
 
