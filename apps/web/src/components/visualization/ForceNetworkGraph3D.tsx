@@ -5,6 +5,16 @@ import dynamic from 'next/dynamic';
 import { companies } from '@/data/companies';
 import { MACRO_CATEGORIES } from '@/data/macroVariables';
 import { useMacroStore } from '@/lib/store/macroStore';
+import {
+  NVIDIA,
+  NVIDIA_PRODUCTS,
+  NVIDIA_COMPONENTS,
+  NVIDIA_SHAREHOLDERS,
+  NVIDIA_CUSTOMERS,
+  NVIDIA_RELATIONSHIPS,
+  SK_HYNIX,
+  EntityType,
+} from '@/data/knowledgeGraph';
 
 // Dynamic import to avoid SSR issues
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
@@ -12,9 +22,10 @@ const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false 
 interface GraphNode {
   id: string;
   name: string;
-  level: 'macro' | 'sector' | 'company';
+  level: 'macro' | 'sector' | 'company' | 'product' | 'component' | 'shareholder' | 'customer' | 'technology';
   sector?: string;
   category?: string;
+  entityType?: EntityType;
   val: number; // Node size
   color: string;
   data?: any;
@@ -203,6 +214,131 @@ function generateGraphData(): GraphData {
         color: 'rgba(239, 68, 68, 0.4)'
       });
     }
+  });
+
+  // ====================================
+  // KNOWLEDGE GRAPH: Deep Ontology
+  // ====================================
+
+  // Add Nvidia entity
+  nodes.push({
+    id: NVIDIA.id,
+    name: NVIDIA.name,
+    level: 'company',
+    sector: 'SEMICONDUCTOR',
+    val: 35,
+    color: '#00FF00',
+    data: NVIDIA,
+  });
+
+  // Add Products (Level 4)
+  NVIDIA_PRODUCTS.forEach(product => {
+    nodes.push({
+      id: product.id,
+      name: product.name,
+      level: 'product',
+      entityType: 'PRODUCT',
+      val: 15,
+      color: '#FFAA00',
+      data: product,
+    });
+
+    // Link: Nvidia PRODUCES Product
+    links.push({
+      source: NVIDIA.id,
+      target: product.id,
+      type: 'supply',
+      strength: 2,
+      color: 'rgba(255, 170, 0, 0.6)',
+    });
+  });
+
+  // Add Components (Level 5)
+  NVIDIA_COMPONENTS.forEach(component => {
+    nodes.push({
+      id: component.id,
+      name: component.name,
+      level: 'component',
+      entityType: 'COMPONENT',
+      val: 10,
+      color: '#FF6B00',
+      data: component,
+    });
+
+    // Link: H100 USES HBM3E (example)
+    if (component.id === 'component-hbm3e') {
+      links.push({
+        source: 'product-h100',
+        target: component.id,
+        type: 'supply',
+        strength: 1.5,
+        color: 'rgba(255, 107, 0, 0.5)',
+      });
+    }
+  });
+
+  // Add SK Hynix (supplier of HBM)
+  nodes.push({
+    id: SK_HYNIX.id,
+    name: SK_HYNIX.name,
+    level: 'company',
+    sector: 'SEMICONDUCTOR',
+    val: 25,
+    color: '#F59E0B',
+    data: SK_HYNIX,
+  });
+
+  // Link: SK Hynix SUPPLIES HBM3E
+  links.push({
+    source: SK_HYNIX.id,
+    target: 'component-hbm3e',
+    type: 'supply',
+    strength: 3,
+    color: 'rgba(245, 158, 11, 0.7)',
+  });
+
+  // Add Shareholders (Level 7)
+  NVIDIA_SHAREHOLDERS.forEach(shareholder => {
+    nodes.push({
+      id: shareholder.id,
+      name: shareholder.name,
+      level: 'shareholder',
+      entityType: 'SHAREHOLDER',
+      val: 12,
+      color: '#9333EA',
+      data: shareholder,
+    });
+
+    // Link: Shareholder OWNS Nvidia
+    links.push({
+      source: shareholder.id,
+      target: NVIDIA.id,
+      type: 'ownership',
+      strength: (shareholder.metadata?.stake || 1) / 10,
+      color: 'rgba(147, 51, 234, 0.5)',
+    });
+  });
+
+  // Add Customers (Level 8)
+  NVIDIA_CUSTOMERS.forEach(customer => {
+    nodes.push({
+      id: customer.id,
+      name: customer.name,
+      level: 'customer',
+      entityType: 'CUSTOMER',
+      val: 18,
+      color: '#06B6D4',
+      data: customer,
+    });
+
+    // Link: Customer BUYS H100
+    links.push({
+      source: customer.id,
+      target: 'product-h100',
+      type: 'supply',
+      strength: 2,
+      color: 'rgba(6, 182, 212, 0.5)',
+    });
   });
 
   return { nodes, links };
