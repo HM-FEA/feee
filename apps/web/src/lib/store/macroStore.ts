@@ -1,6 +1,10 @@
 import { create } from 'zustand';
-import { getDefaultMacroState, MacroState, MACRO_VARIABLES } from '@/data/macroVariables';
+import { getDefaultMacroState, MACRO_VARIABLES } from '@/data/macroVariables';
 import { Company } from '@/data/companies';
+import { calculateAllImpacts, getSectorImpactBreakdown, ImpactBreakdown } from '@/lib/utils/impactCalculation';
+import { useLinkageStore } from './linkageStore';
+
+export type MacroState = Record<string, number>;
 
 export interface AdjustedFinancials {
   revenue: number;
@@ -32,6 +36,9 @@ interface MacroStore {
     crypto: number;       // % impact on crypto sector
   };
 
+  // Get detailed impact breakdown for a sector
+  getSectorBreakdown: (sector: 'BANKING' | 'REALESTATE' | 'MANUFACTURING' | 'SEMICONDUCTOR' | 'CRYPTO') => ImpactBreakdown[];
+
   // Calculate adjusted financials based on macro impact
   calculateAdjustedFinancials: (company: Company) => AdjustedFinancials;
 
@@ -39,38 +46,13 @@ interface MacroStore {
   recalculateImpacts: () => void;
 }
 
-// Calculation logic for how macro variables affect sectors
+// Calculation logic using linkage-based engine
 const calculateSectorImpacts = (macroState: MacroState) => {
-  // Find key variables
-  const fedRate = macroState['fed_rate'] || 0.025;
-  const gdpGrowth = macroState['gdp_growth_us'] || 0.021;
-  const oilPrice = macroState['oil_price_wti'] || 85;
-  const vix = macroState['vix'] || 18.5;
+  // Get adjusted linkages from linkageStore
+  const linkages = useLinkageStore.getState().getAdjustedLinkages();
 
-  // Calculate impacts (simplified model)
-  // Banking: Benefits from higher rates
-  const bankingImpact = (fedRate - 0.025) * 100 * 16; // +0.1% rate → +1.6% banking
-
-  // Real Estate: Hurt by higher rates
-  const realEstateImpact = -(fedRate - 0.025) * 100 * 20; // +0.1% rate → -2.0% RE
-
-  // Manufacturing: Affected by GDP growth and trade
-  const manufacturingImpact = (gdpGrowth - 0.021) * 100 * 30 + (oilPrice - 85) / 85 * -10;
-
-  // Semiconductor: Affected by tech cycle and demand
-  const semiconductorImpact = (gdpGrowth - 0.021) * 100 * 40 + (vix - 18.5) / 18.5 * -15;
-
-  // Crypto: Hurt by higher rates (risk-off), benefits from liquidity
-  const m2Growth = macroState['global_m2_growth'] || 5;
-  const cryptoImpact = -(fedRate - 0.025) * 100 * 25 + (m2Growth - 5) * 2 + (vix - 18.5) / 18.5 * -20;
-
-  return {
-    banking: bankingImpact,
-    realEstate: realEstateImpact,
-    manufacturing: manufacturingImpact,
-    semiconductor: semiconductorImpact,
-    crypto: cryptoImpact,
-  };
+  // Use the sophisticated calculation engine
+  return calculateAllImpacts(macroState, linkages);
 };
 
 export const useMacroStore = create<MacroStore>((set, get) => ({
@@ -154,5 +136,11 @@ export const useMacroStore = create<MacroStore>((set, get) => ({
     const state = get();
     const newImpacts = calculateSectorImpacts(state.macroState);
     set({ calculatedImpacts: newImpacts });
+  },
+
+  getSectorBreakdown: (sector) => {
+    const state = get();
+    const linkages = useLinkageStore.getState().getAdjustedLinkages();
+    return getSectorImpactBreakdown(sector, state.macroState, linkages);
   },
 }));

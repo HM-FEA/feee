@@ -74,10 +74,33 @@ export default function Globe3D({
   showControls = true
 }: Globe3DProps) {
   const globeRef = useRef<any>();
+  const containerRef = useRef<HTMLDivElement>(null);
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [viewMode, setViewMode] = useState<'m2' | 'flows'>('m2');
   const [autoRotate, setAutoRotate] = useState(true);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const macroState = useMacroStore(state => state.macroState);
+
+  // Measure container size
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight,
+        });
+      }
+    };
+
+    updateDimensions();
+
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   // Sector-to-country mapping (which countries are important for each sector)
   const sectorCountries: Record<string, string[]> = {
@@ -154,7 +177,7 @@ export default function Globe3D({
   }, [selectedSector]);
 
   return (
-    <div className="w-full h-full relative bg-black">
+    <div ref={containerRef} className="w-full h-full relative bg-black">
       {/* Sector Focus Indicator */}
       {selectedSector && (
         <div className="absolute top-2 right-2 z-10 bg-accent-cyan/20 backdrop-blur border border-accent-cyan rounded-lg px-3 py-1.5">
@@ -376,8 +399,8 @@ export default function Globe3D({
         atmosphereAltitude={0.15}
 
         // Camera
-        width={typeof window !== 'undefined' ? window.innerWidth : 1920}
-        height={typeof window !== 'undefined' ? window.innerHeight : 1080}
+        width={dimensions.width}
+        height={dimensions.height}
 
         // Interaction
         onGlobeClick={handleGlobeClick}

@@ -272,14 +272,14 @@ export default function SimulationPage() {
           )}
 
           {viewMode === 'split' && (
-            <div className="grid grid-cols-2 h-full">
-              <div className="border-r border-border-primary relative">
+            <div className="grid grid-cols-2 h-full w-full">
+              <div className="border-r border-border-primary relative h-full w-full">
                 <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-cyan rounded px-2 py-1">
                   <span className="text-xs font-semibold text-accent-cyan">Globe 3D - Capital Flows</span>
                 </div>
                 <Globe3D selectedSector={selectedSector} showControls={false} />
               </div>
-              <div className="relative">
+              <div className="relative h-full w-full">
                 <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-magenta rounded px-2 py-1">
                   <span className="text-xs font-semibold text-accent-magenta">Network Graph - Relationships</span>
                 </div>

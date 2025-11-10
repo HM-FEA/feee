@@ -218,14 +218,37 @@ export default function ForceNetworkGraph3D({
   showControls = true
 }: ForceNetworkGraph3DProps) {
   const fgRef = useRef<any>();
+  const containerRef = useRef<HTMLDivElement>(null);
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] });
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [filterLevel, setFilterLevel] = useState<'all' | 'macro' | 'sector' | 'company'>('all');
   const [highlightNodes, setHighlightNodes] = useState(new Set<string>());
   const [highlightLinks, setHighlightLinks] = useState(new Set<GraphLink>());
   const [hoverNode, setHoverNode] = useState<GraphNode | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
   const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+
+  // Measure container size
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight,
+        });
+      }
+    };
+
+    updateDimensions();
+
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   useEffect(() => {
     const data = generateGraphData();
@@ -307,7 +330,7 @@ export default function ForceNetworkGraph3D({
   }, []);
 
   return (
-    <div className="w-full h-full relative bg-black">
+    <div ref={containerRef} className="w-full h-full relative bg-black">
       {/* Controls */}
       {showControls && (
       <div className="absolute top-4 left-4 z-10 space-y-2">
@@ -499,6 +522,8 @@ export default function ForceNetworkGraph3D({
       <ForceGraph3D
         ref={fgRef}
         graphData={filteredData}
+        width={dimensions.width}
+        height={dimensions.height}
         nodeLabel="name"
         nodeVal="val"
         nodeColor={(node: any) => {
