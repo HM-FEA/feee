@@ -4,11 +4,11 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { BarChart3, Info, Network as NetworkIcon, Layers } from 'lucide-react';
 
-const NetworkGraph3D = dynamic(() => import('@/components/visualization/NetworkGraph3D'), {
+const ForceNetworkGraph3D = dynamic(() => import('@/components/visualization/ForceNetworkGraph3D'), {
   ssr: false,
   loading: () => (
     <div className="h-full flex items-center justify-center">
-      <div className="text-accent-cyan animate-pulse">Loading 3D Visualization...</div>
+      <div className="text-accent-cyan animate-pulse">Loading 3D Force Graph...</div>
     </div>
   ),
 });
@@ -59,7 +59,7 @@ export default function NetworkGraphPage() {
       {/* Main Content */}
       {view === '3d' ? (
         <div className="h-[calc(100vh-120px)]">
-          <NetworkGraph3D />
+          <ForceNetworkGraph3D />
         </div>
       ) : (
         <div className="px-6 py-6 max-w-7xl mx-auto">
