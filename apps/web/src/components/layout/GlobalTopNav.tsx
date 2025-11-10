@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Network, Trophy, BookOpen, Zap, Landmark, Bot, BarChart, Globe, Sparkles, Users, Settings } from 'lucide-react';
+import { Home, Network, Trophy, BookOpen, Zap, Landmark, Bot, BarChart, Globe, Sparkles, Users, Settings, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const mainNavigation = [
@@ -11,6 +11,7 @@ const mainNavigation = [
   { name: 'Network', href: '/network-graph', icon: Network, group: 'visualization' },
   { name: 'Globe', href: '/globe', icon: Globe, group: 'visualization' },
   { name: 'Ontology', href: '/ontology', icon: Landmark, group: 'platform' },
+  { name: 'Reports', href: '/reports', icon: FileText, group: 'platform' },
   { name: 'Arena', href: '/arena', icon: Trophy, group: 'platform' },
   { name: 'Learn', href: '/learn', icon: BookOpen, group: 'platform' },
   { name: 'Community', href: '/community', icon: Users, group: 'social' },

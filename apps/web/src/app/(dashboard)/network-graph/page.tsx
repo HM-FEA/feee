@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { BarChart3, Info, Network as NetworkIcon, Layers } from 'lucide-react';
+import { BarChart3, Info, Network as NetworkIcon, Layers, GitBranch } from 'lucide-react';
 import { Card, Button, SectionHeader } from '@/components/ui/DesignSystem';
+import SupplyChainDiagram, { HBM_SUPPLY_CHAIN } from '@/components/visualization/SupplyChainDiagram';
 
 const ForceNetworkGraph3D = dynamic(() => import('@/components/visualization/ForceNetworkGraph3D'), {
   ssr: false,
@@ -15,7 +16,7 @@ const ForceNetworkGraph3D = dynamic(() => import('@/components/visualization/For
 });
 
 export default function NetworkGraphPage() {
-  const [view, setView] = useState<'3d' | 'info'>('3d');
+  const [view, setView] = useState<'3d' | 'supply-chain' | 'info'>('3d');
 
   return (
     <div className="relative min-h-screen bg-black text-text-primary">
@@ -33,6 +34,13 @@ export default function NetworkGraphPage() {
               3D View
             </Button>
             <Button
+              onClick={() => setView('supply-chain')}
+              variant={view === 'supply-chain' ? 'primary' : 'secondary'}
+              size="sm"
+            >
+              Supply Chain
+            </Button>
+            <Button
               onClick={() => setView('info')}
               variant={view === 'info' ? 'primary' : 'secondary'}
               size="sm"
@@ -47,6 +55,95 @@ export default function NetworkGraphPage() {
       {view === '3d' ? (
         <div className="h-[calc(100vh-120px)]">
           <ForceNetworkGraph3D />
+        </div>
+      ) : view === 'supply-chain' ? (
+        <div className="px-6 py-6 max-w-7xl mx-auto">
+          <SupplyChainDiagram
+            nodes={HBM_SUPPLY_CHAIN.nodes}
+            links={HBM_SUPPLY_CHAIN.links}
+            title="NVIDIA H100 Supply Chain Analysis"
+            description="Critical path analysis of AI accelerator manufacturing dependencies"
+          />
+
+          {/* Additional Supply Chain Insights */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <GitBranch size={18} className="text-red-400" />
+                <h3 className="text-base font-semibold text-text-primary">Critical Bottlenecks</h3>
+              </div>
+              <div className="space-y-2 text-sm text-text-secondary">
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                  <div>
+                    <span className="font-semibold text-white">ASML EUV:</span> Monopoly on extreme ultraviolet lithography equipment (18-24 month lead time)
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                  <div>
+                    <span className="font-semibold text-white">HBM3E Memory:</span> SK Hynix controls 95% of supply (4-6 month lead time)
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                  <div>
+                    <span className="font-semibold text-white">TSMC CoWoS:</span> Advanced packaging capacity constrained
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 size={18} className="text-green-400" />
+                <h3 className="text-base font-semibold text-text-primary">Economics</h3>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <div className="text-text-tertiary mb-1">H100 Retail Price</div>
+                  <div className="text-xl font-bold text-white">$30,000 - $40,000</div>
+                </div>
+                <div>
+                  <div className="text-text-tertiary mb-1">Manufacturing Cost</div>
+                  <div className="text-lg font-semibold text-text-primary">~$3,500</div>
+                </div>
+                <div>
+                  <div className="text-text-tertiary mb-1">Gross Margin</div>
+                  <div className="text-lg font-semibold text-green-400">88%+</div>
+                </div>
+                <div className="pt-2 border-t border-border-primary">
+                  <div className="text-text-tertiary mb-1">HBM3E Cost per Unit</div>
+                  <div className="text-text-primary">~$1,500 (43% of COGS)</div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Info size={18} className="text-blue-400" />
+                <h3 className="text-base font-semibold text-text-primary">Market Impact</h3>
+              </div>
+              <div className="space-y-3 text-sm text-text-secondary">
+                <div>
+                  <div className="font-semibold text-white mb-1">Annual Demand</div>
+                  <p>Growing 150% YoY driven by generative AI adoption</p>
+                </div>
+                <div>
+                  <div className="font-semibold text-white mb-1">Top Customers</div>
+                  <ul className="space-y-1">
+                    <li>• Microsoft: ~$8B/year</li>
+                    <li>• Meta: ~$6B/year</li>
+                    <li>• Google: ~$5B/year</li>
+                  </ul>
+                </div>
+                <div>
+                  <div className="font-semibold text-white mb-1">Supply Risk</div>
+                  <p>Geopolitical concentration in Taiwan (TSMC) and Netherlands (ASML)</p>
+                </div>
+              </div>
+            </Card>
+          </div>
         </div>
       ) : (
         <div className="px-6 py-6 max-w-7xl mx-auto">

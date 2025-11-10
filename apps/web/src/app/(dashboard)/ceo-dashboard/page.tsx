@@ -16,7 +16,7 @@ import {
 import { companies, Company } from '@/data/companies';
 import { Card, Button, Badge, SectionHeader } from '@/components/ui/DesignSystem';
 
-type AdminTab = 'overview' | 'companies' | 'macros' | 'connections' | 'add-data' | 'api-keys';
+type AdminTab = 'overview' | 'companies' | 'connections' | 'add-data' | 'api-keys';
 type ViewMode = 'list' | 'grid' | 'circuit';
 
 // Sector colors for visualization
@@ -247,7 +247,7 @@ export default function AdminDashboardPage() {
 
         {/* Tab Navigation */}
         <div className="flex gap-2 overflow-x-auto pb-2">
-          {(['overview', 'companies', 'macros', 'connections', 'api-keys', 'add-data'] as const).map((tab) => (
+          {(['overview', 'companies', 'connections', 'api-keys', 'add-data'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -732,99 +732,6 @@ export default function AdminDashboardPage() {
                 <p className="text-text-secondary">No companies found matching your criteria</p>
               </div>
             )}
-          </div>
-        )}
-
-        {/* MACROS TAB */}
-        {activeTab === 'macros' && (
-          <div className="max-w-7xl">
-            <div className="mb-6">
-              <h2 className="text-xl font-light text-text-primary mb-2">Macro Variables Configuration</h2>
-              <p className="text-sm text-text-secondary">
-                Manage all {MACRO_VARIABLES.length} macro variables across {Object.keys(MACRO_CATEGORIES).length} categories
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {Object.entries(MACRO_CATEGORIES).map(([categoryKey, category]) => {
-                const isExpanded = expandedCategories.has(categoryKey);
-                const variables = getVariablesByCategory(categoryKey as MacroCategory);
-
-                return (
-                  <Card key={categoryKey}>
-                    <button
-                      onClick={() => toggleCategory(categoryKey)}
-                      className="w-full flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">{category.icon}</span>
-                        <div className="text-left">
-                          <h3 className="text-base font-semibold text-text-primary">{category.label}</h3>
-                          <p className="text-xs text-text-tertiary">{variables.length} variables</p>
-                        </div>
-                      </div>
-                      {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-                    </button>
-
-                    {isExpanded && (
-                      <div className="mt-4 pt-4 border-t border-border-primary">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {variables.map(variable => (
-                            <div key={variable.id} className="bg-background-secondary rounded-lg p-3">
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex-1">
-                                  <h4 className="text-sm font-medium text-text-primary mb-1">
-                                    {variable.name}
-                                  </h4>
-                                  <p className="text-xs text-text-tertiary">
-                                    {variable.description}
-                                  </p>
-                                </div>
-                                <button className="p-1 text-text-tertiary hover:text-accent-cyan">
-                                  <Edit2 size={14} />
-                                </button>
-                              </div>
-
-                              <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
-                                <div>
-                                  <span className="text-text-tertiary">Min:</span>
-                                  <span className="ml-1 font-mono text-text-primary">
-                                    {variable.min}{variable.unit}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-text-tertiary">Default:</span>
-                                  <span className="ml-1 font-mono" style={{ color: category.color }}>
-                                    {variable.defaultValue}{variable.unit}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-text-tertiary">Max:</span>
-                                  <span className="ml-1 font-mono text-text-primary">
-                                    {variable.max}{variable.unit}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {variable.impact.sectors.slice(0, 3).map(sector => (
-                                  <span
-                                    key={sector}
-                                    className="px-2 py-0.5 bg-background-tertiary text-text-tertiary text-xs rounded"
-                                  >
-                                    {sector}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </Card>
-                );
-              })}
-            </div>
           </div>
         )}
 
