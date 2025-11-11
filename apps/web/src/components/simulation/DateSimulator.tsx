@@ -22,15 +22,21 @@ import {
 
 interface DateSimulatorProps {
   onSnapshotChange?: (snapshot: DateSnapshot) => void;
+  initialStartDate?: string; // YYYY-MM-DD format
+  initialEndDate?: string; // YYYY-MM-DD format
 }
 
-export default function DateSimulator({ onSnapshotChange }: DateSimulatorProps) {
+export default function DateSimulator({
+  onSnapshotChange,
+  initialStartDate = '2024-01-01',
+  initialEndDate = '2024-12-31'
+}: DateSimulatorProps) {
   const macroState = useMacroStore((state) => state.macroState);
   const levelState = useLevelStore((state) => state.levelState);
 
   // Simulation config
-  const [startDate, setStartDate] = useState<Date>(new Date('2024-01-01'));
-  const [endDate, setEndDate] = useState<Date>(new Date('2024-12-31'));
+  const [startDate, setStartDate] = useState<Date>(new Date(initialStartDate));
+  const [endDate, setEndDate] = useState<Date>(new Date(initialEndDate));
   const [intervalDays, setIntervalDays] = useState(30); // 1개월 간격
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
 
@@ -68,10 +74,16 @@ export default function DateSimulator({ onSnapshotChange }: DateSimulatorProps) 
     }
   };
 
-  // 초기 시뮬레이션
+  // 날짜 props 변경 시 state 업데이트
+  useEffect(() => {
+    setStartDate(new Date(initialStartDate));
+    setEndDate(new Date(initialEndDate));
+  }, [initialStartDate, initialEndDate]);
+
+  // 초기 시뮬레이션 및 날짜 변경 시 재실행
   useEffect(() => {
     runSimulation();
-  }, []); // 최초 1회만
+  }, [startDate, endDate]); // startDate, endDate가 변경되면 재실행
 
   // 재생 루프
   useEffect(() => {

@@ -107,6 +107,8 @@ export default function SimulationPage() {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const [currentSnapshot, setCurrentSnapshot] = useState<DateSnapshot | null>(null);
+  const [simStartDate, setSimStartDate] = useState<string>('2024-01-01');
+  const [simEndDate, setSimEndDate] = useState<string>('2024-12-31');
 
   const macroState = useMacroStore(state => state.macroState);
   const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
@@ -210,6 +212,15 @@ export default function SimulationPage() {
     Object.entries(scenario.settings).forEach(([key, value]) => {
       updateMacroVariable(key, value);
     });
+
+    // Set simulation date range based on scenario
+    // Start from scenario date and simulate for 12 months
+    const scenarioDate = new Date(scenario.date);
+    const endDate = new Date(scenarioDate);
+    endDate.setMonth(endDate.getMonth() + 12);
+
+    setSimStartDate(scenario.date);
+    setSimEndDate(endDate.toISOString().split('T')[0]);
 
     setTimeout(() => {
       setMacroChanging(false);
@@ -498,7 +509,11 @@ export default function SimulationPage() {
                   Date Simulation
                 </span>
               </div>
-              <DateSimulator onSnapshotChange={setCurrentSnapshot} />
+              <DateSimulator
+                onSnapshotChange={setCurrentSnapshot}
+                initialStartDate={simStartDate}
+                initialEndDate={simEndDate}
+              />
             </div>
           </div>
 
