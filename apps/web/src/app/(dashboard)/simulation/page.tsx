@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown, ChevronUp, Info, GitBranch } from 'lucide-react';
 import { Card, SectionHeader } from '@/components/ui/DesignSystem';
 import { useMacroStore } from '@/lib/store/macroStore';
+import { useLevelStore } from '@/lib/store/levelStore';
 import { MACRO_CATEGORIES, MACRO_VARIABLES } from '@/data/macroVariables';
 import LevelControlPanel from '@/components/simulation/LevelControlPanel';
 import SupplyChainDiagram, { HBM_SUPPLY_CHAIN } from '@/components/visualization/SupplyChainDiagram';
@@ -25,19 +26,88 @@ interface MacroControl {
   unit: string;
 }
 
+// Historical Scenarios
+const SCENARIOS = [
+  {
+    id: '2008-financial-crisis',
+    name: '2008 Financial Crisis',
+    date: '2008-09-15',
+    description: 'Lehman Brothers collapse and global financial meltdown',
+    icon: '📉',
+    settings: {
+      fed_funds_rate: 2.0,
+      us_10y_yield: 3.5,
+      us_gdp_growth: -2.8,
+      us_m2_money_supply: 8.5,
+      wti_oil: 145,
+      vix: 45
+    }
+  },
+  {
+    id: '2020-pandemic',
+    name: '2020 COVID-19 Pandemic',
+    date: '2020-03-15',
+    description: 'Market crash and unprecedented Fed intervention',
+    icon: '🦠',
+    settings: {
+      fed_funds_rate: 0.25,
+      us_10y_yield: 0.7,
+      us_gdp_growth: -3.4,
+      us_m2_money_supply: 19.2,
+      wti_oil: 20,
+      vix: 82
+    }
+  },
+  {
+    id: '2022-inflation',
+    name: '2022 Inflation Surge',
+    date: '2022-06-15',
+    description: 'Fed aggressive rate hikes to combat 40-year high inflation',
+    icon: '📈',
+    settings: {
+      fed_funds_rate: 1.75,
+      us_10y_yield: 3.2,
+      us_gdp_growth: 1.6,
+      us_m2_money_supply: 21.7,
+      wti_oil: 120,
+      vix: 28
+    }
+  },
+  {
+    id: 'baseline',
+    name: 'Current Baseline',
+    date: new Date().toISOString().split('T')[0],
+    description: 'Normal market conditions',
+    icon: '⚖️',
+    settings: {
+      fed_funds_rate: 5.25,
+      us_10y_yield: 4.5,
+      us_gdp_growth: 2.5,
+      us_m2_money_supply: 21.4,
+      wti_oil: 85,
+      vix: 18.5
+    }
+  }
+];
+
 export default function SimulationPage() {
   const [selectedSector, setSelectedSector] = useState<Sector>(null);
   const [viewMode, setViewMode] = useState<'split' | 'globe' | 'network' | 'supply-chain'>('split');
   const [globeViewMode, setGlobeViewMode] = useState<'companies' | 'flows' | 'm2'>('companies');
   const [showElementLibrary, setShowElementLibrary] = useState(false);
-  const [showScenarios, setShowScenarios] = useState(false);
+  const [showScenarios, setShowScenarios] = useState(true); // Open by default
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [macroChanging, setMacroChanging] = useState(false);
   const [changedMacroId, setChangedMacroId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [activeScenario, setActiveScenario] = useState<string | null>(null);
 
   const macroState = useMacroStore(state => state.macroState);
   const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
   const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+
+  const levelState = useLevelStore(state => state.levelState);
+  const updateLevelControl = useLevelStore(state => state.updateLevelControl);
 
   // Key macro controls (using correct variable IDs from macroVariables.ts)
   const macroControls: MacroControl[] = [
@@ -101,6 +171,11 @@ export default function SimulationPage() {
     setMacroChanging(true);
     setChangedMacroId(id);
 
+    // Clear active scenario when user manually adjusts
+    if (activeScenario) {
+      setActiveScenario(null);
+    }
+
     // Update macro variable with actual value (no conversion needed)
     updateMacroVariable(id, value);
 
@@ -109,6 +184,24 @@ export default function SimulationPage() {
       setMacroChanging(false);
       setChangedMacroId(null);
     }, 1000);
+  };
+
+  const applyScenario = (scenarioId: string) => {
+    const scenario = SCENARIOS.find(s => s.id === scenarioId);
+    if (!scenario) return;
+
+    setActiveScenario(scenarioId);
+    setSelectedDate(scenario.date);
+    setMacroChanging(true);
+
+    // Apply all scenario settings
+    Object.entries(scenario.settings).forEach(([key, value]) => {
+      updateMacroVariable(key, value);
+    });
+
+    setTimeout(() => {
+      setMacroChanging(false);
+    }, 1500);
   };
 
   const sectors = [
@@ -368,7 +461,7 @@ export default function SimulationPage() {
                 <LevelControlPanel
                   onControlChange={(level, controlId, value) => {
                     console.log(`Level ${level} - ${controlId}: ${value}`);
-                    // TODO: Integrate with state management
+                    updateLevelControl(controlId, value);
                   }}
                 />
               </div>
@@ -682,26 +775,33 @@ export default function SimulationPage() {
                   </div>
 
                   <div className="pt-3 border-t border-border-primary">
-                    <div className="text-xs font-semibold text-text-secondary mb-2">Community Scenarios</div>
+                    <div className="text-xs font-semibold text-text-secondary mb-2">Historical Scenarios</div>
                     <div className="space-y-2">
-                      <ScenarioCard
-                        name="2008 Financial Crisis"
-                        author="analyst_42"
-                        upvotes={152}
-                        description="Fed rate at 0%, high volatility, banking crisis"
-                      />
-                      <ScenarioCard
-                        name="AI Boom 2025"
-                        author="quant_trader"
-                        upvotes={89}
-                        description="Semiconductor surge, tech innovation spike"
-                      />
-                      <ScenarioCard
-                        name="Oil Shock"
-                        author="macro_guru"
-                        upvotes={67}
-                        description="Oil at $150, manufacturing impact"
-                      />
+                      {SCENARIOS.map(scenario => (
+                        <button
+                          key={scenario.id}
+                          onClick={() => applyScenario(scenario.id)}
+                          className={`w-full px-3 py-2 text-left rounded-lg transition-all border ${
+                            activeScenario === scenario.id
+                              ? 'bg-accent-cyan/10 border-accent-cyan text-accent-cyan shadow-lg shadow-accent-cyan/20'
+                              : 'bg-background-tertiary border-border-primary hover:border-accent-magenta hover:bg-background-secondary'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-base">{scenario.icon}</span>
+                            <span className="text-xs font-semibold">{scenario.name}</span>
+                          </div>
+                          <div className="text-[10px] text-text-tertiary">{scenario.description}</div>
+                          {activeScenario === scenario.id && (
+                            <div className="mt-2 pt-2 border-t border-accent-cyan/30">
+                              <div className="text-[10px] text-accent-cyan flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
+                                Active
+                              </div>
+                            </div>
+                          )}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -732,37 +832,6 @@ export default function SimulationPage() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// Scenario Card Component
-function ScenarioCard({
-  name,
-  author,
-  upvotes,
-  description
-}: {
-  name: string;
-  author: string;
-  upvotes: number;
-  description: string;
-}) {
-  return (
-    <div className="bg-background-tertiary border border-border-primary rounded-lg p-3 hover:border-accent-magenta transition-all cursor-pointer group">
-      <div className="flex items-start justify-between mb-1">
-        <h4 className="text-xs font-semibold text-text-primary group-hover:text-accent-magenta transition-colors">
-          {name}
-        </h4>
-        <div className="flex items-center gap-1 text-accent-cyan">
-          <span className="text-[10px]">▲</span>
-          <span className="text-[10px] font-bold">{upvotes}</span>
-        </div>
-      </div>
-      <p className="text-[10px] text-text-tertiary mb-2">{description}</p>
-      <div className="text-[10px] text-text-secondary">
-        by <span className="text-accent-cyan">{author}</span>
       </div>
     </div>
   );
