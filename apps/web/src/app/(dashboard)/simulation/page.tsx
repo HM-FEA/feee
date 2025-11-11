@@ -26,6 +26,7 @@ interface MacroControl {
 export default function SimulationPage() {
   const [selectedSector, setSelectedSector] = useState<Sector>(null);
   const [viewMode, setViewMode] = useState<'split' | 'globe' | 'network'>('split');
+  const [globeViewMode, setGlobeViewMode] = useState<'companies' | 'flows' | 'm2'>('companies');
   const [showElementLibrary, setShowElementLibrary] = useState(false);
   const [showScenarios, setShowScenarios] = useState(false);
   const [macroChanging, setMacroChanging] = useState(false);
@@ -255,6 +256,43 @@ export default function SimulationPage() {
               </button>
             </div>
           </div>
+
+          {/* Globe View Mode */}
+          <div>
+            <h3 className="text-xs font-semibold text-text-tertiary mb-2">Globe Display</h3>
+            <div className="space-y-1">
+              <button
+                onClick={() => setGlobeViewMode('companies')}
+                className={`w-full px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  globeViewMode === 'companies'
+                    ? 'bg-accent-cyan text-black'
+                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                🏢 Companies
+              </button>
+              <button
+                onClick={() => setGlobeViewMode('flows')}
+                className={`w-full px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  globeViewMode === 'flows'
+                    ? 'bg-accent-emerald text-black'
+                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                💸 Cash Flows
+              </button>
+              <button
+                onClick={() => setGlobeViewMode('m2')}
+                className={`w-full px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  globeViewMode === 'm2'
+                    ? 'bg-accent-magenta text-black'
+                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                💰 M2 Liquidity
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Center - Visualization */}
@@ -270,9 +308,11 @@ export default function SimulationPage() {
             <div className="grid grid-cols-2 h-full w-full">
               <div className="border-r border-border-primary relative h-full w-full">
                 <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-cyan rounded px-2 py-1">
-                  <span className="text-xs font-semibold text-accent-cyan">Globe 3D - Capital Flows</span>
+                  <span className="text-xs font-semibold text-accent-cyan">
+                    Globe 3D - {globeViewMode === 'companies' ? 'Companies' : globeViewMode === 'flows' ? 'Cash Flows' : 'M2 Liquidity'}
+                  </span>
                 </div>
-                <Globe3D selectedSector={selectedSector} showControls={false} />
+                <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} />
               </div>
               <div className="relative h-full w-full">
                 <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-magenta rounded px-2 py-1">
@@ -286,9 +326,11 @@ export default function SimulationPage() {
           {viewMode === 'globe' && (
             <div className="h-full relative">
               <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-cyan rounded px-2 py-1">
-                <span className="text-xs font-semibold text-accent-cyan">Globe 3D - Capital Flows</span>
+                <span className="text-xs font-semibold text-accent-cyan">
+                  Globe 3D - {globeViewMode === 'companies' ? 'Companies' : globeViewMode === 'flows' ? 'Cash Flows' : 'M2 Liquidity'}
+                </span>
               </div>
-              <Globe3D selectedSector={selectedSector} showControls={false} />
+              <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} />
             </div>
           )}
 

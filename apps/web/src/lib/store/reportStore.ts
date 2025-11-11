@@ -486,7 +486,7 @@ The [[AMD]] MI300X is a unified compute die combining CPU and GPU elements, targ
     entityType: 'company',
     entityName: 'ASML',
     title: 'ASML: The Monopoly Behind Every Advanced Chip',
-    summary: 'How ASML's EUV lithography monopoly makes it the most critical company in semiconductors.',
+    summary: 'How ASML\'s EUV lithography monopoly makes it the most critical company in semiconductors.',
     content: `# ASML EUV Lithography Monopoly
 
 ## The Ultimate Chokepoint

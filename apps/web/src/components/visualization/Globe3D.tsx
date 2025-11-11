@@ -114,17 +114,20 @@ const CAPITAL_FLOWS = COMPREHENSIVE_FLOWS;
 interface Globe3DProps {
   selectedSector?: string | null;
   showControls?: boolean;
+  viewMode?: 'm2' | 'flows' | 'companies';
 }
 
 export default function Globe3D({
   selectedSector = null,
-  showControls = true
+  showControls = true,
+  viewMode: externalViewMode
 }: Globe3DProps) {
   const globeRef = useRef<any>();
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  const [viewMode, setViewMode] = useState<'m2' | 'flows' | 'companies'>('companies');
+  const [internalViewMode, setInternalViewMode] = useState<'m2' | 'flows' | 'companies'>('companies');
+  const viewMode = externalViewMode || internalViewMode;
   const [autoRotate, setAutoRotate] = useState(true);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const macroState = useMacroStore(state => state.macroState);
@@ -254,6 +257,20 @@ export default function Globe3D({
       });
   }, [selectedSector, calculatedImpacts]);
 
+  // Helper to get RGB values from sector color (must come before dynamicImpactArcs)
+  const getSectorRGB = (sector: string): string => {
+    const colorMap: Record<string, string> = {
+      BANKING: '0, 229, 255',        // cyan
+      SEMICONDUCTOR: '192, 38, 211', // magenta
+      MANUFACTURING: '0, 255, 159',  // emerald
+      COMMODITIES: '245, 158, 11',   // orange
+      REALESTATE: '16, 185, 129',    // green
+      CRYPTO: '139, 92, 246',        // purple
+      OPTIONS: '230, 0, 122',        // pink
+    };
+    return colorMap[sector] || '255, 255, 255';
+  };
+
   // Generate dynamic impact arcs based on macro variable changes
   const dynamicImpactArcs = useMemo(() => {
     const arcs: CapitalFlow[] = [];
@@ -302,20 +319,6 @@ export default function Globe3D({
     return arcs;
   }, [macroImpacts, companyPoints]);
 
-  // Helper to get RGB values from sector color
-  const getSectorRGB = (sector: string): string => {
-    const colorMap: Record<string, string> = {
-      BANKING: '0, 229, 255',        // cyan
-      SEMICONDUCTOR: '192, 38, 211', // magenta
-      MANUFACTURING: '0, 255, 159',  // emerald
-      COMMODITIES: '245, 158, 11',   // orange
-      REALESTATE: '16, 185, 129',    // green
-      CRYPTO: '139, 92, 246',        // purple
-      OPTIONS: '230, 0, 122',        // pink
-    };
-    return colorMap[sector] || '255, 255, 255';
-  };
-
   // Filter capital flows based on selected sector
   const visibleFlows = useMemo(() => {
     if (!selectedSector) return CAPITAL_FLOWS;
@@ -362,7 +365,7 @@ export default function Globe3D({
           <div className="text-xs text-text-tertiary mb-2 font-semibold">View Mode</div>
           <div className="grid grid-cols-3 gap-2">
             <button
-              onClick={() => setViewMode('companies')}
+              onClick={() => setInternalViewMode('companies')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 viewMode === 'companies'
                   ? 'bg-accent-emerald text-black shadow-lg shadow-accent-emerald/50'
@@ -372,7 +375,7 @@ export default function Globe3D({
               Companies
             </button>
             <button
-              onClick={() => setViewMode('m2')}
+              onClick={() => setInternalViewMode('m2')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 viewMode === 'm2'
                   ? 'bg-accent-cyan text-black shadow-lg shadow-accent-cyan/50'
@@ -382,7 +385,7 @@ export default function Globe3D({
               M2 Supply
             </button>
             <button
-              onClick={() => setViewMode('flows')}
+              onClick={() => setInternalViewMode('flows')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 viewMode === 'flows'
                   ? 'bg-accent-magenta text-black shadow-lg shadow-accent-magenta/50'
