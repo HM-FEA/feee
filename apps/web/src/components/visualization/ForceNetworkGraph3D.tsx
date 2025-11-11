@@ -8,6 +8,7 @@ import { useMacroStore } from '@/lib/store/macroStore';
 import { useLevelStore } from '@/lib/store/levelStore';
 import { useRelationshipStore, generateLinkId, getLinkColor } from '@/lib/store/relationshipStore';
 import { getImpactColor, getImpactSizeMultiplier } from '@/lib/utils/levelImpactCalculation';
+import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
 import {
   NVIDIA,
   NVIDIA_PRODUCTS,
@@ -539,11 +540,13 @@ function getLinkColorByType(type: string): string {
 interface ForceNetworkGraph3DProps {
   selectedSector?: string | null;
   showControls?: boolean;
+  snapshot?: DateSnapshot | null;
 }
 
 export default function ForceNetworkGraph3D({
   selectedSector = null,
-  showControls = true
+  showControls = true,
+  snapshot = null
 }: ForceNetworkGraph3DProps) {
   const fgRef = useRef<any>();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -628,20 +631,30 @@ export default function ForceNetworkGraph3D({
       // Get level impact for this entity (if it exists in knowledge graph)
       const entityImpact = getEntityImpact(node.id);
 
+      let impactSize = node.val;
+      let impactColor = node.color;
+
       if (entityImpact && Math.abs(entityImpact.impactScore) > 0.05) {
         // Apply impact to node size and color
-        const impactSize = node.val * getImpactSizeMultiplier(entityImpact.impactScore);
-        const impactColor = getImpactColor(entityImpact.impactScore);
-
-        return {
-          ...node,
-          val: impactSize,
-          color: impactColor,
-          levelImpact: entityImpact, // Store for tooltip
-        };
+        impactSize = node.val * getImpactSizeMultiplier(entityImpact.impactScore);
+        impactColor = getImpactColor(entityImpact.impactScore);
       }
 
-      return node;
+      // Override with snapshot data if available (higher priority)
+      if (snapshot) {
+        const snapshotEntity = snapshot.entityValues.get(node.id);
+        if (snapshotEntity) {
+          impactSize = snapshotEntity.size * node.val; // Use snapshot size
+          impactColor = snapshotEntity.color; // Use snapshot color
+        }
+      }
+
+      return {
+        ...node,
+        val: impactSize,
+        color: impactColor,
+        levelImpact: entityImpact, // Store for tooltip
+      };
     });
 
     // Filter by level if needed
@@ -657,7 +670,7 @@ export default function ForceNetworkGraph3D({
         : filteredNodeIds.has((l.source as any).id) && filteredNodeIds.has((l.target as any).id)
     );
     return { nodes: filteredNodes, links: filteredLinks };
-  }, [graphData, filterLevel, entityImpacts, getEntityImpact]);
+  }, [graphData, filterLevel, entityImpacts, getEntityImpact, snapshot]);
 
   const handleNodeClick = useCallback((node: GraphNode) => {
     setSelectedNode(node);

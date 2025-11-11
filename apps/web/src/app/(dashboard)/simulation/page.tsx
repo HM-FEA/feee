@@ -12,6 +12,8 @@ import LevelControlPanel from '@/components/simulation/LevelControlPanel';
 import SupplyChainDiagram, { HBM_SUPPLY_CHAIN } from '@/components/visualization/SupplyChainDiagram';
 import CascadeEffects from '@/components/simulation/CascadeEffects';
 import SimulationTimeline from '@/components/simulation/SimulationTimeline';
+import DateSimulator from '@/components/simulation/DateSimulator';
+import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
 
 // Dynamic imports
 const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), { ssr: false });
@@ -104,6 +106,7 @@ export default function SimulationPage() {
   const [changedMacroId, setChangedMacroId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
+  const [currentSnapshot, setCurrentSnapshot] = useState<DateSnapshot | null>(null);
 
   const macroState = useMacroStore(state => state.macroState);
   const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
@@ -629,13 +632,13 @@ export default function SimulationPage() {
                     Globe 3D - {globeViewMode === 'companies' ? 'Companies' : globeViewMode === 'flows' ? 'Cash Flows' : 'M2 Liquidity'}
                   </span>
                 </div>
-                <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} />
+                <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} snapshot={currentSnapshot} />
               </div>
               <div className="relative h-full w-full">
                 <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-magenta rounded px-2 py-1">
                   <span className="text-xs font-semibold text-accent-magenta">Network Graph - Relationships</span>
                 </div>
-                <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} />
+                <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} snapshot={currentSnapshot} />
               </div>
             </div>
           )}
@@ -647,7 +650,7 @@ export default function SimulationPage() {
                   Globe 3D - {globeViewMode === 'companies' ? 'Companies' : globeViewMode === 'flows' ? 'Cash Flows' : 'M2 Liquidity'}
                 </span>
               </div>
-              <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} />
+              <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} snapshot={currentSnapshot} />
             </div>
           )}
 
@@ -656,7 +659,7 @@ export default function SimulationPage() {
               <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-magenta rounded px-2 py-1">
                 <span className="text-xs font-semibold text-accent-magenta">Network Graph - Relationships</span>
               </div>
-              <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} />
+              <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} snapshot={currentSnapshot} />
             </div>
           )}
 
@@ -670,7 +673,12 @@ export default function SimulationPage() {
                   description="Critical path analysis of AI accelerator manufacturing dependencies - Click nodes to explore relationships"
                 />
 
-                {/* Timeline Simulation */}
+                {/* Date-Based Simulator */}
+                <div className="mt-6">
+                  <DateSimulator onSnapshotChange={setCurrentSnapshot} />
+                </div>
+
+                {/* Timeline Simulation (Legacy) */}
                 <div className="mt-6">
                   <SimulationTimeline />
                 </div>

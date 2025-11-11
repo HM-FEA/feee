@@ -9,6 +9,7 @@ import { getSectorColor } from '@/lib/config/sectors.config';
 import { MACRO_VARIABLES } from '@/data/macroVariables';
 import { TRADE_FLOWS, SHIPPING_ROUTES, SUPPLY_CHAIN_PATHS, CURRENCY_FLOWS } from '@/data/globalSupplyChain';
 import { getImpactColor, getImpactSizeMultiplier } from '@/lib/utils/levelImpactCalculation';
+import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
 
 // Dynamic import to avoid SSR issues
 const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
@@ -117,12 +118,14 @@ interface Globe3DProps {
   selectedSector?: string | null;
   showControls?: boolean;
   viewMode?: 'm2' | 'flows' | 'companies';
+  snapshot?: DateSnapshot | null;
 }
 
 export default function Globe3D({
   selectedSector = null,
   showControls = true,
-  viewMode: externalViewMode
+  viewMode: externalViewMode,
+  snapshot = null
 }: Globe3DProps) {
   const globeRef = useRef<any>();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -261,9 +264,20 @@ export default function Globe3D({
           : baseSize;
 
         // Use impact color if level impact exists, otherwise sector color
-        const pointColor = levelImpact && Math.abs(levelImpact.impactScore) > 0.05
+        let pointColor = levelImpact && Math.abs(levelImpact.impactScore) > 0.05
           ? getImpactColor(levelImpact.impactScore)
           : isRelevant ? getSectorColor(company.sector) : 'rgba(100, 100, 100, 0.3)';
+
+        let finalSize = adjustedSize;
+
+        // Override with snapshot data if available
+        if (snapshot) {
+          const snapshotEntity = snapshot.entityValues.get(companyEntityId);
+          if (snapshotEntity) {
+            finalSize = snapshotEntity.size * baseSize; // Use snapshot size
+            pointColor = snapshotEntity.color; // Use snapshot color
+          }
+        }
 
         return {
           lat: company.location!.lat,
@@ -271,14 +285,14 @@ export default function Globe3D({
           name: company.name_en || company.name,
           ticker: company.ticker,
           sector: company.sector,
-          size: adjustedSize,
+          size: finalSize,
           color: pointColor,
           impact: totalImpact,
           company: company,
           levelImpact: levelImpact, // Include for tooltip
         };
       });
-  }, [selectedSector, calculatedImpacts, entityImpacts, getEntityImpact]);
+  }, [selectedSector, calculatedImpacts, entityImpacts, getEntityImpact, snapshot]);
 
   // Helper to get RGB values from sector color (must come before dynamicImpactArcs)
   const getSectorRGB = (sector: string): string => {
