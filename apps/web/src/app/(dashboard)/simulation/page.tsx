@@ -48,6 +48,15 @@ export default function SimulationPage() {
       unit: '%'
     },
     {
+      id: 'us_10y_yield',
+      label: 'US 10Y Treasury',
+      value: macroState['us_10y_yield'] || 4.5,
+      min: 0,
+      max: 10,
+      step: 0.1,
+      unit: '%'
+    },
+    {
       id: 'us_gdp_growth',
       label: 'US GDP Growth',
       value: macroState['us_gdp_growth'] || 2.5,
@@ -58,7 +67,7 @@ export default function SimulationPage() {
     },
     {
       id: 'us_m2_money_supply',
-      label: 'US M2 Money Supply',
+      label: 'US M2 Supply',
       value: macroState['us_m2_money_supply'] || 21.4,
       min: 10,
       max: 40,
@@ -67,7 +76,7 @@ export default function SimulationPage() {
     },
     {
       id: 'wti_oil',
-      label: 'Oil Price (WTI)',
+      label: 'WTI Oil Price',
       value: macroState['wti_oil'] || 85,
       min: 20,
       max: 200,
@@ -76,11 +85,47 @@ export default function SimulationPage() {
     },
     {
       id: 'vix',
-      label: 'VIX (Volatility)',
+      label: 'VIX Volatility',
       value: macroState['vix'] || 18.5,
       min: 5,
       max: 80,
       step: 1,
+      unit: ''
+    },
+    {
+      id: 'ai_investment',
+      label: 'AI Investment',
+      value: macroState['ai_investment'] || 150,
+      min: 50,
+      max: 500,
+      step: 10,
+      unit: 'B'
+    },
+    {
+      id: 'gpu_demand_index',
+      label: 'GPU Demand',
+      value: macroState['gpu_demand_index'] || 85,
+      min: 0,
+      max: 150,
+      step: 5,
+      unit: ''
+    },
+    {
+      id: 'container_rate_us_china',
+      label: 'Container Rate (US-China)',
+      value: macroState['container_rate_us_china'] || 3500,
+      min: 1000,
+      max: 10000,
+      step: 100,
+      unit: '$'
+    },
+    {
+      id: 'dram_price_index',
+      label: 'DRAM Price Index',
+      value: macroState['dram_price_index'] || 100,
+      min: 50,
+      max: 200,
+      step: 5,
       unit: ''
     }
   ];
