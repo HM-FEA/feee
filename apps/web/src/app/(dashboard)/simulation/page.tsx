@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown, ChevronUp, Info, GitBranch } from 'lucide-react';
 import { Card, SectionHeader } from '@/components/ui/DesignSystem';
 import { useMacroStore } from '@/lib/store/macroStore';
 import { MACRO_CATEGORIES, MACRO_VARIABLES } from '@/data/macroVariables';
 import LevelControlPanel from '@/components/simulation/LevelControlPanel';
+import SupplyChainDiagram, { HBM_SUPPLY_CHAIN } from '@/components/visualization/SupplyChainDiagram';
 
 // Dynamic imports
 const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), { ssr: false });
@@ -26,7 +27,7 @@ interface MacroControl {
 
 export default function SimulationPage() {
   const [selectedSector, setSelectedSector] = useState<Sector>(null);
-  const [viewMode, setViewMode] = useState<'split' | 'globe' | 'network'>('split');
+  const [viewMode, setViewMode] = useState<'split' | 'globe' | 'network' | 'supply-chain'>('split');
   const [globeViewMode, setGlobeViewMode] = useState<'companies' | 'flows' | 'm2'>('companies');
   const [showElementLibrary, setShowElementLibrary] = useState(false);
   const [showScenarios, setShowScenarios] = useState(false);
@@ -410,6 +411,17 @@ export default function SimulationPage() {
                 <Network size={12} className="inline mr-1" />
                 Network Only
               </button>
+              <button
+                onClick={() => setViewMode('supply-chain')}
+                className={`w-full px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  viewMode === 'supply-chain'
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <GitBranch size={12} className="inline mr-1" />
+                Supply Chain
+              </button>
             </div>
           </div>
 
@@ -496,6 +508,92 @@ export default function SimulationPage() {
                 <span className="text-xs font-semibold text-accent-magenta">Network Graph - Relationships</span>
               </div>
               <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} />
+            </div>
+          )}
+
+          {viewMode === 'supply-chain' && (
+            <div className="h-full relative overflow-auto p-6">
+              <div className="max-w-7xl mx-auto">
+                <SupplyChainDiagram
+                  nodes={HBM_SUPPLY_CHAIN.nodes}
+                  links={HBM_SUPPLY_CHAIN.links}
+                  title="NVIDIA H100 Supply Chain Analysis"
+                  description="Critical path analysis of AI accelerator manufacturing dependencies - Click nodes to explore relationships"
+                />
+
+                {/* Additional Supply Chain Insights */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                  <Card className="p-6 border-red-500/30 bg-red-500/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <GitBranch size={18} className="text-red-400" />
+                      <h3 className="text-base font-semibold text-text-primary">Critical Bottlenecks</h3>
+                    </div>
+                    <div className="space-y-2 text-sm text-text-secondary">
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                        <div>
+                          <span className="font-semibold text-white">ASML EUV:</span> Monopoly on extreme ultraviolet lithography equipment (18-24 month lead time)
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                        <div>
+                          <span className="font-semibold text-white">HBM3E Memory:</span> SK Hynix controls 95% of supply (4-6 month lead time)
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                        <div>
+                          <span className="font-semibold text-white">TSMC CoWoS:</span> Advanced packaging capacity constrained
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-6 border-green-500/30 bg-green-500/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap size={18} className="text-green-400" />
+                      <h3 className="text-base font-semibold text-text-primary">Economics</h3>
+                    </div>
+                    <div className="space-y-2 text-sm text-text-secondary">
+                      <div className="flex justify-between">
+                        <span>H100 Price:</span>
+                        <span className="font-mono text-green-400">$30,000</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>HBM3E Cost:</span>
+                        <span className="font-mono text-green-400">$1,500</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>TSMC Wafer:</span>
+                        <span className="font-mono text-green-400">$16,000</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Margin:</span>
+                        <span className="font-mono text-green-400">~65%</span>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-6 border-cyan-500/30 bg-cyan-500/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Network size={18} className="text-cyan-400" />
+                      <h3 className="text-base font-semibold text-text-primary">Dependencies</h3>
+                    </div>
+                    <div className="space-y-2 text-sm text-text-secondary">
+                      <div>
+                        <span className="font-semibold text-white">Geopolitical Risk:</span> Taiwan dependency for TSMC manufacturing
+                      </div>
+                      <div>
+                        <span className="font-semibold text-white">Alternative Sources:</span> Samsung (limited), Intel (developing)
+                      </div>
+                      <div>
+                        <span className="font-semibold text-white">Lead Time:</span> 12-18 months from order to delivery
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              </div>
             </div>
           )}
         </div>
