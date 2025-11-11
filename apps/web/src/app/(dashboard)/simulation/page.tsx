@@ -2,10 +2,18 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles } from 'lucide-react';
+import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown, ChevronUp, Info, GitBranch } from 'lucide-react';
 import { Card, SectionHeader } from '@/components/ui/DesignSystem';
 import { useMacroStore } from '@/lib/store/macroStore';
-import { MACRO_CATEGORIES } from '@/data/macroVariables';
+import { useLevelStore } from '@/lib/store/levelStore';
+import { useScenarioStore } from '@/lib/store/scenarioStore';
+import { MACRO_CATEGORIES, MACRO_VARIABLES } from '@/data/macroVariables';
+import LevelControlPanel from '@/components/simulation/LevelControlPanel';
+import SupplyChainDiagram, { HBM_SUPPLY_CHAIN } from '@/components/visualization/SupplyChainDiagram';
+import CascadeEffects from '@/components/simulation/CascadeEffects';
+import SimulationTimeline from '@/components/simulation/SimulationTimeline';
+import DateSimulator from '@/components/simulation/DateSimulator';
+import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
 
 // Dynamic imports
 const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), { ssr: false });
@@ -23,51 +31,138 @@ interface MacroControl {
   unit: string;
 }
 
+// Historical Scenarios
+const SCENARIOS = [
+  {
+    id: '2008-financial-crisis',
+    name: '2008 Financial Crisis',
+    date: '2008-09-15',
+    description: 'Lehman Brothers collapse and global financial meltdown',
+    icon: '📉',
+    settings: {
+      fed_funds_rate: 2.0,
+      us_10y_yield: 3.5,
+      us_gdp_growth: -2.8,
+      us_m2_money_supply: 8.5,
+      wti_oil: 145,
+      vix: 45
+    }
+  },
+  {
+    id: '2020-pandemic',
+    name: '2020 COVID-19 Pandemic',
+    date: '2020-03-15',
+    description: 'Market crash and unprecedented Fed intervention',
+    icon: '🦠',
+    settings: {
+      fed_funds_rate: 0.25,
+      us_10y_yield: 0.7,
+      us_gdp_growth: -3.4,
+      us_m2_money_supply: 19.2,
+      wti_oil: 20,
+      vix: 82
+    }
+  },
+  {
+    id: '2022-inflation',
+    name: '2022 Inflation Surge',
+    date: '2022-06-15',
+    description: 'Fed aggressive rate hikes to combat 40-year high inflation',
+    icon: '📈',
+    settings: {
+      fed_funds_rate: 1.75,
+      us_10y_yield: 3.2,
+      us_gdp_growth: 1.6,
+      us_m2_money_supply: 21.7,
+      wti_oil: 120,
+      vix: 28
+    }
+  },
+  {
+    id: 'baseline',
+    name: 'Current Baseline',
+    date: new Date().toISOString().split('T')[0],
+    description: 'Normal market conditions',
+    icon: '⚖️',
+    settings: {
+      fed_funds_rate: 5.25,
+      us_10y_yield: 4.5,
+      us_gdp_growth: 2.5,
+      us_m2_money_supply: 21.4,
+      wti_oil: 85,
+      vix: 18.5
+    }
+  }
+];
+
 export default function SimulationPage() {
   const [selectedSector, setSelectedSector] = useState<Sector>(null);
-  const [viewMode, setViewMode] = useState<'split' | 'globe' | 'network'>('split');
+  const [viewMode, setViewMode] = useState<'split' | 'globe' | 'network' | 'supply-chain'>('split');
+  const [globeViewMode, setGlobeViewMode] = useState<'companies' | 'flows' | 'm2'>('companies');
   const [showElementLibrary, setShowElementLibrary] = useState(false);
-  const [showScenarios, setShowScenarios] = useState(false);
+  const [showScenarios, setShowScenarios] = useState(true); // Open by default
+  const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [macroChanging, setMacroChanging] = useState(false);
   const [changedMacroId, setChangedMacroId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [activeScenario, setActiveScenario] = useState<string | null>(null);
+  const [currentSnapshot, setCurrentSnapshot] = useState<DateSnapshot | null>(null);
 
   const macroState = useMacroStore(state => state.macroState);
   const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
   const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
 
-  // Key macro controls
+  const levelState = useLevelStore(state => state.levelState);
+  const updateLevelControl = useLevelStore(state => state.updateLevelControl);
+
+  const { saveScenario, loadScenario, getAllScenarios } = useScenarioStore();
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
+  const [scenarioName, setScenarioName] = useState('');
+  const [scenarioDescription, setScenarioDescription] = useState('');
+
+  // Key macro controls (using correct variable IDs from macroVariables.ts)
   const macroControls: MacroControl[] = [
     {
-      id: 'fed_rate',
-      label: 'Fed Interest Rate',
-      value: (macroState['fed_rate'] || 0.055) * 100,
+      id: 'fed_funds_rate',
+      label: 'Fed Funds Rate',
+      value: macroState['fed_funds_rate'] || 5.25,
       min: 0,
       max: 10,
       step: 0.25,
       unit: '%'
     },
     {
-      id: 'gdp_growth_us',
-      label: 'US GDP Growth',
-      value: (macroState['gdp_growth_us'] || 0.021) * 100,
-      min: -5,
+      id: 'us_10y_yield',
+      label: 'US 10Y Treasury',
+      value: macroState['us_10y_yield'] || 4.5,
+      min: 0,
       max: 10,
       step: 0.1,
       unit: '%'
     },
     {
-      id: 'global_m2_growth',
-      label: 'Global M2 Growth',
-      value: macroState['global_m2_growth'] || 5,
-      min: -10,
-      max: 20,
-      step: 0.5,
+      id: 'us_gdp_growth',
+      label: 'US GDP Growth',
+      value: macroState['us_gdp_growth'] || 2.5,
+      min: -5,
+      max: 7,
+      step: 0.1,
       unit: '%'
     },
     {
-      id: 'oil_price_wti',
-      label: 'Oil Price (WTI)',
-      value: macroState['oil_price_wti'] || 85,
+      id: 'us_m2_money_supply',
+      label: 'US M2 Supply',
+      value: macroState['us_m2_money_supply'] || 21.4,
+      min: 10,
+      max: 40,
+      step: 0.5,
+      unit: 'T'
+    },
+    {
+      id: 'wti_oil',
+      label: 'WTI Oil Price',
+      value: macroState['wti_oil'] || 85,
       min: 20,
       max: 200,
       step: 5,
@@ -75,7 +170,7 @@ export default function SimulationPage() {
     },
     {
       id: 'vix',
-      label: 'VIX (Volatility)',
+      label: 'VIX Volatility',
       value: macroState['vix'] || 18.5,
       min: 5,
       max: 80,
@@ -84,23 +179,88 @@ export default function SimulationPage() {
     }
   ];
 
-  const handleMacroChange = (id: string, displayValue: number) => {
+  const handleMacroChange = (id: string, value: number) => {
     setMacroChanging(true);
     setChangedMacroId(id);
 
-    // Convert display value back to actual value
-    let actualValue = displayValue;
-    if (id === 'fed_rate' || id === 'gdp_growth_us') {
-      actualValue = displayValue / 100;
+    // Clear active scenario when user manually adjusts
+    if (activeScenario) {
+      setActiveScenario(null);
     }
 
-    updateMacroVariable(id, actualValue);
+    // Update macro variable with actual value (no conversion needed)
+    updateMacroVariable(id, value);
 
     // Reset bright effect after animation
     setTimeout(() => {
       setMacroChanging(false);
       setChangedMacroId(null);
     }, 1000);
+  };
+
+  const applyScenario = (scenarioId: string) => {
+    const scenario = SCENARIOS.find(s => s.id === scenarioId);
+    if (!scenario) return;
+
+    setActiveScenario(scenarioId);
+    setSelectedDate(scenario.date);
+    setMacroChanging(true);
+
+    // Apply all scenario settings
+    Object.entries(scenario.settings).forEach(([key, value]) => {
+      updateMacroVariable(key, value);
+    });
+
+    setTimeout(() => {
+      setMacroChanging(false);
+    }, 1500);
+  };
+
+  const handleSaveScenario = () => {
+    if (!scenarioName.trim()) {
+      alert('Please enter a scenario name');
+      return;
+    }
+
+    const scenarioId = saveScenario({
+      name: scenarioName,
+      description: scenarioDescription || 'Custom scenario',
+      icon: '💾',
+      macroState,
+      levelState,
+      createdBy: 'user', // In real app, use actual user ID
+      isPublic: false,
+      tags: ['custom'],
+    });
+
+    setScenarioName('');
+    setScenarioDescription('');
+    setShowSaveDialog(false);
+    alert(`Scenario "${scenarioName}" saved successfully!`);
+  };
+
+  const handleLoadScenario = (scenarioId: string) => {
+    const scenario = loadScenario(scenarioId);
+    if (!scenario) return;
+
+    setMacroChanging(true);
+
+    // Apply macro state
+    Object.entries(scenario.macroState).forEach(([key, value]) => {
+      updateMacroVariable(key, value);
+    });
+
+    // Apply level state if available
+    if (scenario.levelState) {
+      Object.entries(scenario.levelState).forEach(([controlId, value]) => {
+        updateLevelControl(controlId, value);
+      });
+    }
+
+    setShowLoadDialog(false);
+    setTimeout(() => {
+      setMacroChanging(false);
+    }, 1500);
   };
 
   const sectors = [
@@ -222,6 +382,164 @@ export default function SimulationPage() {
             </div>
           </div>
 
+          {/* Legend - Globe Style */}
+          <div className="mb-6">
+            <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-3">
+                <Info size={14} className="text-accent-cyan" />
+                <div className="text-xs text-text-tertiary font-semibold">Legend</div>
+              </div>
+              {globeViewMode === 'm2' ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-accent-cyan shadow-lg" style={{ boxShadow: '0 0 10px #00E5FF' }} />
+                    <span className="text-xs text-text-primary">Point Size = M2 Supply</span>
+                  </div>
+                  <div className="text-xs text-text-tertiary mt-2">
+                    Larger = More Money Supply
+                  </div>
+                </div>
+              ) : globeViewMode === 'flows' ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-0.5 bg-gradient-to-r from-accent-cyan to-transparent" />
+                    <span className="text-xs text-text-primary">Static Flow</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-0.5 bg-gradient-to-r from-accent-emerald to-transparent shadow-lg" style={{ boxShadow: '0 0 8px #00FF9F' }} />
+                    <span className="text-xs text-accent-emerald font-semibold">⚡ Macro Impact</span>
+                  </div>
+                  <div className="text-xs text-text-tertiary mt-2">
+                    Brighter arcs = Higher macro variable impact
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-accent-emerald shadow-lg" style={{ boxShadow: '0 0 10px #00FF9F' }} />
+                    <span className="text-xs text-text-primary">Companies</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-0.5 bg-gradient-to-r from-accent-emerald to-transparent shadow-lg" style={{ boxShadow: '0 0 8px #00FF9F' }} />
+                    <span className="text-xs text-accent-emerald font-semibold">⚡ Macro Impact</span>
+                  </div>
+                  <div className="text-xs text-text-tertiary mt-2">
+                    Arcs show macro variable effects on sectors
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Active Macro Impacts - Globe Style */}
+          {Object.values(calculatedImpacts).some(v => Math.abs(v) > 0) && (
+            <div className="mb-6">
+              <div className="bg-black/80 backdrop-blur border-2 border-accent-emerald rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+                  <div className="text-xs font-bold text-accent-emerald">Active Macro Impacts</div>
+                </div>
+                <div className="space-y-1 text-xs">
+                  {macroControls
+                    .map(control => {
+                      // Calculate impact based on deviation from baseline
+                      const baseline = {
+                        'fed_funds_rate': 5.25,
+                        'us_10y_yield': 4.5,
+                        'us_gdp_growth': 2.5,
+                        'us_m2_money_supply': 21.4,
+                        'wti_oil': 85,
+                        'vix': 18.5
+                      }[control.id] || 0;
+                      const deviation = Math.abs((control.value - baseline) / baseline);
+                      return { ...control, impact: deviation };
+                    })
+                    .filter(control => control.impact > 0.05)
+                    .slice(0, 5)
+                    .map(control => (
+                      <div key={control.id} className="flex justify-between items-center">
+                        <span className="text-text-tertiary truncate max-w-[140px]">{control.label}:</span>
+                        <div className="flex items-center gap-1">
+                          <div
+                            className="h-1 bg-gradient-to-r from-accent-emerald to-transparent rounded"
+                            style={{ width: `${Math.min(control.impact * 100, 40)}px` }}
+                          />
+                          <span className="text-accent-emerald font-mono">{(control.impact * 100).toFixed(0)}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  {macroControls.every(c => {
+                    const baseline = {
+                      'fed_funds_rate': 5.25,
+                      'us_10y_yield': 4.5,
+                      'us_gdp_growth': 2.5,
+                      'us_m2_money_supply': 21.4,
+                      'wti_oil': 85,
+                      'vix': 18.5
+                    }[c.id] || 0;
+                    return Math.abs((c.value - baseline) / baseline) <= 0.05;
+                  }) && (
+                    <div className="text-text-tertiary text-xs italic">
+                      Adjust macro variables above to see impacts
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Advanced Level Controls Toggle */}
+          {/* Time-Based Simulation */}
+          <div className="mb-6">
+            <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Zap size={16} className="text-accent-emerald" />
+                <span className="text-sm font-semibold text-text-primary">
+                  Date Simulation
+                </span>
+              </div>
+              <DateSimulator onSnapshotChange={setCurrentSnapshot} />
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <button
+              onClick={() => setShowAdvancedControls(!showAdvancedControls)}
+              className="w-full px-4 py-3 bg-gradient-to-r from-purple-500/20 to-indigo-500/20
+                border border-purple-500/30 rounded-lg hover:from-purple-500/30 hover:to-indigo-500/30
+                transition-all duration-200 flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-purple-400" />
+                <span className="text-sm font-semibold text-text-primary">
+                  Advanced Level Controls
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-tertiary">
+                  {showAdvancedControls ? 'Hide' : 'Show'} 9-Level Controls
+                </span>
+                {showAdvancedControls ? (
+                  <ChevronUp size={16} className="text-text-tertiary group-hover:text-purple-400 transition-colors" />
+                ) : (
+                  <ChevronDown size={16} className="text-text-tertiary group-hover:text-purple-400 transition-colors" />
+                )}
+              </div>
+            </button>
+
+            {/* Level Control Panel */}
+            {showAdvancedControls && (
+              <div className="mt-4 animate-in slide-in-from-top-2 duration-200">
+                <LevelControlPanel
+                  onControlChange={(level, controlId, value) => {
+                    console.log(`Level ${level} - ${controlId}: ${value}`);
+                    updateLevelControl(controlId, value);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
           {/* View Mode */}
           <div>
             <h3 className="text-xs font-semibold text-text-tertiary mb-2">View Layout</h3>
@@ -258,6 +576,54 @@ export default function SimulationPage() {
                 <Network size={12} className="inline mr-1" />
                 Network Only
               </button>
+              <button
+                onClick={() => setViewMode('supply-chain')}
+                className={`w-full px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  viewMode === 'supply-chain'
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <GitBranch size={12} className="inline mr-1" />
+                Supply Chain
+              </button>
+            </div>
+          </div>
+
+          {/* Globe View Mode */}
+          <div>
+            <h3 className="text-xs font-semibold text-text-tertiary mb-2">Globe Display</h3>
+            <div className="space-y-1">
+              <button
+                onClick={() => setGlobeViewMode('companies')}
+                className={`w-full px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  globeViewMode === 'companies'
+                    ? 'bg-accent-cyan text-black'
+                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                🏢 Companies
+              </button>
+              <button
+                onClick={() => setGlobeViewMode('flows')}
+                className={`w-full px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  globeViewMode === 'flows'
+                    ? 'bg-accent-emerald text-black'
+                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                💸 Cash Flows
+              </button>
+              <button
+                onClick={() => setGlobeViewMode('m2')}
+                className={`w-full px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  globeViewMode === 'm2'
+                    ? 'bg-accent-magenta text-black'
+                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                💰 M2 Liquidity
+              </button>
             </div>
           </div>
         </div>
@@ -272,18 +638,60 @@ export default function SimulationPage() {
           )}
 
           {viewMode === 'split' && (
-            <div className="grid grid-cols-2 h-full">
-              <div className="border-r border-border-primary relative">
+            <div className="grid grid-cols-2 h-full w-full">
+              <div className="border-r border-border-primary relative h-full w-full">
                 <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-cyan rounded px-2 py-1">
-                  <span className="text-xs font-semibold text-accent-cyan">Globe 3D - Capital Flows</span>
+                  <span className="text-xs font-semibold text-accent-cyan">
+                    Globe 3D - {globeViewMode === 'companies' ? 'Companies' : globeViewMode === 'flows' ? 'Cash Flows' : 'M2 Liquidity'}
+                  </span>
                 </div>
-                <Globe3D selectedSector={selectedSector} showControls={false} />
+                {/* Date Legend - Top Right */}
+                {currentSnapshot && (
+                  <div className="absolute top-4 right-4 z-10 bg-black/95 backdrop-blur-md border-2 border-accent-emerald/50 rounded-lg px-4 py-3 shadow-2xl shadow-emerald-500/20">
+                    <div className="text-xs text-text-tertiary mb-1 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+                      SIMULATION TIME
+                    </div>
+                    <div className="text-2xl font-bold text-accent-emerald font-mono">
+                      {currentSnapshot.date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </div>
+                    <div className="text-xs text-text-secondary mt-1 flex items-center justify-between">
+                      <span>{currentSnapshot.events.length} events</span>
+                      <span className="text-accent-cyan">●</span>
+                    </div>
+                  </div>
+                )}
+                <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} snapshot={currentSnapshot} />
               </div>
-              <div className="relative">
+              <div className="relative h-full w-full">
                 <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-magenta rounded px-2 py-1">
                   <span className="text-xs font-semibold text-accent-magenta">Network Graph - Relationships</span>
                 </div>
-                <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} />
+                {/* Date Legend - Top Right */}
+                {currentSnapshot && (
+                  <div className="absolute top-4 right-4 z-10 bg-black/95 backdrop-blur-md border-2 border-accent-emerald/50 rounded-lg px-4 py-3 shadow-2xl shadow-emerald-500/20">
+                    <div className="text-xs text-text-tertiary mb-1 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+                      SIMULATION TIME
+                    </div>
+                    <div className="text-2xl font-bold text-accent-emerald font-mono">
+                      {currentSnapshot.date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </div>
+                    <div className="text-xs text-text-secondary mt-1 flex items-center justify-between">
+                      <span>{currentSnapshot.events.length} events</span>
+                      <span className="text-accent-cyan">●</span>
+                    </div>
+                  </div>
+                )}
+                <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} snapshot={currentSnapshot} />
               </div>
             </div>
           )}
@@ -291,9 +699,31 @@ export default function SimulationPage() {
           {viewMode === 'globe' && (
             <div className="h-full relative">
               <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-cyan rounded px-2 py-1">
-                <span className="text-xs font-semibold text-accent-cyan">Globe 3D - Capital Flows</span>
+                <span className="text-xs font-semibold text-accent-cyan">
+                  Globe 3D - {globeViewMode === 'companies' ? 'Companies' : globeViewMode === 'flows' ? 'Cash Flows' : 'M2 Liquidity'}
+                </span>
               </div>
-              <Globe3D selectedSector={selectedSector} showControls={false} />
+              {/* Date Legend - Top Right */}
+              {currentSnapshot && (
+                <div className="absolute top-4 right-4 z-10 bg-black/95 backdrop-blur-md border-2 border-accent-emerald/50 rounded-lg px-4 py-3 shadow-2xl shadow-emerald-500/20">
+                  <div className="text-xs text-text-tertiary mb-1 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+                    SIMULATION TIME
+                  </div>
+                  <div className="text-2xl font-bold text-accent-emerald font-mono">
+                    {currentSnapshot.date.toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </div>
+                  <div className="text-xs text-text-secondary mt-1 flex items-center justify-between">
+                    <span>{currentSnapshot.events.length} events</span>
+                    <span className="text-accent-cyan">●</span>
+                  </div>
+                </div>
+              )}
+              <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} snapshot={currentSnapshot} />
             </div>
           )}
 
@@ -302,7 +732,118 @@ export default function SimulationPage() {
               <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-magenta rounded px-2 py-1">
                 <span className="text-xs font-semibold text-accent-magenta">Network Graph - Relationships</span>
               </div>
-              <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} />
+              {/* Date Legend - Top Right */}
+              {currentSnapshot && (
+                <div className="absolute top-4 right-4 z-10 bg-black/95 backdrop-blur-md border-2 border-accent-emerald/50 rounded-lg px-4 py-3 shadow-2xl shadow-emerald-500/20">
+                  <div className="text-xs text-text-tertiary mb-1 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+                    SIMULATION TIME
+                  </div>
+                  <div className="text-2xl font-bold text-accent-emerald font-mono">
+                    {currentSnapshot.date.toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </div>
+                  <div className="text-xs text-text-secondary mt-1 flex items-center justify-between">
+                    <span>{currentSnapshot.events.length} events</span>
+                    <span className="text-accent-cyan">●</span>
+                  </div>
+                </div>
+              )}
+              <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} snapshot={currentSnapshot} />
+            </div>
+          )}
+
+          {viewMode === 'supply-chain' && (
+            <div className="h-full relative overflow-auto p-6">
+              <div className="max-w-7xl mx-auto">
+                <SupplyChainDiagram
+                  nodes={HBM_SUPPLY_CHAIN.nodes}
+                  links={HBM_SUPPLY_CHAIN.links}
+                  title="NVIDIA H100 Supply Chain Analysis"
+                  description="Critical path analysis of AI accelerator manufacturing dependencies - Click nodes to explore relationships"
+                />
+
+                {/* Timeline Simulation (Legacy) */}
+                <div className="mt-6">
+                  <SimulationTimeline />
+                </div>
+
+                {/* Additional Supply Chain Insights */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                  <Card className="p-6 border-red-500/30 bg-red-500/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <GitBranch size={18} className="text-red-400" />
+                      <h3 className="text-base font-semibold text-text-primary">Critical Bottlenecks</h3>
+                    </div>
+                    <div className="space-y-2 text-sm text-text-secondary">
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                        <div>
+                          <span className="font-semibold text-white">ASML EUV:</span> Monopoly on extreme ultraviolet lithography equipment (18-24 month lead time)
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                        <div>
+                          <span className="font-semibold text-white">HBM3E Memory:</span> SK Hynix controls 95% of supply (4-6 month lead time)
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                        <div>
+                          <span className="font-semibold text-white">TSMC CoWoS:</span> Advanced packaging capacity constrained
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-6 border-green-500/30 bg-green-500/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap size={18} className="text-green-400" />
+                      <h3 className="text-base font-semibold text-text-primary">Economics</h3>
+                    </div>
+                    <div className="space-y-2 text-sm text-text-secondary">
+                      <div className="flex justify-between">
+                        <span>H100 Price:</span>
+                        <span className="font-mono text-green-400">$30,000</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>HBM3E Cost:</span>
+                        <span className="font-mono text-green-400">$1,500</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>TSMC Wafer:</span>
+                        <span className="font-mono text-green-400">$16,000</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Margin:</span>
+                        <span className="font-mono text-green-400">~65%</span>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-6 border-cyan-500/30 bg-cyan-500/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Network size={18} className="text-cyan-400" />
+                      <h3 className="text-base font-semibold text-text-primary">Dependencies</h3>
+                    </div>
+                    <div className="space-y-2 text-sm text-text-secondary">
+                      <div>
+                        <span className="font-semibold text-white">Geopolitical Risk:</span> Taiwan dependency for TSMC manufacturing
+                      </div>
+                      <div>
+                        <span className="font-semibold text-white">Alternative Sources:</span> Samsung (limited), Intel (developing)
+                      </div>
+                      <div>
+                        <span className="font-semibold text-white">Lead Time:</span> 12-18 months from order to delivery
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -380,37 +921,154 @@ export default function SimulationPage() {
                   </p>
 
                   <div className="space-y-1">
-                    <button className="w-full px-3 py-2 bg-accent-cyan text-black text-xs font-semibold rounded-lg hover:bg-accent-cyan/80 transition-all">
+                    <button
+                      onClick={() => setShowSaveDialog(true)}
+                      className="w-full px-3 py-2 bg-accent-cyan text-black text-xs font-semibold rounded-lg hover:bg-accent-cyan/80 transition-all"
+                    >
                       <Save size={12} className="inline mr-1" />
                       Save Current Scenario
                     </button>
-                    <button className="w-full px-3 py-2 bg-background-tertiary text-text-primary text-xs font-semibold rounded-lg hover:bg-background-secondary transition-all border border-border-primary">
+                    <button
+                      onClick={() => setShowLoadDialog(true)}
+                      className="w-full px-3 py-2 bg-background-tertiary text-text-primary text-xs font-semibold rounded-lg hover:bg-background-secondary transition-all border border-border-primary"
+                    >
                       <Play size={12} className="inline mr-1" />
-                      Load Scenario
+                      Load Scenario ({getAllScenarios().length})
                     </button>
                   </div>
 
+                  {/* Save Dialog */}
+                  {showSaveDialog && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                      <div className="bg-background-primary border-2 border-accent-cyan rounded-lg p-6 w-96 max-w-[90vw]">
+                        <h3 className="text-lg font-bold text-text-primary mb-4">Save Scenario</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-xs text-text-secondary mb-1 block">Scenario Name *</label>
+                            <input
+                              type="text"
+                              value={scenarioName}
+                              onChange={(e) => setScenarioName(e.target.value)}
+                              placeholder="e.g., My Custom Scenario"
+                              className="w-full px-3 py-2 bg-background-secondary border border-border-primary rounded text-sm text-text-primary focus:outline-none focus:border-accent-cyan"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-text-secondary mb-1 block">Description (Optional)</label>
+                            <textarea
+                              value={scenarioDescription}
+                              onChange={(e) => setScenarioDescription(e.target.value)}
+                              placeholder="Describe your scenario..."
+                              rows={3}
+                              className="w-full px-3 py-2 bg-background-secondary border border-border-primary rounded text-sm text-text-primary focus:outline-none focus:border-accent-cyan resize-none"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleSaveScenario}
+                              className="flex-1 px-4 py-2 bg-accent-cyan text-black font-semibold rounded hover:bg-accent-cyan/80 transition-all"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowSaveDialog(false);
+                                setScenarioName('');
+                                setScenarioDescription('');
+                              }}
+                              className="flex-1 px-4 py-2 bg-background-secondary text-text-primary border border-border-primary rounded hover:bg-background-tertiary transition-all"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Load Dialog */}
+                  {showLoadDialog && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                      <div className="bg-background-primary border-2 border-accent-magenta rounded-lg p-6 w-[500px] max-w-[90vw] max-h-[80vh] overflow-y-auto">
+                        <h3 className="text-lg font-bold text-text-primary mb-4">Load Scenario</h3>
+                        <div className="space-y-2">
+                          {getAllScenarios().length === 0 ? (
+                            <p className="text-sm text-text-tertiary text-center py-8">
+                              No saved scenarios yet. Save your current state to create one!
+                            </p>
+                          ) : (
+                            getAllScenarios().map((scenario) => (
+                              <button
+                                key={scenario.id}
+                                onClick={() => handleLoadScenario(scenario.id)}
+                                className="w-full px-4 py-3 bg-background-secondary border border-border-primary rounded-lg hover:border-accent-magenta hover:bg-background-tertiary transition-all text-left"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-base">{scenario.icon || '💾'}</span>
+                                      <span className="text-sm font-semibold text-text-primary">{scenario.name}</span>
+                                    </div>
+                                    <p className="text-xs text-text-tertiary line-clamp-2">{scenario.description}</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <span className="text-[10px] text-text-tertiary">
+                                        {new Date(scenario.createdAt).toLocaleDateString()}
+                                      </span>
+                                      {scenario.tags && scenario.tags.length > 0 && (
+                                        <div className="flex gap-1">
+                                          {scenario.tags.slice(0, 2).map(tag => (
+                                            <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-accent-cyan/10 text-accent-cyan rounded">
+                                              {tag}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Play size={16} className="text-accent-magenta mt-1" />
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                        <button
+                          onClick={() => setShowLoadDialog(false)}
+                          className="w-full mt-4 px-4 py-2 bg-background-secondary text-text-primary border border-border-primary rounded hover:bg-background-tertiary transition-all"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="pt-3 border-t border-border-primary">
-                    <div className="text-xs font-semibold text-text-secondary mb-2">Community Scenarios</div>
+                    <div className="text-xs font-semibold text-text-secondary mb-2">Historical Scenarios</div>
                     <div className="space-y-2">
-                      <ScenarioCard
-                        name="2008 Financial Crisis"
-                        author="analyst_42"
-                        upvotes={152}
-                        description="Fed rate at 0%, high volatility, banking crisis"
-                      />
-                      <ScenarioCard
-                        name="AI Boom 2025"
-                        author="quant_trader"
-                        upvotes={89}
-                        description="Semiconductor surge, tech innovation spike"
-                      />
-                      <ScenarioCard
-                        name="Oil Shock"
-                        author="macro_guru"
-                        upvotes={67}
-                        description="Oil at $150, manufacturing impact"
-                      />
+                      {SCENARIOS.map(scenario => (
+                        <button
+                          key={scenario.id}
+                          onClick={() => applyScenario(scenario.id)}
+                          className={`w-full px-3 py-2 text-left rounded-lg transition-all border ${
+                            activeScenario === scenario.id
+                              ? 'bg-accent-cyan/10 border-accent-cyan text-accent-cyan shadow-lg shadow-accent-cyan/20'
+                              : 'bg-background-tertiary border-border-primary hover:border-accent-magenta hover:bg-background-secondary'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-base">{scenario.icon}</span>
+                            <span className="text-xs font-semibold">{scenario.name}</span>
+                          </div>
+                          <div className="text-[10px] text-text-tertiary">{scenario.description}</div>
+                          {activeScenario === scenario.id && (
+                            <div className="mt-2 pt-2 border-t border-accent-cyan/30">
+                              <div className="text-[10px] text-accent-cyan flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
+                                Active
+                              </div>
+                            </div>
+                          )}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -430,7 +1088,7 @@ export default function SimulationPage() {
                 <div className="flex justify-between">
                   <span className="text-text-tertiary">Fed Rate:</span>
                   <span className="text-accent-emerald font-mono font-bold">
-                    {((macroState['fed_rate'] || 0.055) * 100).toFixed(2)}%
+                    {(macroState['fed_funds_rate'] || 5.25).toFixed(2)}%
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -442,37 +1100,9 @@ export default function SimulationPage() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-// Scenario Card Component
-function ScenarioCard({
-  name,
-  author,
-  upvotes,
-  description
-}: {
-  name: string;
-  author: string;
-  upvotes: number;
-  description: string;
-}) {
-  return (
-    <div className="bg-background-tertiary border border-border-primary rounded-lg p-3 hover:border-accent-magenta transition-all cursor-pointer group">
-      <div className="flex items-start justify-between mb-1">
-        <h4 className="text-xs font-semibold text-text-primary group-hover:text-accent-magenta transition-colors">
-          {name}
-        </h4>
-        <div className="flex items-center gap-1 text-accent-cyan">
-          <span className="text-[10px]">▲</span>
-          <span className="text-[10px] font-bold">{upvotes}</span>
-        </div>
-      </div>
-      <p className="text-[10px] text-text-tertiary mb-2">{description}</p>
-      <div className="text-[10px] text-text-secondary">
-        by <span className="text-accent-cyan">{author}</span>
-      </div>
+      {/* Cascade Effects Animation */}
+      <CascadeEffects />
     </div>
   );
 }

@@ -1,6 +1,17 @@
 /**
  * Comprehensive Macro Variables Data Structure
- * Based on NEXUS_VISION_MASTER.md - 50+ Variables across 9 Categories
+ * Based on NEXUS_VISION_MASTER.md - 87 Variables across 9 Categories
+ *
+ * Expansion Details:
+ * - Economic Growth: 17 variables (added GDP components, PMI, industrial production)
+ * - Commodities: 13 variables (added silver, lithium, aluminum, iron ore, nickel, rare earths)
+ * - Trade & Logistics: 10 variables (added EU-Asia, Intra-Asia routes, air freight, port congestion)
+ * - Tech & Innovation: 10 variables (added DRAM, NAND, HBM prices, foundry utilization, AI GPU demand)
+ * - Monetary Policy: 10 variables
+ * - Liquidity: 10 variables
+ * - Foreign Exchange: 8 variables
+ * - Market Sentiment: 5 variables
+ * - Real Estate: 4 variables
  */
 
 export interface MacroVariable {
@@ -409,6 +420,90 @@ export const MACRO_VARIABLES: MacroVariable[] = [
     description: 'Conference Board Consumer Confidence Index',
     impact: { sectors: ['ALL'], direction: 'positive', magnitude: 'low' }
   },
+  {
+    id: 'us_gdp_nominal',
+    name: 'US Nominal GDP',
+    category: 'ECONOMIC_GROWTH',
+    unit: 'T USD',
+    min: 20,
+    max: 35,
+    defaultValue: 27.4,
+    step: 0.1,
+    description: 'US nominal GDP (current dollars)',
+    impact: { sectors: ['ALL'], direction: 'positive', magnitude: 'high' }
+  },
+  {
+    id: 'us_gdp_per_capita',
+    name: 'US GDP Per Capita',
+    category: 'ECONOMIC_GROWTH',
+    unit: 'K USD',
+    min: 60,
+    max: 90,
+    defaultValue: 81.5,
+    step: 0.5,
+    description: 'US GDP per capita',
+    impact: { sectors: ['ALL'], direction: 'positive', magnitude: 'medium' }
+  },
+  {
+    id: 'us_consumption_growth',
+    name: 'US Personal Consumption Growth',
+    category: 'ECONOMIC_GROWTH',
+    unit: '%',
+    min: -5,
+    max: 8,
+    defaultValue: 2.8,
+    step: 0.1,
+    description: 'Personal consumption expenditure growth (70% of GDP)',
+    impact: { sectors: ['ALL'], direction: 'positive', magnitude: 'high' }
+  },
+  {
+    id: 'us_investment_growth',
+    name: 'US Fixed Investment Growth',
+    category: 'ECONOMIC_GROWTH',
+    unit: '%',
+    min: -10,
+    max: 15,
+    defaultValue: 3.2,
+    step: 0.5,
+    description: 'Gross private domestic investment growth',
+    impact: { sectors: ['MANUFACTURING', 'SEMICONDUCTOR'], direction: 'positive', magnitude: 'high' }
+  },
+  {
+    id: 'us_industrial_production',
+    name: 'US Industrial Production',
+    category: 'ECONOMIC_GROWTH',
+    unit: 'Index',
+    min: 80,
+    max: 120,
+    defaultValue: 103.5,
+    step: 0.5,
+    description: 'Federal Reserve Industrial Production Index',
+    impact: { sectors: ['MANUFACTURING'], direction: 'positive', magnitude: 'high' }
+  },
+  {
+    id: 'china_pmi_manufacturing',
+    name: 'China Manufacturing PMI',
+    category: 'ECONOMIC_GROWTH',
+    unit: 'Index',
+    min: 35,
+    max: 65,
+    defaultValue: 50.2,
+    step: 0.5,
+    description: 'China Caixin Manufacturing PMI',
+    impact: { sectors: ['MANUFACTURING', 'SEMICONDUCTOR'], direction: 'positive', magnitude: 'high' }
+  },
+  {
+    id: 'korea_gdp_growth',
+    name: 'Korea GDP Growth',
+    category: 'ECONOMIC_GROWTH',
+    unit: '%',
+    min: -3,
+    max: 7,
+    defaultValue: 1.4,
+    step: 0.1,
+    description: 'South Korea real GDP growth rate (YoY)',
+    impact: { sectors: ['SEMICONDUCTOR'], direction: 'positive', magnitude: 'high' }
+  },
 
   // ===== Category 4: Foreign Exchange (8 variables) =====
   {
@@ -593,6 +688,78 @@ export const MACRO_VARIABLES: MacroVariable[] = [
     description: 'Wheat commodity price',
     impact: { sectors: ['ALL'], direction: 'negative', magnitude: 'low' }
   },
+  {
+    id: 'silver',
+    name: 'Silver',
+    category: 'COMMODITIES',
+    unit: '$ / oz',
+    min: 15,
+    max: 35,
+    defaultValue: 24.5,
+    step: 0.5,
+    description: 'Silver spot price',
+    impact: { sectors: ['COMMODITIES'], direction: 'positive', magnitude: 'medium' }
+  },
+  {
+    id: 'lithium',
+    name: 'Lithium Carbonate',
+    category: 'COMMODITIES',
+    unit: '$ / kg',
+    min: 8,
+    max: 80,
+    defaultValue: 18.5,
+    step: 1,
+    description: 'Battery-grade lithium carbonate price (China)',
+    impact: { sectors: ['SEMICONDUCTOR', 'MANUFACTURING'], direction: 'negative', magnitude: 'high' }
+  },
+  {
+    id: 'aluminum',
+    name: 'Aluminum',
+    category: 'COMMODITIES',
+    unit: '$ / ton',
+    min: 1800,
+    max: 3500,
+    defaultValue: 2250.0,
+    step: 50,
+    description: 'LME aluminum price',
+    impact: { sectors: ['MANUFACTURING'], direction: 'positive', magnitude: 'medium' }
+  },
+  {
+    id: 'iron_ore',
+    name: 'Iron Ore',
+    category: 'COMMODITIES',
+    unit: '$ / ton',
+    min: 60,
+    max: 180,
+    defaultValue: 115.0,
+    step: 5,
+    description: 'Iron ore fines 62% Fe CFR China',
+    impact: { sectors: ['MANUFACTURING', 'COMMODITIES'], direction: 'positive', magnitude: 'medium' }
+  },
+  {
+    id: 'nickel',
+    name: 'Nickel',
+    category: 'COMMODITIES',
+    unit: '$ / ton',
+    min: 15000,
+    max: 35000,
+    defaultValue: 18500.0,
+    step: 500,
+    description: 'LME nickel price (battery material)',
+    impact: { sectors: ['MANUFACTURING'], direction: 'negative', magnitude: 'medium' }
+  },
+  {
+    id: 'rare_earth_index',
+    name: 'Rare Earth Metals Index',
+    category: 'COMMODITIES',
+    unit: 'Index',
+    min: 80,
+    max: 180,
+    defaultValue: 125.0,
+    step: 5,
+    description: 'Composite rare earth elements price index',
+    impact: { sectors: ['SEMICONDUCTOR', 'MANUFACTURING'], direction: 'negative', magnitude: 'high' }
+  },
 
   // ===== Category 6: Trade & Logistics (6 variables) =====
   {
@@ -666,6 +833,54 @@ export const MACRO_VARIABLES: MacroVariable[] = [
     step: 0.1,
     description: 'NY Fed Global Supply Chain Pressure Index',
     impact: { sectors: ['MANUFACTURING', 'SEMICONDUCTOR'], direction: 'negative', magnitude: 'high' }
+  },
+  {
+    id: 'container_rate_eu_asia',
+    name: 'Container Rate (EU-Asia)',
+    category: 'TRADE_LOGISTICS',
+    unit: '$ / 40ft',
+    min: 1200,
+    max: 12000,
+    defaultValue: 3200.0,
+    step: 100,
+    description: 'Rotterdam to Shanghai container shipping rate',
+    impact: { sectors: ['MANUFACTURING'], direction: 'negative', magnitude: 'medium' }
+  },
+  {
+    id: 'container_rate_intra_asia',
+    name: 'Container Rate (Intra-Asia)',
+    category: 'TRADE_LOGISTICS',
+    unit: '$ / 40ft',
+    min: 500,
+    max: 4000,
+    defaultValue: 1100.0,
+    step: 50,
+    description: 'Shanghai to Singapore/Tokyo container rate',
+    impact: { sectors: ['MANUFACTURING', 'SEMICONDUCTOR'], direction: 'negative', magnitude: 'medium' }
+  },
+  {
+    id: 'air_freight_index',
+    name: 'Air Freight Rate Index',
+    category: 'TRADE_LOGISTICS',
+    unit: 'Index',
+    min: 80,
+    max: 200,
+    defaultValue: 115.0,
+    step: 5,
+    description: 'Global air cargo rate index (high-value goods)',
+    impact: { sectors: ['SEMICONDUCTOR'], direction: 'negative', magnitude: 'high' }
+  },
+  {
+    id: 'port_congestion_index',
+    name: 'Port Congestion Index',
+    category: 'TRADE_LOGISTICS',
+    unit: 'Index',
+    min: 80,
+    max: 150,
+    defaultValue: 105.0,
+    step: 5,
+    description: 'Global port congestion severity index',
+    impact: { sectors: ['MANUFACTURING'], direction: 'negative', magnitude: 'medium' }
   },
 
   // ===== Category 7: Market Sentiment (5 variables) =====
@@ -816,6 +1031,90 @@ export const MACRO_VARIABLES: MacroVariable[] = [
     step: 2,
     description: 'Global cloud infrastructure spending',
     impact: { sectors: ['SEMICONDUCTOR'], direction: 'positive', magnitude: 'medium' }
+  },
+  {
+    id: 'dram_price_index',
+    name: 'DRAM Price Index',
+    category: 'TECH_INNOVATION',
+    unit: 'Index',
+    min: 60,
+    max: 180,
+    defaultValue: 105.0,
+    step: 5,
+    description: 'DDR4/DDR5 DRAM contract price index',
+    impact: { sectors: ['SEMICONDUCTOR'], direction: 'positive', magnitude: 'high' }
+  },
+  {
+    id: 'nand_flash_price',
+    name: 'NAND Flash Price',
+    category: 'TECH_INNOVATION',
+    unit: '$ / GB',
+    min: 0.02,
+    max: 0.15,
+    defaultValue: 0.045,
+    step: 0.005,
+    description: 'NAND flash memory contract price',
+    impact: { sectors: ['SEMICONDUCTOR'], direction: 'positive', magnitude: 'high' }
+  },
+  {
+    id: 'hbm_price_premium',
+    name: 'HBM Price Premium',
+    category: 'TECH_INNOVATION',
+    unit: '%',
+    min: 50,
+    max: 400,
+    defaultValue: 250.0,
+    step: 10,
+    description: 'HBM3/HBM3E price premium vs standard DRAM',
+    impact: { sectors: ['SEMICONDUCTOR'], direction: 'mixed', magnitude: 'high' }
+  },
+  {
+    id: 'wafer_capacity_utilization',
+    name: 'Foundry Capacity Utilization',
+    category: 'TECH_INNOVATION',
+    unit: '%',
+    min: 50,
+    max: 100,
+    defaultValue: 85.0,
+    step: 1,
+    description: 'Global semiconductor foundry utilization rate',
+    impact: { sectors: ['SEMICONDUCTOR'], direction: 'positive', magnitude: 'high' }
+  },
+  {
+    id: 'gpu_demand_index',
+    name: 'AI GPU Demand Index',
+    category: 'TECH_INNOVATION',
+    unit: 'Index',
+    min: 80,
+    max: 200,
+    defaultValue: 165.0,
+    step: 5,
+    description: 'AI accelerator demand intensity (H100, MI300X)',
+    impact: { sectors: ['SEMICONDUCTOR'], direction: 'positive', magnitude: 'high' }
+  },
+  {
+    id: 'ev_production_growth',
+    name: 'EV Production Growth',
+    category: 'TECH_INNOVATION',
+    unit: '%',
+    min: -10,
+    max: 50,
+    defaultValue: 22.0,
+    step: 2,
+    description: 'Electric vehicle production growth (YoY)',
+    impact: { sectors: ['MANUFACTURING', 'COMMODITIES'], direction: 'positive', magnitude: 'high' }
+  },
+  {
+    id: 'renewable_capex',
+    name: 'Renewable Energy CapEx',
+    category: 'TECH_INNOVATION',
+    unit: 'B USD (annual)',
+    min: 300,
+    max: 800,
+    defaultValue: 550.0,
+    step: 20,
+    description: 'Global renewable energy capital expenditure',
+    impact: { sectors: ['MANUFACTURING'], direction: 'positive', magnitude: 'medium' }
   }
 ];
 

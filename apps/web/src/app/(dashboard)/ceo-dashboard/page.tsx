@@ -16,7 +16,7 @@ import {
 import { companies, Company } from '@/data/companies';
 import { Card, Button, Badge, SectionHeader } from '@/components/ui/DesignSystem';
 
-type AdminTab = 'overview' | 'companies' | 'macros' | 'connections' | 'add-data';
+type AdminTab = 'overview' | 'companies' | 'connections' | 'add-data' | 'api-keys';
 type ViewMode = 'list' | 'grid' | 'circuit';
 
 // Sector colors for visualization
@@ -28,12 +28,47 @@ const SECTOR_COLORS: Record<string, string> = {
   DEFAULT: '#9CA3AF'
 };
 
+interface APIKey {
+  id: string;
+  name: string;
+  key: string;
+  service: 'openai' | 'alpha-vantage' | 'coinmarketcap' | 'newsapi' | 'other';
+  createdAt: string;
+  lastUsed?: string;
+}
+
 export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSector, setSelectedSector] = useState<string>('all');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  // API Keys State
+  const [apiKeys, setApiKeys] = useState<APIKey[]>([
+    {
+      id: '1',
+      name: 'OpenAI API',
+      key: 'sk-••••••••••••••••••••',
+      service: 'openai',
+      createdAt: '2025-01-01',
+      lastUsed: '2025-01-10'
+    },
+    {
+      id: '2',
+      name: 'Alpha Vantage',
+      key: 'DEMO••••••••••••',
+      service: 'alpha-vantage',
+      createdAt: '2025-01-05',
+      lastUsed: '2025-01-09'
+    }
+  ]);
+  const [isAddingKey, setIsAddingKey] = useState(false);
+  const [newKeyForm, setNewKeyForm] = useState({
+    name: '',
+    key: '',
+    service: 'openai' as APIKey['service']
+  });
 
   // Statistics
   const stats = useMemo(() => {
@@ -136,6 +171,53 @@ export default function AdminDashboardPage() {
     setExpandedCategories(newSet);
   };
 
+  // API Key handlers
+  const handleAddApiKey = () => {
+    if (newKeyForm.name && newKeyForm.key) {
+      const newKey: APIKey = {
+        id: Date.now().toString(),
+        name: newKeyForm.name,
+        key: newKeyForm.key,
+        service: newKeyForm.service,
+        createdAt: new Date().toISOString().split('T')[0],
+      };
+      setApiKeys([...apiKeys, newKey]);
+      setNewKeyForm({ name: '', key: '', service: 'openai' });
+      setIsAddingKey(false);
+    }
+  };
+
+  const handleDeleteApiKey = (id: string) => {
+    if (confirm('Are you sure you want to delete this API key?')) {
+      setApiKeys(apiKeys.filter(key => key.id !== id));
+    }
+  };
+
+  const maskApiKey = (key: string) => {
+    if (key.length <= 8) return '••••••••';
+    return key.substring(0, 4) + '••••••••••••' + key.substring(key.length - 4);
+  };
+
+  const getServiceIcon = (service: APIKey['service']) => {
+    switch (service) {
+      case 'openai': return '🤖';
+      case 'alpha-vantage': return '📈';
+      case 'coinmarketcap': return '💰';
+      case 'newsapi': return '📰';
+      default: return '🔑';
+    }
+  };
+
+  const getServiceColor = (service: APIKey['service']) => {
+    switch (service) {
+      case 'openai': return '#10B981';
+      case 'alpha-vantage': return '#06B6D4';
+      case 'coinmarketcap': return '#F59E0B';
+      case 'newsapi': return '#8B5CF6';
+      default: return '#9CA3AF';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-text-primary">
       {/* Header */}
@@ -165,7 +247,7 @@ export default function AdminDashboardPage() {
 
         {/* Tab Navigation */}
         <div className="flex gap-2 overflow-x-auto pb-2">
-          {(['overview', 'companies', 'macros', 'connections', 'add-data'] as const).map((tab) => (
+          {(['overview', 'companies', 'connections', 'api-keys', 'add-data'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -653,99 +735,6 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* MACROS TAB */}
-        {activeTab === 'macros' && (
-          <div className="max-w-7xl">
-            <div className="mb-6">
-              <h2 className="text-xl font-light text-text-primary mb-2">Macro Variables Configuration</h2>
-              <p className="text-sm text-text-secondary">
-                Manage all {MACRO_VARIABLES.length} macro variables across {Object.keys(MACRO_CATEGORIES).length} categories
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {Object.entries(MACRO_CATEGORIES).map(([categoryKey, category]) => {
-                const isExpanded = expandedCategories.has(categoryKey);
-                const variables = getVariablesByCategory(categoryKey as MacroCategory);
-
-                return (
-                  <Card key={categoryKey}>
-                    <button
-                      onClick={() => toggleCategory(categoryKey)}
-                      className="w-full flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">{category.icon}</span>
-                        <div className="text-left">
-                          <h3 className="text-base font-semibold text-text-primary">{category.label}</h3>
-                          <p className="text-xs text-text-tertiary">{variables.length} variables</p>
-                        </div>
-                      </div>
-                      {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-                    </button>
-
-                    {isExpanded && (
-                      <div className="mt-4 pt-4 border-t border-border-primary">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {variables.map(variable => (
-                            <div key={variable.id} className="bg-background-secondary rounded-lg p-3">
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex-1">
-                                  <h4 className="text-sm font-medium text-text-primary mb-1">
-                                    {variable.name}
-                                  </h4>
-                                  <p className="text-xs text-text-tertiary">
-                                    {variable.description}
-                                  </p>
-                                </div>
-                                <button className="p-1 text-text-tertiary hover:text-accent-cyan">
-                                  <Edit2 size={14} />
-                                </button>
-                              </div>
-
-                              <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
-                                <div>
-                                  <span className="text-text-tertiary">Min:</span>
-                                  <span className="ml-1 font-mono text-text-primary">
-                                    {variable.min}{variable.unit}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-text-tertiary">Default:</span>
-                                  <span className="ml-1 font-mono" style={{ color: category.color }}>
-                                    {variable.defaultValue}{variable.unit}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-text-tertiary">Max:</span>
-                                  <span className="ml-1 font-mono text-text-primary">
-                                    {variable.max}{variable.unit}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {variable.impact.sectors.slice(0, 3).map(sector => (
-                                  <span
-                                    key={sector}
-                                    className="px-2 py-0.5 bg-background-tertiary text-text-tertiary text-xs rounded"
-                                  >
-                                    {sector}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* CONNECTIONS TAB - Circuit Diagram View */}
         {activeTab === 'connections' && (
           <div className="max-w-7xl">
@@ -800,6 +789,273 @@ export default function AdminDashboardPage() {
                 >
                   Open Interactive Network Graph
                 </Button>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* API KEYS TAB */}
+        {activeTab === 'api-keys' && (
+          <div className="max-w-5xl">
+            <div className="mb-6">
+              <h2 className="text-xl font-light text-text-primary mb-2">API Keys Management</h2>
+              <p className="text-sm text-text-secondary">
+                Securely manage API keys for third-party services used across the platform
+              </p>
+            </div>
+
+            {/* API Keys List */}
+            <div className="space-y-4 mb-6">
+              {apiKeys.map((apiKey) => (
+                <Card key={apiKey.id} className="hover:border-[#2A2A3F] transition-all">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      {/* Service Icon */}
+                      <div
+                        className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl"
+                        style={{ backgroundColor: `${getServiceColor(apiKey.service)}20` }}
+                      >
+                        {getServiceIcon(apiKey.service)}
+                      </div>
+
+                      {/* Key Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="text-base font-semibold text-text-primary">{apiKey.name}</h4>
+                          <span
+                            className="px-2 py-0.5 text-xs rounded font-medium"
+                            style={{
+                              backgroundColor: `${getServiceColor(apiKey.service)}20`,
+                              color: getServiceColor(apiKey.service)
+                            }}
+                          >
+                            {apiKey.service.toUpperCase()}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 text-xs">
+                          <div>
+                            <span className="text-text-tertiary">API Key:</span>
+                            <span className="ml-2 font-mono text-text-primary">
+                              {maskApiKey(apiKey.key)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-text-tertiary">Created:</span>
+                            <span className="ml-2 text-text-primary">{apiKey.createdAt}</span>
+                          </div>
+                          <div>
+                            <span className="text-text-tertiary">Last Used:</span>
+                            <span className="ml-2 text-accent-emerald">
+                              {apiKey.lastUsed || 'Never'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(apiKey.key);
+                          alert('API key copied to clipboard!');
+                        }}
+                        className="p-2 text-text-tertiary hover:text-accent-cyan transition-colors"
+                        title="Copy API Key"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteApiKey(apiKey.id)}
+                        className="p-2 text-text-tertiary hover:text-status-danger transition-colors"
+                        title="Delete API Key"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+
+              {apiKeys.length === 0 && (
+                <Card className="text-center py-12">
+                  <Database size={48} className="mx-auto mb-3 text-text-tertiary opacity-50" />
+                  <p className="text-text-secondary mb-4">No API keys configured yet</p>
+                  <Button
+                    onClick={() => setIsAddingKey(true)}
+                    variant="primary"
+                    size="md"
+                  >
+                    <Plus size={16} className="mr-2" />
+                    Add Your First API Key
+                  </Button>
+                </Card>
+              )}
+            </div>
+
+            {/* Add New Key Form */}
+            {isAddingKey ? (
+              <Card>
+                <div className="flex items-center gap-2 mb-6">
+                  <Plus size={20} className="text-accent-cyan" />
+                  <h3 className="text-lg font-semibold text-text-primary">Add New API Key</h3>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs text-text-tertiary mb-2">Service *</label>
+                    <select
+                      value={newKeyForm.service}
+                      onChange={(e) => setNewKeyForm({ ...newKeyForm, service: e.target.value as APIKey['service'] })}
+                      className="w-full bg-background-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-cyan"
+                    >
+                      <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
+                      <option value="alpha-vantage">Alpha Vantage (Stock Data)</option>
+                      <option value="coinmarketcap">CoinMarketCap (Crypto Data)</option>
+                      <option value="newsapi">NewsAPI (News Sentiment)</option>
+                      <option value="other">Other Service</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-text-tertiary mb-2">Key Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., OpenAI Production Key"
+                      value={newKeyForm.name}
+                      onChange={(e) => setNewKeyForm({ ...newKeyForm, name: e.target.value })}
+                      className="w-full bg-background-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent-cyan"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-text-tertiary mb-2">API Key *</label>
+                    <input
+                      type="password"
+                      placeholder="sk-••••••••••••••••••••"
+                      value={newKeyForm.key}
+                      onChange={(e) => setNewKeyForm({ ...newKeyForm, key: e.target.value })}
+                      className="w-full bg-background-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary font-mono focus:outline-none focus:border-accent-cyan"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4 border-t border-border-primary">
+                    <Button
+                      onClick={() => {
+                        setIsAddingKey(false);
+                        setNewKeyForm({ name: '', key: '', service: 'openai' });
+                      }}
+                      variant="secondary"
+                      size="md"
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAddApiKey}
+                      variant="primary"
+                      size="md"
+                      className="flex-1"
+                      disabled={!newKeyForm.name || !newKeyForm.key}
+                    >
+                      <Plus size={16} className="mr-2" />
+                      Add API Key
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Info size={14} className="text-blue-400 mt-0.5" />
+                    <div className="text-xs text-blue-400">
+                      <p className="font-semibold mb-1">Security Note:</p>
+                      <p>API keys are stored locally in your browser. Never share your keys publicly or commit them to version control.</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              apiKeys.length > 0 && (
+                <Button
+                  onClick={() => setIsAddingKey(true)}
+                  variant="primary"
+                  size="lg"
+                  className="w-full"
+                >
+                  <Plus size={16} className="mr-2" />
+                  Add New API Key
+                </Button>
+              )
+            )}
+
+            {/* Service Documentation Links */}
+            <Card className="mt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Info size={18} className="text-accent-cyan" />
+                <h3 className="text-base font-semibold text-text-primary">Getting API Keys</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-background-secondary rounded-lg p-3 hover:bg-background-tertiary transition-colors border border-border-primary hover:border-accent-cyan"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🤖</span>
+                    <div>
+                      <h4 className="text-sm font-semibold text-text-primary">OpenAI</h4>
+                      <p className="text-xs text-text-tertiary">Get your API key →</p>
+                    </div>
+                  </div>
+                </a>
+
+                <a
+                  href="https://www.alphavantage.co/support/#api-key"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-background-secondary rounded-lg p-3 hover:bg-background-tertiary transition-colors border border-border-primary hover:border-accent-cyan"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">📈</span>
+                    <div>
+                      <h4 className="text-sm font-semibold text-text-primary">Alpha Vantage</h4>
+                      <p className="text-xs text-text-tertiary">Get your API key →</p>
+                    </div>
+                  </div>
+                </a>
+
+                <a
+                  href="https://coinmarketcap.com/api/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-background-secondary rounded-lg p-3 hover:bg-background-tertiary transition-colors border border-border-primary hover:border-accent-cyan"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">💰</span>
+                    <div>
+                      <h4 className="text-sm font-semibold text-text-primary">CoinMarketCap</h4>
+                      <p className="text-xs text-text-tertiary">Get your API key →</p>
+                    </div>
+                  </div>
+                </a>
+
+                <a
+                  href="https://newsapi.org/register"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-background-secondary rounded-lg p-3 hover:bg-background-tertiary transition-colors border border-border-primary hover:border-accent-cyan"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">📰</span>
+                    <div>
+                      <h4 className="text-sm font-semibold text-text-primary">NewsAPI</h4>
+                      <p className="text-xs text-text-tertiary">Get your API key →</p>
+                    </div>
+                  </div>
+                </a>
               </div>
             </Card>
           </div>

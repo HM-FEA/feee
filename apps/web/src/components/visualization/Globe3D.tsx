@@ -3,6 +3,13 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useMacroStore } from '@/lib/store/macroStore';
+import { useLevelStore } from '@/lib/store/levelStore';
+import { companies, Company } from '@/data/companies';
+import { getSectorColor } from '@/lib/config/sectors.config';
+import { MACRO_VARIABLES } from '@/data/macroVariables';
+import { TRADE_FLOWS, SHIPPING_ROUTES, SUPPLY_CHAIN_PATHS, CURRENCY_FLOWS } from '@/data/globalSupplyChain';
+import { getImpactColor, getImpactSizeMultiplier } from '@/lib/utils/levelImpactCalculation';
+import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
 
 // Dynamic import to avoid SSR issues
 const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
@@ -42,42 +49,117 @@ const COUNTRIES: Country[] = [
   { lat: 25.2048, lng: 55.2708, name: 'UAE', code: 'AE', m2Supply: 0.5, gdp: 0.5, color: '#39FF14', size: 0.5 },
 ];
 
-// Capital flows (arcs) between countries
-const CAPITAL_FLOWS: CapitalFlow[] = [
-  // US → Global outflows
-  { startLat: 37.7749, startLng: -122.4194, endLat: 39.9042, endLng: 116.4074, amount: 150, color: 'rgba(255, 215, 0, 0.6)', label: 'US → China' },
-  { startLat: 37.7749, startLng: -122.4194, endLat: 35.6762, endLng: 139.6503, amount: 120, color: 'rgba(255, 215, 0, 0.6)', label: 'US → Japan' },
-  { startLat: 37.7749, startLng: -122.4194, endLat: 51.5074, endLng: -0.1278, amount: 100, color: 'rgba(255, 215, 0, 0.6)', label: 'US → UK' },
-  { startLat: 37.7749, startLng: -122.4194, endLat: 37.5665, endLng: 126.9780, amount: 80, color: 'rgba(255, 215, 0, 0.6)', label: 'US → Korea' },
+// Convert all flow data to CapitalFlow format
+const COMPREHENSIVE_FLOWS: CapitalFlow[] = [
+  // Original capital flows
+  { startLat: 37.7749, startLng: -122.4194, endLat: 39.9042, endLng: 116.4074, amount: 150, color: 'rgba(255, 215, 0, 0.6)', label: 'US → China Capital' },
+  { startLat: 37.7749, startLng: -122.4194, endLat: 35.6762, endLng: 139.6503, amount: 120, color: 'rgba(255, 215, 0, 0.6)', label: 'US → Japan Capital' },
+  { startLat: 37.7749, startLng: -122.4194, endLat: 51.5074, endLng: -0.1278, amount: 100, color: 'rgba(255, 215, 0, 0.6)', label: 'US → UK Capital' },
+  { startLat: 37.7749, startLng: -122.4194, endLat: 37.5665, endLng: 126.9780, amount: 80, color: 'rgba(255, 215, 0, 0.6)', label: 'US → Korea Capital' },
+  { startLat: 39.9042, startLng: 116.4074, endLat: 37.5665, endLng: 126.9780, amount: 90, color: 'rgba(239, 68, 68, 0.6)', label: 'China → Korea Capital' },
+  { startLat: 39.9042, startLng: 116.4074, endLat: 28.6139, endLng: 77.2090, amount: 70, color: 'rgba(239, 68, 68, 0.6)', label: 'China → India Capital' },
+  { startLat: 39.9042, startLng: 116.4074, endLat: 25.2048, endLng: 55.2708, amount: 50, color: 'rgba(239, 68, 68, 0.6)', label: 'China → UAE Capital' },
+  { startLat: 52.5200, startLng: 13.4050, endLat: 48.8566, endLng: 2.3522, amount: 60, color: 'rgba(0, 229, 255, 0.6)', label: 'Germany → France Capital' },
+  { startLat: 51.5074, startLng: -0.1278, endLat: 52.5200, endLng: 13.4050, amount: 55, color: 'rgba(139, 92, 246, 0.6)', label: 'UK → Germany Capital' },
+  { startLat: 35.6762, startLng: 139.6503, endLat: 37.7749, endLng: -122.4194, amount: 100, color: 'rgba(255, 107, 107, 0.6)', label: 'Japan → US Capital' },
+  { startLat: 37.5665, startLng: 126.9780, endLat: 39.9042, endLng: 116.4074, amount: 65, color: 'rgba(0, 229, 255, 0.6)', label: 'Korea → China Capital' },
 
-  // China → Asia
-  { startLat: 39.9042, startLng: 116.4074, endLat: 37.5665, endLng: 126.9780, amount: 90, color: 'rgba(239, 68, 68, 0.6)', label: 'China → Korea' },
-  { startLat: 39.9042, startLng: 116.4074, endLat: 28.6139, endLng: 77.2090, amount: 70, color: 'rgba(239, 68, 68, 0.6)', label: 'China → India' },
-  { startLat: 39.9042, startLng: 116.4074, endLat: 25.2048, endLng: 55.2708, amount: 50, color: 'rgba(239, 68, 68, 0.6)', label: 'China → UAE' },
+  // Add Trade Flows (from globalSupplyChain.ts)
+  ...TRADE_FLOWS.map(flow => ({
+    startLat: flow.startLat,
+    startLng: flow.startLng,
+    endLat: flow.endLat,
+    endLng: flow.endLng,
+    amount: flow.volume,
+    color: flow.color.includes('rgba') ? flow.color : `${flow.color}99`, // Add alpha if not present
+    label: `Trade: ${flow.product} ($${flow.volume}B)`
+  })),
 
-  // EU internal flows
-  { startLat: 52.5200, startLng: 13.4050, endLat: 48.8566, endLng: 2.3522, amount: 60, color: 'rgba(0, 229, 255, 0.6)', label: 'Germany → France' },
-  { startLat: 51.5074, startLng: -0.1278, endLat: 52.5200, endLng: 13.4050, amount: 55, color: 'rgba(139, 92, 246, 0.6)', label: 'UK → Germany' },
+  // Add Shipping Routes
+  ...SHIPPING_ROUTES.map(route => ({
+    startLat: route.startLat,
+    startLng: route.startLng,
+    endLat: route.endLat,
+    endLng: route.endLng,
+    amount: route.frequency / 10, // Convert frequency to comparable amount
+    color: route.mode === 'air' ? 'rgba(255, 215, 0, 0.5)' : route.color.includes('rgba') ? route.color : `${route.color}99`,
+    label: `${route.mode === 'air' ? '✈️' : '🚢'} ${route.cargo} (${route.frequency}/mo)`
+  })),
 
-  // Asia → Global
-  { startLat: 35.6762, startLng: 139.6503, endLat: 37.7749, endLng: -122.4194, amount: 100, color: 'rgba(255, 107, 107, 0.6)', label: 'Japan → US' },
-  { startLat: 37.5665, startLng: 126.9780, endLat: 39.9042, endLng: 116.4074, amount: 65, color: 'rgba(0, 229, 255, 0.6)', label: 'Korea → China' },
+  // Add Supply Chain Paths (convert multi-node paths to individual arcs)
+  ...SUPPLY_CHAIN_PATHS.flatMap(path =>
+    path.nodes.slice(0, -1).map((node, i) => ({
+      startLat: node.lat,
+      startLng: node.lng,
+      endLat: path.nodes[i + 1].lat,
+      endLng: path.nodes[i + 1].lng,
+      amount: 50, // Default amount for supply chain
+      color: path.color.includes('rgba') ? path.color : `${path.color}CC`,
+      label: `${path.product}: ${node.name} → ${path.nodes[i + 1].name}`
+    }))
+  ),
+
+  // Add Currency Flows
+  ...CURRENCY_FLOWS.map(flow => ({
+    startLat: flow.startLat,
+    startLng: flow.startLng,
+    endLat: flow.endLat,
+    endLng: flow.endLng,
+    amount: flow.volume / 10, // Scale down for visualization
+    color: flow.color,
+    label: `Forex: ${flow.pair} ($${flow.volume}B/day)`
+  }))
 ];
+
+// Backward compatibility
+const CAPITAL_FLOWS = COMPREHENSIVE_FLOWS;
 
 interface Globe3DProps {
   selectedSector?: string | null;
   showControls?: boolean;
+  viewMode?: 'm2' | 'flows' | 'companies';
+  snapshot?: DateSnapshot | null;
 }
 
 export default function Globe3D({
   selectedSector = null,
-  showControls = true
+  showControls = true,
+  viewMode: externalViewMode,
+  snapshot = null
 }: Globe3DProps) {
   const globeRef = useRef<any>();
+  const containerRef = useRef<HTMLDivElement>(null);
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
-  const [viewMode, setViewMode] = useState<'m2' | 'flows'>('m2');
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [internalViewMode, setInternalViewMode] = useState<'m2' | 'flows' | 'companies'>('companies');
+  const viewMode = externalViewMode || internalViewMode;
   const [autoRotate, setAutoRotate] = useState(true);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const macroState = useMacroStore(state => state.macroState);
+  const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+  const entityImpacts = useLevelStore(state => state.entityImpacts);
+  const getEntityImpact = useLevelStore(state => state.getEntityImpact);
+
+  // Measure container size
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight,
+        });
+      }
+    };
+
+    updateDimensions();
+
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   // Sector-to-country mapping (which countries are important for each sector)
   const sectorCountries: Record<string, string[]> = {
@@ -136,6 +218,211 @@ export default function Globe3D({
     }));
   }, [adjustedCountries, selectedSector]);
 
+  // Calculate macro impact intensity (how much each variable changed from default)
+  const macroImpacts = useMemo(() => {
+    const impacts: Record<string, number> = {};
+
+    MACRO_VARIABLES.forEach(variable => {
+      const currentValue = macroState[variable.id] || variable.defaultValue;
+      const defaultValue = variable.defaultValue;
+      const range = variable.max - variable.min;
+
+      // Normalized change: -1 to +1
+      const change = (currentValue - defaultValue) / range;
+      impacts[variable.id] = Math.abs(change);
+    });
+
+    return impacts;
+  }, [macroState]);
+
+  // Prepare company points for Globe (must come before dynamicImpactArcs)
+  const companyPoints = useMemo(() => {
+    return companies
+      .filter(c => c.location) // Only companies with location data
+      .map(company => {
+        const sectorImpact =
+          company.sector === 'BANKING' ? calculatedImpacts.banking :
+          company.sector === 'REALESTATE' ? calculatedImpacts.realEstate :
+          company.sector === 'MANUFACTURING' ? calculatedImpacts.manufacturing :
+          company.sector === 'SEMICONDUCTOR' ? calculatedImpacts.semiconductor :
+          company.sector === 'CRYPTO' ? calculatedImpacts.crypto :
+          0;
+
+        const isRelevant = !selectedSector || company.sector === selectedSector;
+
+        // Get level-specific impact for this company
+        const companyEntityId = `company-${company.ticker?.toLowerCase() || company.name.toLowerCase().replace(/\s+/g, '-')}`;
+        const levelImpact = getEntityImpact(companyEntityId);
+
+        // Combine macro sector impact with level-specific impact
+        const totalImpact = sectorImpact + (levelImpact?.impactPercentage || 0);
+
+        // Adjust size based on level impact (if any)
+        const baseSize = Math.log(company.financials.revenue + 1) * 0.3;
+        const adjustedSize = levelImpact
+          ? baseSize * getImpactSizeMultiplier(levelImpact.impactScore)
+          : baseSize;
+
+        // Use impact color if level impact exists, otherwise sector color
+        let pointColor = levelImpact && Math.abs(levelImpact.impactScore) > 0.05
+          ? getImpactColor(levelImpact.impactScore)
+          : isRelevant ? getSectorColor(company.sector) : 'rgba(100, 100, 100, 0.3)';
+
+        let finalSize = adjustedSize;
+
+        // Check if entity is affected by recent events
+        let isAffected = false;
+        let affectedByEvent: any = null;
+
+        // Override with snapshot data if available
+        if (snapshot) {
+          const snapshotEntity = snapshot.entityValues.get(companyEntityId);
+          if (snapshotEntity) {
+            finalSize = snapshotEntity.size * baseSize; // Use snapshot size
+            pointColor = snapshotEntity.color; // Use snapshot color
+          }
+
+          // Check if this entity is in any recent events
+          snapshot.events.forEach(event => {
+            if (event.affectedEntities.includes(companyEntityId)) {
+              isAffected = true;
+              affectedByEvent = event;
+            }
+          });
+        }
+
+        return {
+          lat: company.location!.lat,
+          lng: company.location!.lng,
+          name: company.name_en || company.name,
+          ticker: company.ticker,
+          sector: company.sector,
+          size: finalSize,
+          color: pointColor,
+          impact: totalImpact,
+          company: company,
+          levelImpact: levelImpact, // Include for tooltip
+          isAffected, // NEW: flag for visual indicator
+          affectedByEvent, // NEW: event details
+        };
+      });
+  }, [selectedSector, calculatedImpacts, entityImpacts, getEntityImpact, snapshot]);
+
+  // Helper to get RGB values from sector color (must come before dynamicImpactArcs)
+  const getSectorRGB = (sector: string): string => {
+    const colorMap: Record<string, string> = {
+      BANKING: '0, 229, 255',        // cyan
+      SEMICONDUCTOR: '192, 38, 211', // magenta
+      MANUFACTURING: '0, 255, 159',  // emerald
+      COMMODITIES: '245, 158, 11',   // orange
+      REALESTATE: '16, 185, 129',    // green
+      CRYPTO: '139, 92, 246',        // purple
+      OPTIONS: '230, 0, 122',        // pink
+    };
+    return colorMap[sector] || '255, 255, 255';
+  };
+
+  // Generate dynamic impact arcs from snapshot events (time-based simulation)
+  const snapshotImpactArcs = useMemo(() => {
+    if (!snapshot || !snapshot.events || snapshot.events.length === 0) return [];
+
+    const arcs: CapitalFlow[] = [];
+    const companyLocationMap = new Map<string, { lat: number; lng: number }>();
+
+    // Build location map for all companies
+    companies.forEach(company => {
+      if (company.location) {
+        const entityId = `company-${company.ticker?.toLowerCase() || company.name.toLowerCase().replace(/\s+/g, '-')}`;
+        companyLocationMap.set(entityId, company.location);
+      }
+    });
+
+    // Create arcs from snapshot events
+    snapshot.events.forEach(event => {
+      event.affectedEntities.forEach(targetEntityId => {
+        const targetLocation = companyLocationMap.get(targetEntityId);
+
+        // Find source entity location (if it's a company)
+        // For now, we'll create arcs from a central point or from affected entities to each other
+        if (targetLocation && event.affectedEntities.length > 1) {
+          // Create arcs between affected entities
+          event.affectedEntities.forEach(sourceEntityId => {
+            if (sourceEntityId !== targetEntityId) {
+              const sourceLocation = companyLocationMap.get(sourceEntityId);
+              if (sourceLocation) {
+                const color = event.impact === 'positive'
+                  ? 'rgba(0, 255, 159, 0.6)'  // emerald
+                  : event.impact === 'negative'
+                  ? 'rgba(239, 68, 68, 0.6)'  // red
+                  : 'rgba(148, 163, 184, 0.4)'; // gray
+
+                arcs.push({
+                  startLat: sourceLocation.lat,
+                  startLng: sourceLocation.lng,
+                  endLat: targetLocation.lat,
+                  endLng: targetLocation.lng,
+                  amount: event.magnitude * 100,
+                  color,
+                  label: event.title,
+                });
+              }
+            }
+          });
+        }
+      });
+    });
+
+    return arcs;
+  }, [snapshot]);
+
+  // Generate dynamic impact arcs based on macro variable changes
+  const dynamicImpactArcs = useMemo(() => {
+    const arcs: CapitalFlow[] = [];
+
+    // Map sectors to their impacted macro variables
+    const sectorMacroMap: Record<string, string[]> = {
+      BANKING: ['fed_funds_rate', 'us_10y_yield', 'yield_curve', 'ted_spread', 'credit_spread_baa'],
+      SEMICONDUCTOR: ['ai_investment', 'gpu_demand_index', 'dram_price_index', 'wafer_capacity_utilization', 'hbm_price_premium'],
+      MANUFACTURING: ['container_rate_us_china', 'container_rate_eu_asia', 'air_freight_index', 'us_pmi_manufacturing', 'china_pmi_manufacturing'],
+      COMMODITIES: ['wti_oil', 'brent_oil', 'iron_ore', 'copper', 'lithium', 'silver', 'gold'],
+      REALESTATE: ['us_mortgage_rate_30y', 'us_home_price_index', 'commercial_real_estate_index', 'cap_rate'],
+    };
+
+    // For each sector, find affected companies and create arcs between them
+    Object.entries(sectorMacroMap).forEach(([sector, macroVars]) => {
+      // Calculate average impact for this sector
+      const avgImpact = macroVars.reduce((sum, varId) => sum + (macroImpacts[varId] || 0), 0) / macroVars.length;
+
+      if (avgImpact > 0.05) { // Only show if significant impact (>5% change)
+        const sectorCompanies = companyPoints.filter(c => c.sector === sector);
+
+        // Create arcs between top companies in the sector
+        for (let i = 0; i < Math.min(sectorCompanies.length, 5); i++) {
+          for (let j = i + 1; j < Math.min(sectorCompanies.length, 5); j++) {
+            const company1 = sectorCompanies[i];
+            const company2 = sectorCompanies[j];
+
+            // Calculate brightness based on impact intensity
+            const brightness = Math.min(1, avgImpact * 3); // 0 to 1
+            const alpha = brightness * 0.8; // Max 0.8 opacity
+
+            arcs.push({
+              startLat: company1.lat,
+              startLng: company1.lng,
+              endLat: company2.lat,
+              endLng: company2.lng,
+              amount: avgImpact * 100, // Use impact as amount for arc width
+              color: `rgba(${getSectorRGB(sector)}, ${alpha})`,
+              label: `${sector} Impact: ${(avgImpact * 100).toFixed(1)}%`,
+            });
+          }
+        }
+      }
+    });
+
+    return arcs;
+  }, [macroImpacts, companyPoints]);
+
   // Filter capital flows based on selected sector
   const visibleFlows = useMemo(() => {
     if (!selectedSector) return CAPITAL_FLOWS;
@@ -153,8 +440,51 @@ export default function Globe3D({
     });
   }, [selectedSector]);
 
+  // Combine static flows with dynamic impact arcs and snapshot-based arcs
+  const allArcs = useMemo(() => {
+    if (viewMode === 'flows') {
+      return [...visibleFlows, ...dynamicImpactArcs, ...snapshotImpactArcs];
+    } else if (viewMode === 'companies') {
+      // In companies mode, show both macro and snapshot impact arcs
+      return [...dynamicImpactArcs, ...snapshotImpactArcs];
+    } else if (viewMode === 'm2') {
+      // In split mode, show snapshot arcs (time-based simulation arcs)
+      return snapshotImpactArcs;
+    }
+    return [];
+  }, [viewMode, visibleFlows, dynamicImpactArcs, snapshotImpactArcs]);
+
+  // Create pulsing rings for affected entities (problem indicators)
+  const affectedEntityRings = useMemo(() => {
+    if (!snapshot || viewMode !== 'companies') return [];
+
+    const rings: any[] = [];
+    companyPoints.forEach(point => {
+      if (point.isAffected && point.affectedByEvent) {
+        const event = point.affectedByEvent;
+        const ringColor = event.impact === 'positive'
+          ? 'rgba(0, 255, 159, 0.8)'  // emerald for positive
+          : event.impact === 'negative'
+          ? 'rgba(239, 68, 68, 0.8)'  // red for negative
+          : 'rgba(148, 163, 184, 0.6)'; // gray for neutral
+
+        rings.push({
+          lat: point.lat,
+          lng: point.lng,
+          maxR: 3, // Maximum ring radius
+          propagationSpeed: 1.5, // How fast the ring expands
+          repeatPeriod: 1200, // Repeat every 1.2 seconds
+          color: ringColor,
+          label: event.title,
+        });
+      }
+    });
+
+    return rings;
+  }, [snapshot, companyPoints, viewMode]);
+
   return (
-    <div className="w-full h-full relative bg-black">
+    <div ref={containerRef} className="w-full h-full relative bg-black">
       {/* Sector Focus Indicator */}
       {selectedSector && (
         <div className="absolute top-2 right-2 z-10 bg-accent-cyan/20 backdrop-blur border border-accent-cyan rounded-lg px-3 py-1.5">
@@ -169,9 +499,19 @@ export default function Globe3D({
       <div className="absolute top-4 left-4 z-10 space-y-2">
         <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
           <div className="text-xs text-text-tertiary mb-2 font-semibold">View Mode</div>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <button
-              onClick={() => setViewMode('m2')}
+              onClick={() => setInternalViewMode('companies')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                viewMode === 'companies'
+                  ? 'bg-accent-emerald text-black shadow-lg shadow-accent-emerald/50'
+                  : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              Companies
+            </button>
+            <button
+              onClick={() => setInternalViewMode('m2')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 viewMode === 'm2'
                   ? 'bg-accent-cyan text-black shadow-lg shadow-accent-cyan/50'
@@ -181,14 +521,14 @@ export default function Globe3D({
               M2 Supply
             </button>
             <button
-              onClick={() => setViewMode('flows')}
+              onClick={() => setInternalViewMode('flows')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 viewMode === 'flows'
                   ? 'bg-accent-magenta text-black shadow-lg shadow-accent-magenta/50'
                   : 'bg-background-secondary text-text-secondary hover:text-text-primary'
               }`}
             >
-              Capital Flows
+              Flows
             </button>
           </div>
         </div>
@@ -206,18 +546,72 @@ export default function Globe3D({
                 Larger = More Money Supply
               </div>
             </div>
-          ) : (
-            <div className="space-y-1.5">
+          ) : viewMode === 'flows' ? (
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-0.5 bg-gradient-to-r from-accent-cyan to-transparent" />
-                <span className="text-xs text-text-primary">Capital Flow</span>
+                <span className="text-xs text-text-primary">Static Flow</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-0.5 bg-gradient-to-r from-accent-emerald to-transparent shadow-lg" style={{ boxShadow: '0 0 8px #00FF9F' }} />
+                <span className="text-xs text-accent-emerald font-semibold">⚡ Macro Impact</span>
               </div>
               <div className="text-xs text-text-tertiary mt-2">
-                Arc Width = Flow Volume
+                Brighter arcs = Higher macro variable impact
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-accent-emerald shadow-lg" style={{ boxShadow: '0 0 10px #00FF9F' }} />
+                <span className="text-xs text-text-primary">Companies</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-0.5 bg-gradient-to-r from-accent-emerald to-transparent shadow-lg" style={{ boxShadow: '0 0 8px #00FF9F' }} />
+                <span className="text-xs text-accent-emerald font-semibold">⚡ Macro Impact</span>
+              </div>
+              <div className="text-xs text-text-tertiary mt-2">
+                Arcs show macro variable effects on sectors
               </div>
             </div>
           )}
         </div>
+
+        {/* Active Macro Impacts Indicator */}
+        {dynamicImpactArcs.length > 0 && (
+          <div className="bg-black/80 backdrop-blur border-2 border-accent-emerald rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+              <div className="text-xs font-bold text-accent-emerald">Active Macro Impacts</div>
+            </div>
+            <div className="space-y-1 text-xs">
+              {Object.entries(macroImpacts)
+                .filter(([_, impact]) => impact > 0.08)
+                .slice(0, 5)
+                .map(([varId, impact]) => {
+                  const variable = MACRO_VARIABLES.find(v => v.id === varId);
+                  if (!variable) return null;
+                  return (
+                    <div key={varId} className="flex justify-between items-center">
+                      <span className="text-text-tertiary truncate max-w-[140px]">{variable.name}:</span>
+                      <div className="flex items-center gap-1">
+                        <div
+                          className="h-1 bg-gradient-to-r from-accent-emerald to-transparent rounded"
+                          style={{ width: `${Math.min(impact * 100, 40)}px` }}
+                        />
+                        <span className="text-accent-emerald font-mono">{(impact * 100).toFixed(0)}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              {Object.values(macroImpacts).filter(v => v > 0.08).length === 0 && (
+                <div className="text-text-tertiary text-xs italic">
+                  Adjust macro variables in Simulation to see impacts
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Controls */}
         <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
@@ -250,8 +644,143 @@ export default function Globe3D({
       </div>
       )}
 
+      {/* Company Details */}
+      {selectedCompany && (
+        <div className="absolute top-4 right-4 z-10 w-80 bg-black/95 backdrop-blur border-2 border-accent-emerald rounded-lg p-4 shadow-2xl shadow-accent-emerald/30">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-base font-bold text-accent-emerald">{selectedCompany.name_en || selectedCompany.name}</h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-text-tertiary">Ticker:</span>
+                <span className="text-xs font-mono font-bold text-accent-cyan">{selectedCompany.ticker}</span>
+                <span className="px-2 py-0.5 rounded text-xs font-medium" style={{
+                  backgroundColor: `${getSectorColor(selectedCompany.sector)}20`,
+                  color: getSectorColor(selectedCompany.sector),
+                  border: `1px solid ${getSectorColor(selectedCompany.sector)}50`
+                }}>
+                  {selectedCompany.sector}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedCompany(null)}
+              className="text-text-tertiary hover:text-accent-emerald transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Financial Metrics */}
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="bg-background-secondary rounded-lg p-2.5">
+              <div className="text-xs text-text-tertiary mb-1">Revenue</div>
+              <div className="text-sm font-bold text-accent-cyan">
+                ${(selectedCompany.financials.revenue / 1000).toFixed(1)}B
+              </div>
+            </div>
+            <div className="bg-background-secondary rounded-lg p-2.5">
+              <div className="text-xs text-text-tertiary mb-1">Net Income</div>
+              <div className="text-sm font-bold text-accent-emerald">
+                ${(selectedCompany.financials.net_income / 1000).toFixed(1)}B
+              </div>
+            </div>
+            <div className="bg-background-secondary rounded-lg p-2.5">
+              <div className="text-xs text-text-tertiary mb-1">Total Assets</div>
+              <div className="text-sm font-bold text-text-primary">
+                ${(selectedCompany.financials.total_assets / 1000).toFixed(1)}B
+              </div>
+            </div>
+            <div className="bg-background-secondary rounded-lg p-2.5">
+              <div className="text-xs text-text-tertiary mb-1">ROE</div>
+              <div className="text-sm font-bold text-accent-magenta">
+                {selectedCompany.ratios.roe?.toFixed(1) || 'N/A'}%
+              </div>
+            </div>
+          </div>
+
+          {/* Key Ratios */}
+          <div className="border-t border-border-primary pt-3 mb-3">
+            <div className="text-xs font-semibold text-text-tertiary mb-2">Key Ratios</div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-text-tertiary">D/E Ratio:</span>
+                <span className="font-mono text-text-primary">{selectedCompany.ratios.de_ratio.toFixed(2)}x</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-tertiary">ICR:</span>
+                <span className="font-mono text-text-primary">{selectedCompany.ratios.icr.toFixed(1)}x</span>
+              </div>
+              {selectedCompany.ratios.roa && (
+                <div className="flex justify-between">
+                  <span className="text-text-tertiary">ROA:</span>
+                  <span className="font-mono text-text-primary">{selectedCompany.ratios.roa.toFixed(1)}%</span>
+                </div>
+              )}
+              {selectedCompany.ratios.pe_ratio && (
+                <div className="flex justify-between">
+                  <span className="text-text-tertiary">P/E:</span>
+                  <span className="font-mono text-text-primary">{selectedCompany.ratios.pe_ratio.toFixed(1)}x</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sector Specific Metrics */}
+          {selectedCompany.sector_metrics && (
+            <div className="border-t border-border-primary pt-3">
+              <div className="text-xs font-semibold text-text-tertiary mb-2">Sector Metrics</div>
+              <div className="space-y-1.5 text-xs">
+                {selectedCompany.sector_metrics.production_volume && (
+                  <div className="flex justify-between">
+                    <span className="text-text-tertiary">Production:</span>
+                    <span className="font-mono text-accent-cyan">
+                      {selectedCompany.sector_metrics.production_volume} {
+                        selectedCompany.sector === 'COMMODITIES' && selectedCompany.ticker.includes('ARAMCO') ? 'M barrels' :
+                        selectedCompany.sector === 'COMMODITIES' && selectedCompany.id.includes('GOLD') ? 'M oz' :
+                        'MT'
+                      }
+                    </span>
+                  </div>
+                )}
+                {selectedCompany.sector_metrics.reserves && (
+                  <div className="flex justify-between">
+                    <span className="text-text-tertiary">Reserves:</span>
+                    <span className="font-mono text-accent-emerald">{selectedCompany.sector_metrics.reserves} years</span>
+                  </div>
+                )}
+                {selectedCompany.sector_metrics.extraction_cost && (
+                  <div className="flex justify-between">
+                    <span className="text-text-tertiary">Extraction Cost:</span>
+                    <span className="font-mono text-accent-magenta">${selectedCompany.sector_metrics.extraction_cost}/unit</span>
+                  </div>
+                )}
+                {selectedCompany.sector_metrics.nim && (
+                  <div className="flex justify-between">
+                    <span className="text-text-tertiary">NIM:</span>
+                    <span className="font-mono text-accent-cyan">{selectedCompany.sector_metrics.nim}%</span>
+                  </div>
+                )}
+                {selectedCompany.sector_metrics.wafer_utilization && (
+                  <div className="flex justify-between">
+                    <span className="text-text-tertiary">Wafer Utilization:</span>
+                    <span className="font-mono text-accent-emerald">{selectedCompany.sector_metrics.wafer_utilization}%</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Location */}
+          {selectedCompany.location && (
+            <div className="mt-3 pt-3 border-t border-border-primary text-xs text-text-tertiary">
+              📍 {selectedCompany.country} • {selectedCompany.location.lat.toFixed(2)}°, {selectedCompany.location.lng.toFixed(2)}°
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Country Details */}
-      {selectedCountry && (
+      {selectedCountry && !selectedCompany && (
         <div className="absolute top-4 right-4 z-10 w-72 bg-black/90 backdrop-blur border border-accent-cyan rounded-lg p-4 shadow-2xl shadow-accent-cyan/20">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-accent-cyan">{selectedCountry.name}</h3>
@@ -313,20 +842,43 @@ export default function Globe3D({
       {/* Stats */}
       <div className="absolute bottom-4 left-4 z-10 bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
         <div className="grid grid-cols-3 gap-4 text-xs">
-          <div>
-            <div className="text-text-tertiary">Countries</div>
-            <div className="text-accent-cyan font-bold text-lg">{COUNTRIES.length}</div>
-          </div>
-          <div>
-            <div className="text-text-tertiary">Total M2</div>
-            <div className="text-accent-emerald font-bold text-lg">
-              ${adjustedCountries.reduce((sum, c) => sum + c.m2Supply, 0).toFixed(1)}T
-            </div>
-          </div>
-          <div>
-            <div className="text-text-tertiary">Flows</div>
-            <div className="text-accent-magenta font-bold text-lg">{CAPITAL_FLOWS.length}</div>
-          </div>
+          {viewMode === 'companies' ? (
+            <>
+              <div>
+                <div className="text-text-tertiary">Companies</div>
+                <div className="text-accent-emerald font-bold text-lg">{companyPoints.length}</div>
+              </div>
+              <div>
+                <div className="text-text-tertiary">Sectors</div>
+                <div className="text-accent-cyan font-bold text-lg">
+                  {new Set(companyPoints.map(c => c.sector)).size}
+                </div>
+              </div>
+              <div>
+                <div className="text-text-tertiary">{selectedSector || 'All'}</div>
+                <div className="text-accent-magenta font-bold text-lg">
+                  {selectedSector ? companyPoints.filter(c => c.sector === selectedSector).length : companyPoints.length}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <div className="text-text-tertiary">Countries</div>
+                <div className="text-accent-cyan font-bold text-lg">{COUNTRIES.length}</div>
+              </div>
+              <div>
+                <div className="text-text-tertiary">Total M2</div>
+                <div className="text-accent-emerald font-bold text-lg">
+                  ${adjustedCountries.reduce((sum, c) => sum + c.m2Supply, 0).toFixed(1)}T
+                </div>
+              </div>
+              <div>
+                <div className="text-text-tertiary">Flows</div>
+                <div className="text-accent-magenta font-bold text-lg">{CAPITAL_FLOWS.length}</div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -337,37 +889,89 @@ export default function Globe3D({
         globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
         bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
 
-        // Points (M2 Supply)
-        pointsData={viewMode === 'm2' ? visibleCountries : []}
+        // Points (Companies, Countries, or empty)
+        pointsData={
+          viewMode === 'companies' ? companyPoints :
+          viewMode === 'm2' ? visibleCountries :
+          []
+        }
         pointLat="lat"
         pointLng="lng"
         pointAltitude={(d: any) => d.size * 0.01}
-        pointRadius={(d: any) => d.size * 0.5}
+        pointRadius={(d: any) => viewMode === 'companies' ? d.size * 0.4 : d.size * 0.5}
         pointColor={(d: any) => d.color}
-        pointLabel={(d: any) => `
-          <div style="background: rgba(0, 0, 0, 0.9); padding: 8px; border-radius: 6px; border: 1px solid #00E5FF;">
-            <div style="color: #00E5FF; font-weight: bold; margin-bottom: 4px;">${d.name}</div>
-            <div style="color: white; font-size: 12px;">M2: $${d.m2Supply.toFixed(1)}T</div>
-            <div style="color: #00FF9F; font-size: 12px;">GDP: $${d.gdp.toFixed(1)}T</div>
-          </div>
-        `}
-        onPointClick={(point: any) => handleCountryClick(point as Country)}
+        pointLabel={(d: any) => {
+          if (viewMode === 'companies') {
+            return `
+              <div style="background: rgba(0, 0, 0, 0.95); padding: 10px; border-radius: 8px; border: 2px solid ${d.color};">
+                <div style="color: ${d.color}; font-weight: bold; font-size: 14px; margin-bottom: 6px;">${d.name}</div>
+                <div style="color: white; font-size: 11px; margin-bottom: 4px;">Ticker: <span style="color: #00E5FF;">${d.ticker}</span></div>
+                <div style="color: white; font-size: 11px; margin-bottom: 4px;">Sector: <span style="color: ${d.color};">${d.sector}</span></div>
+                <div style="color: white; font-size: 11px;">Impact: <span style="color: ${d.impact >= 0 ? '#00FF9F' : '#FF4444'};">${d.impact >= 0 ? '+' : ''}${d.impact.toFixed(2)}%</span></div>
+              </div>
+            `;
+          } else {
+            return `
+              <div style="background: rgba(0, 0, 0, 0.9); padding: 8px; border-radius: 6px; border: 1px solid #00E5FF;">
+                <div style="color: #00E5FF; font-weight: bold; margin-bottom: 4px;">${d.name}</div>
+                <div style="color: white; font-size: 12px;">M2: $${d.m2Supply?.toFixed(1)}T</div>
+                <div style="color: #00FF9F; font-size: 12px;">GDP: $${d.gdp?.toFixed(1)}T</div>
+              </div>
+            `;
+          }
+        }}
+        onPointClick={(point: any) => {
+          if (viewMode === 'companies') {
+            setSelectedCompany(point.company);
+            setSelectedCountry(null);
+          } else {
+            handleCountryClick(point as Country);
+          }
+        }}
 
-        // Arcs (Capital Flows)
-        arcsData={viewMode === 'flows' ? visibleFlows : []}
+        // Arcs (Capital Flows + Dynamic Macro Impacts)
+        arcsData={allArcs}
         arcStartLat="startLat"
         arcStartLng="startLng"
         arcEndLat="endLat"
         arcEndLng="endLng"
         arcColor="color"
-        arcStroke={(d: any) => Math.sqrt(d.amount) * 0.02}
+        arcStroke={(d: any) => {
+          // Dynamic arcs (from macro impacts) are thicker
+          const isDynamic = d.label && d.label.includes('Impact');
+          return isDynamic ? Math.sqrt(d.amount) * 0.04 : Math.sqrt(d.amount) * 0.02;
+        }}
         arcDashLength={0.4}
         arcDashGap={0.2}
-        arcDashAnimateTime={2000}
-        arcLabel={(d: any) => `
-          <div style="background: rgba(0, 0, 0, 0.9); padding: 8px; border-radius: 6px; border: 1px solid #E6007A;">
-            <div style="color: #E6007A; font-weight: bold; margin-bottom: 4px;">${d.label}</div>
-            <div style="color: white; font-size: 12px;">Amount: $${d.amount}B</div>
+        arcDashAnimateTime={(d: any) => {
+          // Dynamic arcs pulse faster
+          const isDynamic = d.label && d.label.includes('Impact');
+          return isDynamic ? 1500 : 2000;
+        }}
+        arcLabel={(d: any) => {
+          const isDynamic = d.label && d.label.includes('Impact');
+          return `
+            <div style="background: rgba(0, 0, 0, 0.95); padding: 10px; border-radius: 8px; border: 2px solid ${isDynamic ? '#00FF9F' : '#E6007A'};">
+              <div style="color: ${isDynamic ? '#00FF9F' : '#E6007A'}; font-weight: bold; margin-bottom: 4px; font-size: 13px;">${d.label}</div>
+              ${isDynamic ?
+                `<div style="color: #FFD700; font-size: 11px; margin-top: 4px;">⚡ Macro Impact Active</div>` :
+                `<div style="color: white; font-size: 12px;">Flow: $${d.amount}B</div>`
+              }
+            </div>
+          `;
+        }}
+
+        // Pulsing rings for affected entities (problem indicators)
+        ringsData={affectedEntityRings}
+        ringLat="lat"
+        ringLng="lng"
+        ringMaxRadius="maxR"
+        ringPropagationSpeed="propagationSpeed"
+        ringRepeatPeriod="repeatPeriod"
+        ringColor="color"
+        ringLabel={(d: any) => `
+          <div style="background: rgba(0, 0, 0, 0.95); padding: 8px; border-radius: 6px; border: 2px solid ${d.color};">
+            <div style="color: ${d.color}; font-weight: bold; font-size: 12px;">⚠️ ${d.label}</div>
           </div>
         `}
 
@@ -376,8 +980,8 @@ export default function Globe3D({
         atmosphereAltitude={0.15}
 
         // Camera
-        width={typeof window !== 'undefined' ? window.innerWidth : 1920}
-        height={typeof window !== 'undefined' ? window.innerHeight : 1080}
+        width={dimensions.width}
+        height={dimensions.height}
 
         // Interaction
         onGlobeClick={handleGlobeClick}

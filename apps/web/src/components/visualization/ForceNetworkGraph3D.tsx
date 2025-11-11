@@ -5,6 +5,36 @@ import dynamic from 'next/dynamic';
 import { companies } from '@/data/companies';
 import { MACRO_CATEGORIES } from '@/data/macroVariables';
 import { useMacroStore } from '@/lib/store/macroStore';
+import { useLevelStore } from '@/lib/store/levelStore';
+import { useRelationshipStore, generateLinkId, getLinkColor } from '@/lib/store/relationshipStore';
+import { getImpactColor, getImpactSizeMultiplier } from '@/lib/utils/levelImpactCalculation';
+import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
+import {
+  NVIDIA,
+  NVIDIA_PRODUCTS,
+  NVIDIA_COMPONENTS,
+  NVIDIA_SHAREHOLDERS,
+  NVIDIA_CUSTOMERS,
+  NVIDIA_RELATIONSHIPS,
+  SK_HYNIX,
+  EntityType,
+} from '@/data/knowledgeGraph';
+import {
+  EXPANDED_RELATIONSHIPS,
+  AMD,
+  TSMC,
+  MICROSOFT,
+  APPLE,
+  ASML,
+  AMD_PRODUCTS,
+  APPLE_PRODUCTS,
+  MICROSOFT_PRODUCTS,
+  ADVANCED_COMPONENTS,
+  TECHNOLOGIES,
+  HYPERSCALERS,
+  ALL_EXPANDED_ENTITIES
+} from '@/data/expandedKnowledgeGraph';
+import SupplyChainDetailPanel from './SupplyChainDetailPanel';
 
 // Dynamic import to avoid SSR issues
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
@@ -12,20 +42,23 @@ const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false 
 interface GraphNode {
   id: string;
   name: string;
-  level: 'macro' | 'sector' | 'company';
+  level: 'macro' | 'sector' | 'company' | 'product' | 'component' | 'shareholder' | 'customer' | 'technology';
   sector?: string;
   category?: string;
+  entityType?: EntityType;
   val: number; // Node size
   color: string;
   data?: any;
 }
 
 interface GraphLink {
+  id?: string;
   source: string;
   target: string;
-  type: 'impact' | 'supply' | 'ownership' | 'loan' | 'competition';
+  type: 'impact' | 'supply' | 'ownership' | 'loan' | 'competition' | 'SUPPLIES' | 'MANUFACTURES' | 'BUYS' | 'USES' | 'REQUIRES' | 'PRODUCES' | 'DEVELOPS' | 'COMPETES_WITH';
   strength: number;
   color?: string;
+  metadata?: any; // Supply chain metadata (annualValue, capacity, product, etc.)
 }
 
 interface GraphData {
@@ -94,27 +127,36 @@ function generateGraphData(): GraphData {
 
     // Connect macro to sectors (impact relationships)
     if (sector === 'BANKING' || sector === 'REALESTATE') {
+      const source = 'macro-MONETARY_POLICY';
+      const target = `sector-${sector}`;
       links.push({
-        source: 'macro-MONETARY_POLICY',
-        target: `sector-${sector}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'impact',
         strength: 5,
         color: 'rgba(255, 215, 0, 0.3)'
       });
     }
     if (sector === 'MANUFACTURING') {
+      const source = 'macro-COMMODITIES';
+      const target = `sector-${sector}`;
       links.push({
-        source: 'macro-COMMODITIES',
-        target: `sector-${sector}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'impact',
         strength: 4,
         color: 'rgba(139, 92, 246, 0.3)'
       });
     }
     if (sector === 'SEMICONDUCTOR') {
+      const source = 'macro-TECH_INNOVATION';
+      const target = `sector-${sector}`;
       links.push({
-        source: 'macro-TECH_INNOVATION',
-        target: `sector-${sector}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'impact',
         strength: 4,
         color: 'rgba(245, 158, 11, 0.3)'
@@ -136,9 +178,12 @@ function generateGraphData(): GraphData {
     });
 
     // Connect to sector
+    const source = `sector-${company.sector}`;
+    const target = `company-${company.ticker}`;
     links.push({
-      source: `sector-${company.sector}`,
-      target: `company-${company.ticker}`,
+      id: generateLinkId(source, target),
+      source,
+      target,
       type: 'ownership',
       strength: 2,
       color: 'rgba(0, 255, 159, 0.2)'
@@ -156,9 +201,12 @@ function generateGraphData(): GraphData {
     const fromCompany = companySample.find(c => c.ticker === from);
     const toCompany = companySample.find(c => c.ticker === to);
     if (fromCompany && toCompany) {
+      const source = `company-${from}`;
+      const target = `company-${to}`;
       links.push({
-        source: `company-${from}`,
-        target: `company-${to}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'supply',
         strength: 1,
         color: 'rgba(0, 229, 255, 0.4)'
@@ -174,9 +222,12 @@ function generateGraphData(): GraphData {
     // Each bank lends to 2-3 companies
     const startIdx = idx * 2;
     nonBankingCompanies.slice(startIdx, startIdx + 3).forEach(company => {
+      const source = `company-${bank.ticker}`;
+      const target = `company-${company.ticker}`;
       links.push({
-        source: `company-${bank.ticker}`,
-        target: `company-${company.ticker}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'loan',
         strength: 1.5,
         color: 'rgba(255, 215, 0, 0.35)'
@@ -195,9 +246,12 @@ function generateGraphData(): GraphData {
     const company1 = companySample.find(c => c.ticker === from);
     const company2 = companySample.find(c => c.ticker === to);
     if (company1 && company2) {
+      const source = `company-${from}`;
+      const target = `company-${to}`;
       links.push({
-        source: `company-${from}`,
-        target: `company-${to}`,
+        id: generateLinkId(source, target),
+        source,
+        target,
         type: 'competition',
         strength: 0.8,
         color: 'rgba(239, 68, 68, 0.4)'
@@ -205,27 +259,340 @@ function generateGraphData(): GraphData {
     }
   });
 
+  // ====================================
+  // KNOWLEDGE GRAPH: Deep Ontology
+  // ====================================
+
+  // Add Nvidia entity
+  nodes.push({
+    id: NVIDIA.id,
+    name: NVIDIA.name,
+    level: 'company',
+    sector: 'SEMICONDUCTOR',
+    val: 35,
+    color: '#00FF00',
+    data: NVIDIA,
+  });
+
+  // Add Products (Level 4)
+  NVIDIA_PRODUCTS.forEach(product => {
+    nodes.push({
+      id: product.id,
+      name: product.name,
+      level: 'product',
+      entityType: 'PRODUCT',
+      val: 15,
+      color: '#FFAA00',
+      data: product,
+    });
+
+    // Link: Nvidia PRODUCES Product
+    links.push({
+      id: generateLinkId(NVIDIA.id, product.id),
+      source: NVIDIA.id,
+      target: product.id,
+      type: 'supply',
+      strength: 2,
+      color: 'rgba(255, 170, 0, 0.6)',
+    });
+  });
+
+  // Add Components (Level 5)
+  NVIDIA_COMPONENTS.forEach(component => {
+    nodes.push({
+      id: component.id,
+      name: component.name,
+      level: 'component',
+      entityType: 'COMPONENT',
+      val: 10,
+      color: '#FF6B00',
+      data: component,
+    });
+
+    // Link: H100 USES HBM3E (example)
+    if (component.id === 'component-hbm3e') {
+      const source = 'product-h100';
+      const target = component.id;
+      links.push({
+        id: generateLinkId(source, target),
+        source,
+        target,
+        type: 'supply',
+        strength: 1.5,
+        color: 'rgba(255, 107, 0, 0.5)',
+      });
+    }
+  });
+
+  // Add SK Hynix (supplier of HBM)
+  nodes.push({
+    id: SK_HYNIX.id,
+    name: SK_HYNIX.name,
+    level: 'company',
+    sector: 'SEMICONDUCTOR',
+    val: 25,
+    color: '#F59E0B',
+    data: SK_HYNIX,
+  });
+
+  // Link: SK Hynix SUPPLIES HBM3E
+  links.push({
+    id: generateLinkId(SK_HYNIX.id, 'component-hbm3e'),
+    source: SK_HYNIX.id,
+    target: 'component-hbm3e',
+    type: 'supply',
+    strength: 3,
+    color: 'rgba(245, 158, 11, 0.7)',
+  });
+
+  // Add Shareholders (Level 7)
+  NVIDIA_SHAREHOLDERS.forEach(shareholder => {
+    nodes.push({
+      id: shareholder.id,
+      name: shareholder.name,
+      level: 'shareholder',
+      entityType: 'SHAREHOLDER',
+      val: 12,
+      color: '#9333EA',
+      data: shareholder,
+    });
+
+    // Link: Shareholder OWNS Nvidia
+    links.push({
+      id: generateLinkId(shareholder.id, NVIDIA.id),
+      source: shareholder.id,
+      target: NVIDIA.id,
+      type: 'ownership',
+      strength: (shareholder.metadata?.stake || 1) / 10,
+      color: 'rgba(147, 51, 234, 0.5)',
+    });
+  });
+
+  // Add Customers (Level 8)
+  NVIDIA_CUSTOMERS.forEach(customer => {
+    nodes.push({
+      id: customer.id,
+      name: customer.name,
+      level: 'customer',
+      entityType: 'CUSTOMER',
+      val: 18,
+      color: '#06B6D4',
+      data: customer,
+    });
+
+    // Link: Customer BUYS H100
+    links.push({
+      id: generateLinkId(customer.id, 'product-h100'),
+      source: customer.id,
+      target: 'product-h100',
+      type: 'supply',
+      strength: 2,
+      color: 'rgba(6, 182, 212, 0.5)',
+    });
+  });
+
+  // Add expanded knowledge graph entities (AMD, TSMC, Microsoft, Apple, etc.)
+  ALL_EXPANDED_ENTITIES.forEach(entity => {
+    const level = mapEntityTypeToLevel(entity.type);
+    const nodeColor = getNodeColorByType(entity.type, entity.metadata?.sector);
+    const nodeSize = getNodeSizeByEntity(entity);
+
+    nodes.push({
+      id: entity.id,
+      name: entity.name,
+      level: level as any,
+      entityType: entity.type,
+      sector: entity.metadata?.sector,
+      val: nodeSize,
+      color: nodeColor,
+      data: entity.metadata
+    });
+  });
+
+  // Add expanded knowledge graph relationships with supply chain metadata
+  EXPANDED_RELATIONSHIPS.forEach(relationship => {
+    // Only add if both source and target exist as nodes
+    const sourceExists = nodes.some(n => n.id === relationship.source);
+    const targetExists = nodes.some(n => n.id === relationship.target);
+
+    if (sourceExists && targetExists) {
+      links.push({
+        id: relationship.id,
+        source: relationship.source,
+        target: relationship.target,
+        type: relationship.type as any,
+        strength: relationship.weight * 2, // Scale weight to strength
+        color: getLinkColorByType(relationship.type),
+        metadata: relationship.metadata, // Include all supply chain metadata
+      });
+    }
+  });
+
   return { nodes, links };
+}
+
+// Helper: Map entity type to graph level
+function mapEntityTypeToLevel(entityType: EntityType): string {
+  const levelMap: Record<string, string> = {
+    COMPANY: 'company',
+    PRODUCT: 'product',
+    COMPONENT: 'component',
+    SHAREHOLDER: 'shareholder',
+    CUSTOMER: 'customer',
+    TECHNOLOGY: 'technology',
+    SECTOR: 'sector',
+    MACRO: 'macro'
+  };
+  return levelMap[entityType] || 'company';
+}
+
+// Helper: Get node color by entity type and sector
+function getNodeColorByType(entityType: EntityType, sector?: string): string {
+  if (entityType === 'COMPANY' && sector) {
+    return SECTOR_COLORS[sector] || '#00FF9F';
+  }
+
+  const typeColors: Record<string, string> = {
+    PRODUCT: '#FFD700',        // Gold
+    COMPONENT: '#FF6B00',      // Orange
+    SHAREHOLDER: '#9333EA',    // Purple
+    CUSTOMER: '#06B6D4',       // Cyan
+    TECHNOLOGY: '#6366F1',     // Indigo
+    SECTOR: '#00E5FF',         // Cyan
+    MACRO: '#FFD700'           // Gold
+  };
+
+  return typeColors[entityType] || '#FFFFFF';
+}
+
+// Helper: Get node size by entity type
+function getNodeSizeByType(entityType: EntityType): number {
+  const sizeMap: Record<string, number> = {
+    COMPANY: 20,
+    PRODUCT: 15,
+    COMPONENT: 12,
+    TECHNOLOGY: 18,
+    SHAREHOLDER: 16,
+    CUSTOMER: 18,
+    SECTOR: 25,
+    MACRO: 30
+  };
+  return sizeMap[entityType] || 15;
+}
+
+// Helper: Get node size based on entity attributes (revenue, market cap, etc.)
+function getNodeSizeByEntity(entity: any): number {
+  const baseSize = getNodeSizeByType(entity.type);
+
+  // Scale companies by market cap
+  if (entity.type === 'COMPANY' && entity.metadata?.marketCap) {
+    const marketCap = entity.metadata.marketCap; // in millions
+    // Log scale for market cap (0.5B - 3T range)
+    const scaleFactor = Math.log10(marketCap / 100000) / 2; // Normalize to ~1-2 range
+    return baseSize * Math.max(0.7, Math.min(2.5, scaleFactor));
+  }
+
+  // Scale products by price
+  if (entity.type === 'PRODUCT' && entity.metadata?.price) {
+    const price = entity.metadata.price;
+    // Higher priced products are larger
+    if (price > 10000) {
+      return baseSize * 1.5; // H100, MI300X
+    } else if (price > 1000) {
+      return baseSize * 1.2; // iPhone, High-end chips
+    }
+  }
+
+  // Scale shareholders by stake
+  if (entity.type === 'SHAREHOLDER' && entity.metadata?.stake) {
+    const stake = entity.metadata.stake; // percentage
+    return baseSize * (1 + stake / 20); // 8% stake = 1.4x size
+  }
+
+  // Scale customers by AI spend
+  if (entity.type === 'CUSTOMER' && entity.metadata?.aiSpend) {
+    const aiSpend = entity.metadata.aiSpend; // in dollars
+    if (aiSpend > 5_000_000_000) {
+      return baseSize * 1.8; // Microsoft, Amazon
+    } else if (aiSpend > 2_000_000_000) {
+      return baseSize * 1.4; // Meta, Google
+    }
+  }
+
+  return baseSize;
+}
+
+// Helper: Get link color by relationship type
+function getLinkColorByType(type: string): string {
+  const colorMap: Record<string, string> = {
+    SUPPLIES: 'rgba(0, 229, 255, 0.6)',        // Cyan
+    MANUFACTURES: 'rgba(245, 158, 11, 0.6)',   // Orange
+    BUYS: 'rgba(16, 185, 129, 0.6)',           // Green
+    USES: 'rgba(139, 92, 246, 0.6)',           // Purple
+    REQUIRES: 'rgba(230, 0, 122, 0.6)',        // Pink
+    PRODUCES: 'rgba(255, 170, 0, 0.6)',        // Amber
+    DEVELOPS: 'rgba(99, 102, 241, 0.6)',       // Indigo
+    COMPETES_WITH: 'rgba(239, 68, 68, 0.5)',   // Red
+  };
+  return colorMap[type] || 'rgba(255, 255, 255, 0.3)';
 }
 
 interface ForceNetworkGraph3DProps {
   selectedSector?: string | null;
   showControls?: boolean;
+  snapshot?: DateSnapshot | null;
 }
 
 export default function ForceNetworkGraph3D({
   selectedSector = null,
-  showControls = true
+  showControls = true,
+  snapshot = null
 }: ForceNetworkGraph3DProps) {
   const fgRef = useRef<any>();
+  const containerRef = useRef<HTMLDivElement>(null);
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] });
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [selectedLink, setSelectedLink] = useState<GraphLink | null>(null);
   const [filterLevel, setFilterLevel] = useState<'all' | 'macro' | 'sector' | 'company'>('all');
   const [highlightNodes, setHighlightNodes] = useState(new Set<string>());
   const [highlightLinks, setHighlightLinks] = useState(new Set<GraphLink>());
   const [hoverNode, setHoverNode] = useState<GraphNode | null>(null);
+  const [hoverLink, setHoverLink] = useState<GraphLink | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
   const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+  const entityImpacts = useLevelStore(state => state.entityImpacts);
+  const getEntityImpact = useLevelStore(state => state.getEntityImpact);
+  const {
+    editedRelationships,
+    getRelationshipStrength,
+    isRelationshipEdited,
+    isRelationshipRemoved,
+    editRelationship,
+    removeRelationship,
+    restoreRelationship,
+  } = useRelationshipStore();
+
+  // Measure container size
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight,
+        });
+      }
+    };
+
+    updateDimensions();
+
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   useEffect(() => {
     const data = generateGraphData();
@@ -259,8 +626,43 @@ export default function ForceNetworkGraph3D({
   }, []);
 
   const filteredData = useMemo(() => {
-    if (filterLevel === 'all') return graphData;
-    const filteredNodes = graphData.nodes.filter(n => n.level === filterLevel);
+    // Apply level-specific impacts to nodes
+    const nodesWithImpact = graphData.nodes.map(node => {
+      // Get level impact for this entity (if it exists in knowledge graph)
+      const entityImpact = getEntityImpact(node.id);
+
+      let impactSize = node.val;
+      let impactColor = node.color;
+
+      if (entityImpact && Math.abs(entityImpact.impactScore) > 0.05) {
+        // Apply impact to node size and color
+        impactSize = node.val * getImpactSizeMultiplier(entityImpact.impactScore);
+        impactColor = getImpactColor(entityImpact.impactScore);
+      }
+
+      // Override with snapshot data if available (higher priority)
+      if (snapshot) {
+        const snapshotEntity = snapshot.entityValues.get(node.id);
+        if (snapshotEntity) {
+          impactSize = snapshotEntity.size * node.val; // Use snapshot size
+          impactColor = snapshotEntity.color; // Use snapshot color
+        }
+      }
+
+      return {
+        ...node,
+        val: impactSize,
+        color: impactColor,
+        levelImpact: entityImpact, // Store for tooltip
+      };
+    });
+
+    // Filter by level if needed
+    if (filterLevel === 'all') {
+      return { nodes: nodesWithImpact, links: graphData.links };
+    }
+
+    const filteredNodes = nodesWithImpact.filter(n => n.level === filterLevel);
     const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
     const filteredLinks = graphData.links.filter(
       l => typeof l.source === 'string'
@@ -268,7 +670,7 @@ export default function ForceNetworkGraph3D({
         : filteredNodeIds.has((l.source as any).id) && filteredNodeIds.has((l.target as any).id)
     );
     return { nodes: filteredNodes, links: filteredLinks };
-  }, [graphData, filterLevel]);
+  }, [graphData, filterLevel, entityImpacts, getEntityImpact, snapshot]);
 
   const handleNodeClick = useCallback((node: GraphNode) => {
     setSelectedNode(node);
@@ -300,14 +702,26 @@ export default function ForceNetworkGraph3D({
     setHoverNode(node);
   }, []);
 
+  const handleLinkClick = useCallback((link: GraphLink) => {
+    setSelectedLink(link);
+    setSelectedNode(null); // Clear node selection when clicking link
+    setHighlightNodes(new Set());
+    setHighlightLinks(new Set());
+  }, []);
+
+  const handleLinkHover = useCallback((link: GraphLink | null) => {
+    setHoverLink(link);
+  }, []);
+
   const handleBackgroundClick = useCallback(() => {
     setSelectedNode(null);
+    setSelectedLink(null);
     setHighlightNodes(new Set());
     setHighlightLinks(new Set());
   }, []);
 
   return (
-    <div className="w-full h-full relative bg-black">
+    <div ref={containerRef} className="w-full h-full relative bg-black">
       {/* Controls */}
       {showControls && (
       <div className="absolute top-4 left-4 z-10 space-y-2">
@@ -407,24 +821,32 @@ export default function ForceNetworkGraph3D({
                   <span className="text-text-tertiary">Name:</span>
                   <span className="text-text-primary font-semibold">{selectedNode.data.name}</span>
                 </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-text-tertiary">Sector:</span>
-                  <span className="text-accent-cyan">{selectedNode.data.sector}</span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-text-tertiary">Revenue:</span>
-                  <span className="text-accent-emerald font-mono">${selectedNode.data.financials.revenue.toLocaleString()}M</span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-text-tertiary">Net Income:</span>
-                  <span className="text-accent-emerald font-mono">${selectedNode.data.financials.net_income.toLocaleString()}M</span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-text-tertiary">ICR:</span>
-                  <span className={`font-mono ${selectedNode.data.ratios?.icr > 2.5 ? 'text-status-safe' : 'text-status-caution'}`}>
-                    {selectedNode.data.ratios?.icr?.toFixed(2) || 'N/A'}x
-                  </span>
-                </div>
+                {selectedNode.data.sector && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-text-tertiary">Sector:</span>
+                    <span className="text-accent-cyan">{selectedNode.data.sector}</span>
+                  </div>
+                )}
+                {selectedNode.data.financials?.revenue && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-text-tertiary">Revenue:</span>
+                    <span className="text-accent-emerald font-mono">${selectedNode.data.financials.revenue.toLocaleString()}M</span>
+                  </div>
+                )}
+                {selectedNode.data.financials?.net_income && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-text-tertiary">Net Income:</span>
+                    <span className="text-accent-emerald font-mono">${selectedNode.data.financials.net_income.toLocaleString()}M</span>
+                  </div>
+                )}
+                {selectedNode.data.ratios?.icr && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-text-tertiary">ICR:</span>
+                    <span className={`font-mono ${selectedNode.data.ratios.icr > 2.5 ? 'text-status-safe' : 'text-status-caution'}`}>
+                      {selectedNode.data.ratios.icr.toFixed(2)}x
+                    </span>
+                  </div>
+                )}
 
                 {/* Show macro impact */}
                 {selectedNode.data.sector && (
@@ -477,6 +899,14 @@ export default function ForceNetworkGraph3D({
         </div>
       )}
 
+      {/* Supply Chain Detail Panel */}
+      {selectedLink && (
+        <SupplyChainDetailPanel
+          link={selectedLink}
+          onClose={() => setSelectedLink(null)}
+        />
+      )}
+
       {/* Stats */}
       <div className="absolute bottom-4 left-4 z-10 bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
         <div className="grid grid-cols-3 gap-4 text-xs">
@@ -499,6 +929,8 @@ export default function ForceNetworkGraph3D({
       <ForceGraph3D
         ref={fgRef}
         graphData={filteredData}
+        width={dimensions.width}
+        height={dimensions.height}
         nodeLabel="name"
         nodeVal="val"
         nodeColor={(node: any) => {
@@ -533,6 +965,16 @@ export default function ForceNetworkGraph3D({
         nodeOpacity={1}
         nodeResolution={32}
         linkColor={(link: any) => {
+          // Check edit status first
+          if (link.id) {
+            if (isRelationshipRemoved(link.id)) {
+              return 'rgba(239, 68, 68, 0.3)'; // Red for removed
+            }
+            if (isRelationshipEdited(link.id)) {
+              return 'rgba(34, 197, 94, 0.7)'; // Green for edited
+            }
+          }
+
           // Sector focus mode
           if (selectedSector) {
             const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id;
@@ -555,13 +997,62 @@ export default function ForceNetworkGraph3D({
 
           return link.color || 'rgba(255, 255, 255, 0.2)';
         }}
-        linkWidth={(link: any) => link.strength || 1}
-        linkOpacity={0.6}
-        linkDirectionalParticles={2}
+        linkWidth={(link: any) => {
+          const baseWidth = link.strength || 1;
+          // Make edited links thicker
+          if (link.id && isRelationshipEdited(link.id)) {
+            return baseWidth * 1.5;
+          }
+          return baseWidth;
+        }}
+        linkOpacity={(link: any) => {
+          // Dimout removed links
+          if (link.id && isRelationshipRemoved(link.id)) {
+            return 0.1;
+          }
+          return 0.6;
+        }}
+        linkDirectionalParticles={(link: any) => {
+          // More particles for edited links
+          if (link.id && isRelationshipEdited(link.id)) {
+            return 4;
+          }
+          return 2;
+        }}
         linkDirectionalParticleWidth={2}
         linkDirectionalParticleSpeed={0.005}
+        linkCurvature={(link: any) => {
+          // Add natural curves to links based on relationship type
+          const supplyChainTypes = ['SUPPLIES', 'MANUFACTURES', 'BUYS', 'USES', 'REQUIRES', 'supply'];
+          if (supplyChainTypes.includes(link.type)) {
+            return 0.25; // Smooth curve for supply chain
+          } else if (link.type === 'impact') {
+            return 0.15; // Gentle curve for impact relationships
+          } else if (link.type === 'COMPETES_WITH' || link.type === 'competition') {
+            return 0.4; // Strong curve for competition
+          }
+          return 0.2; // Default curve
+        }}
+        linkWidth={(link: any) => {
+          // Link width based on strength and type
+          const baseWidth = link.strength / 5; // Scale down strength
+
+          // Thicker lines for critical supply chain links
+          if (link.metadata?.critical) {
+            return baseWidth * 1.5;
+          }
+
+          // Edited links are thicker
+          if (link.id && isRelationshipEdited(link.id)) {
+            return baseWidth * 1.3;
+          }
+
+          return Math.max(baseWidth, 0.5); // Minimum width
+        }}
         onNodeClick={handleNodeClick}
         onNodeHover={handleNodeHover}
+        onLinkClick={handleLinkClick}
+        onLinkHover={handleLinkHover}
         onBackgroundClick={handleBackgroundClick}
         backgroundColor="rgba(0, 0, 0, 0)"
         showNavInfo={false}
