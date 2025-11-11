@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles } from 'lucide-react';
+import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, SectionHeader } from '@/components/ui/DesignSystem';
 import { useMacroStore } from '@/lib/store/macroStore';
 import { MACRO_CATEGORIES } from '@/data/macroVariables';
+import LevelControlPanel from '@/components/simulation/LevelControlPanel';
 
 // Dynamic imports
 const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), { ssr: false });
@@ -29,6 +30,7 @@ export default function SimulationPage() {
   const [globeViewMode, setGlobeViewMode] = useState<'companies' | 'flows' | 'm2'>('companies');
   const [showElementLibrary, setShowElementLibrary] = useState(false);
   const [showScenarios, setShowScenarios] = useState(false);
+  const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [macroChanging, setMacroChanging] = useState(false);
   const [changedMacroId, setChangedMacroId] = useState<string | null>(null);
 
@@ -225,6 +227,45 @@ export default function SimulationPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Advanced Level Controls Toggle */}
+          <div className="mb-6">
+            <button
+              onClick={() => setShowAdvancedControls(!showAdvancedControls)}
+              className="w-full px-4 py-3 bg-gradient-to-r from-purple-500/20 to-indigo-500/20
+                border border-purple-500/30 rounded-lg hover:from-purple-500/30 hover:to-indigo-500/30
+                transition-all duration-200 flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-purple-400" />
+                <span className="text-sm font-semibold text-text-primary">
+                  Advanced Level Controls
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-tertiary">
+                  {showAdvancedControls ? 'Hide' : 'Show'} 9-Level Controls
+                </span>
+                {showAdvancedControls ? (
+                  <ChevronUp size={16} className="text-text-tertiary group-hover:text-purple-400 transition-colors" />
+                ) : (
+                  <ChevronDown size={16} className="text-text-tertiary group-hover:text-purple-400 transition-colors" />
+                )}
+              </div>
+            </button>
+
+            {/* Level Control Panel */}
+            {showAdvancedControls && (
+              <div className="mt-4 animate-in slide-in-from-top-2 duration-200">
+                <LevelControlPanel
+                  onControlChange={(level, controlId, value) => {
+                    console.log(`Level ${level} - ${controlId}: ${value}`);
+                    // TODO: Integrate with state management
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* View Mode */}
