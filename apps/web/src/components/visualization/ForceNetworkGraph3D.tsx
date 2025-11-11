@@ -392,6 +392,7 @@ function generateGraphData(): GraphData {
   ALL_EXPANDED_ENTITIES.forEach(entity => {
     const level = mapEntityTypeToLevel(entity.type);
     const nodeColor = getNodeColorByType(entity.type, entity.metadata?.sector);
+    const nodeSize = getNodeSizeByEntity(entity);
 
     nodes.push({
       id: entity.id,
@@ -399,7 +400,7 @@ function generateGraphData(): GraphData {
       level: level as any,
       entityType: entity.type,
       sector: entity.metadata?.sector,
-      val: getNodeSizeByType(entity.type),
+      val: nodeSize,
       color: nodeColor,
       data: entity.metadata
     });
@@ -474,6 +475,48 @@ function getNodeSizeByType(entityType: EntityType): number {
     MACRO: 30
   };
   return sizeMap[entityType] || 15;
+}
+
+// Helper: Get node size based on entity attributes (revenue, market cap, etc.)
+function getNodeSizeByEntity(entity: any): number {
+  const baseSize = getNodeSizeByType(entity.type);
+
+  // Scale companies by market cap
+  if (entity.type === 'COMPANY' && entity.metadata?.marketCap) {
+    const marketCap = entity.metadata.marketCap; // in millions
+    // Log scale for market cap (0.5B - 3T range)
+    const scaleFactor = Math.log10(marketCap / 100000) / 2; // Normalize to ~1-2 range
+    return baseSize * Math.max(0.7, Math.min(2.5, scaleFactor));
+  }
+
+  // Scale products by price
+  if (entity.type === 'PRODUCT' && entity.metadata?.price) {
+    const price = entity.metadata.price;
+    // Higher priced products are larger
+    if (price > 10000) {
+      return baseSize * 1.5; // H100, MI300X
+    } else if (price > 1000) {
+      return baseSize * 1.2; // iPhone, High-end chips
+    }
+  }
+
+  // Scale shareholders by stake
+  if (entity.type === 'SHAREHOLDER' && entity.metadata?.stake) {
+    const stake = entity.metadata.stake; // percentage
+    return baseSize * (1 + stake / 20); // 8% stake = 1.4x size
+  }
+
+  // Scale customers by AI spend
+  if (entity.type === 'CUSTOMER' && entity.metadata?.aiSpend) {
+    const aiSpend = entity.metadata.aiSpend; // in dollars
+    if (aiSpend > 5_000_000_000) {
+      return baseSize * 1.8; // Microsoft, Amazon
+    } else if (aiSpend > 2_000_000_000) {
+      return baseSize * 1.4; // Meta, Google
+    }
+  }
+
+  return baseSize;
 }
 
 // Helper: Get link color by relationship type
@@ -928,6 +971,34 @@ export default function ForceNetworkGraph3D({
         }}
         linkDirectionalParticleWidth={2}
         linkDirectionalParticleSpeed={0.005}
+        linkCurvature={(link: any) => {
+          // Add natural curves to links based on relationship type
+          const supplyChainTypes = ['SUPPLIES', 'MANUFACTURES', 'BUYS', 'USES', 'REQUIRES', 'supply'];
+          if (supplyChainTypes.includes(link.type)) {
+            return 0.25; // Smooth curve for supply chain
+          } else if (link.type === 'impact') {
+            return 0.15; // Gentle curve for impact relationships
+          } else if (link.type === 'COMPETES_WITH' || link.type === 'competition') {
+            return 0.4; // Strong curve for competition
+          }
+          return 0.2; // Default curve
+        }}
+        linkWidth={(link: any) => {
+          // Link width based on strength and type
+          const baseWidth = link.strength / 5; // Scale down strength
+
+          // Thicker lines for critical supply chain links
+          if (link.metadata?.critical) {
+            return baseWidth * 1.5;
+          }
+
+          // Edited links are thicker
+          if (link.id && isRelationshipEdited(link.id)) {
+            return baseWidth * 1.3;
+          }
+
+          return Math.max(baseWidth, 0.5); // Minimum width
+        }}
         onNodeClick={handleNodeClick}
         onNodeHover={handleNodeHover}
         onLinkClick={handleLinkClick}
