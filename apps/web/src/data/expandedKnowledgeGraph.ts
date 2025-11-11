@@ -69,6 +69,102 @@ export const ASML: Entity = {
   },
 };
 
+export const INTEL: Entity = {
+  id: 'company-intel',
+  type: 'COMPANY',
+  name: 'Intel Corporation',
+  metadata: {
+    ticker: 'INTC',
+    sector: 'SEMICONDUCTOR',
+    revenue: 54228,
+    marketCap: 180000,
+  },
+};
+
+export const SAMSUNG: Entity = {
+  id: 'company-samsung',
+  type: 'COMPANY',
+  name: 'Samsung Electronics',
+  metadata: {
+    ticker: '005930.KS',
+    sector: 'SEMICONDUCTOR',
+    revenue: 234000,
+    marketCap: 380000,
+  },
+};
+
+export const MICRON: Entity = {
+  id: 'company-micron',
+  type: 'COMPANY',
+  name: 'Micron Technology',
+  metadata: {
+    ticker: 'MU',
+    sector: 'SEMICONDUCTOR',
+    revenue: 15537,
+    marketCap: 110000,
+  },
+};
+
+export const BROADCOM: Entity = {
+  id: 'company-broadcom',
+  type: 'COMPANY',
+  name: 'Broadcom Inc.',
+  metadata: {
+    ticker: 'AVGO',
+    sector: 'SEMICONDUCTOR',
+    revenue: 35819,
+    marketCap: 780000,
+  },
+};
+
+export const QUALCOMM: Entity = {
+  id: 'company-qualcomm',
+  type: 'COMPANY',
+  name: 'Qualcomm Inc.',
+  metadata: {
+    ticker: 'QCOM',
+    sector: 'SEMICONDUCTOR',
+    revenue: 35820,
+    marketCap: 190000,
+  },
+};
+
+export const GOOGLE: Entity = {
+  id: 'company-google',
+  type: 'COMPANY',
+  name: 'Alphabet Inc.',
+  metadata: {
+    ticker: 'GOOGL',
+    sector: 'TECHNOLOGY',
+    revenue: 307394,
+    marketCap: 1900000,
+  },
+};
+
+export const AMAZON_COMPANY: Entity = {
+  id: 'company-amazon-web',
+  type: 'COMPANY',
+  name: 'Amazon.com Inc.',
+  metadata: {
+    ticker: 'AMZN',
+    sector: 'TECHNOLOGY',
+    revenue: 574785,
+    marketCap: 1800000,
+  },
+};
+
+export const META: Entity = {
+  id: 'company-meta',
+  type: 'COMPANY',
+  name: 'Meta Platforms Inc.',
+  metadata: {
+    ticker: 'META',
+    sector: 'TECHNOLOGY',
+    revenue: 134902,
+    marketCap: 1300000,
+  },
+};
+
 // ==========================================
 // ADDITIONAL PRODUCTS (Level 4)
 // ==========================================
@@ -525,6 +621,186 @@ export const EXPANDED_RELATIONSHIPS: Relationship[] = [
     target: 'product-m3-chip',
     weight: 1.0,
   },
+
+  // Intel relationships
+  {
+    id: 'rel-intel-competes-nvidia',
+    type: 'COMPETES_WITH',
+    source: 'company-intel',
+    target: 'company-nvidia',
+    weight: 0.7,
+    metadata: {
+      market: 'Data Center GPUs',
+      intelProduct: 'Gaudi 3',
+    },
+  },
+  {
+    id: 'rel-intel-competes-amd',
+    type: 'COMPETES_WITH',
+    source: 'company-intel',
+    target: 'company-amd',
+    weight: 0.9,
+    metadata: {
+      market: 'CPU Market',
+    },
+  },
+
+  // Samsung relationships
+  {
+    id: 'rel-samsung-supplies-hbm',
+    type: 'SUPPLIES',
+    source: 'company-samsung',
+    target: 'component-hbm3e',
+    weight: 0.4,
+    metadata: {
+      market: 'HBM3E Memory',
+      marketShare: 40,
+    },
+  },
+  {
+    id: 'rel-samsung-competes-tsmc',
+    type: 'COMPETES_WITH',
+    source: 'company-samsung',
+    target: 'company-tsmc',
+    weight: 0.8,
+    metadata: {
+      market: 'Foundry Services',
+    },
+  },
+
+  // Micron relationships
+  {
+    id: 'rel-micron-supplies-dram',
+    type: 'SUPPLIES',
+    source: 'company-micron',
+    target: 'component-hbm3e',
+    weight: 0.1,
+    metadata: {
+      market: 'HBM3E Memory',
+      marketShare: 10,
+    },
+  },
+
+  // Broadcom & Qualcomm
+  {
+    id: 'rel-broadcom-supplies-networking',
+    type: 'SUPPLIES',
+    source: 'company-broadcom',
+    target: 'customer-microsoft',
+    weight: 0.7,
+    metadata: {
+      product: 'Networking chips for Azure',
+      annualValue: 2000000000,
+    },
+  },
+  {
+    id: 'rel-qualcomm-supplies-apple',
+    type: 'SUPPLIES',
+    source: 'company-qualcomm',
+    target: 'company-apple',
+    weight: 0.8,
+    metadata: {
+      product: 'Modem chips',
+      annualValue: 7000000000,
+    },
+  },
+
+  // Google relationships
+  {
+    id: 'rel-google-buys-h100',
+    type: 'BUYS',
+    source: 'company-google',
+    target: 'product-h100',
+    weight: 0.85,
+    metadata: {
+      annualSpend: 7000000000,
+      gpuCount: 450000,
+    },
+  },
+  {
+    id: 'rel-google-competes-microsoft',
+    type: 'COMPETES_WITH',
+    source: 'company-google',
+    target: 'company-microsoft',
+    weight: 0.9,
+    metadata: {
+      market: 'Cloud AI Services',
+    },
+  },
+
+  // Meta relationships
+  {
+    id: 'rel-meta-buys-h100',
+    type: 'BUYS',
+    source: 'company-meta',
+    target: 'product-h100',
+    weight: 0.9,
+    metadata: {
+      annualSpend: 9000000000,
+      gpuCount: 600000,
+    },
+  },
+
+  // Amazon relationships
+  {
+    id: 'rel-amazon-buys-h100',
+    type: 'BUYS',
+    source: 'company-amazon-web',
+    target: 'product-h100',
+    weight: 0.8,
+    metadata: {
+      annualSpend: 6000000000,
+      gpuCount: 400000,
+    },
+  },
+  {
+    id: 'rel-amazon-competes-microsoft',
+    type: 'COMPETES_WITH',
+    source: 'company-amazon-web',
+    target: 'company-microsoft',
+    weight: 0.95,
+    metadata: {
+      market: 'Cloud Infrastructure (AWS vs Azure)',
+    },
+  },
+
+  // Cross-company supply chains
+  {
+    id: 'rel-tsmc-manufactures-amd',
+    type: 'MANUFACTURES',
+    source: 'company-tsmc',
+    target: 'product-mi300x',
+    weight: 1.0,
+    metadata: {
+      process: '5nm',
+      capacity: 15000,
+      unit: 'wafers/month',
+    },
+  },
+  {
+    id: 'rel-tsmc-manufactures-apple-chip',
+    type: 'MANUFACTURES',
+    source: 'company-tsmc',
+    target: 'product-m3-chip',
+    weight: 1.0,
+    metadata: {
+      process: '3nm',
+      capacity: 25000,
+      unit: 'wafers/month',
+      exclusivity: 'high',
+    },
+  },
+  {
+    id: 'rel-tsmc-manufactures-qualcomm',
+    type: 'MANUFACTURES',
+    source: 'company-tsmc',
+    target: 'company-qualcomm',
+    weight: 0.8,
+    metadata: {
+      product: 'Snapdragon chips',
+      process: '4nm',
+    },
+  },
 ];
 
 // ==========================================
@@ -537,6 +813,14 @@ export const ALL_EXPANDED_ENTITIES: Entity[] = [
   MICROSOFT,
   APPLE,
   ASML,
+  INTEL,
+  SAMSUNG,
+  MICRON,
+  BROADCOM,
+  QUALCOMM,
+  GOOGLE,
+  AMAZON_COMPANY,
+  META,
   ...AMD_PRODUCTS,
   ...APPLE_PRODUCTS,
   ...MICROSOFT_PRODUCTS,
