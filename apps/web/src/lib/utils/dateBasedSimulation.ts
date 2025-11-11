@@ -147,29 +147,54 @@ function simulateNextPeriod(
   const entityValues = new Map<string, EntitySnapshot>();
   const events: SimulationEvent[] = [];
 
-  // 각 엔티티의 다음 값 계산
+  // 매크로 상태 먼저 업데이트
+  const newMacroState = evolveMacroState(previousSnapshot.macroState, config);
+
+  // 각 엔티티의 다음 값 계산 (매크로 변화 반영)
   ALL_EXPANDED_ENTITIES.forEach((entity) => {
     const previousValue = previousSnapshot.entityValues.get(entity.id)!;
-    const nextValue = evolveEntity(previousValue, config, date);
+    const nextValue = evolveEntity(
+      previousValue,
+      config,
+      date,
+      newMacroState,
+      previousSnapshot.macroState
+    );
 
     entityValues.set(entity.id, nextValue);
 
     // 큰 변화가 있으면 이벤트 생성 (관련 엔티티 포함)
     if (Math.abs(nextValue.changeRate) > 0.1) {
       const relatedEntities = getRelatedEntities(entity.id);
+
+      // 의미 있는 이벤트 메시지 생성
+      let eventTitle = '';
+      let eventDescription = '';
+
+      if (entity.id.includes('bank')) {
+        eventTitle = `${entity.name}: ${nextValue.isGrowing ? 'NIM expansion' : 'margin pressure'}`;
+        eventDescription = `${nextValue.changeRate > 0 ? '+' : ''}${(nextValue.changeRate * 100).toFixed(1)}% due to rate changes`;
+      } else if (entity.id.includes('reit')) {
+        eventTitle = `${entity.name}: ${nextValue.isGrowing ? 'valuation up' : 'interest cost surge'}`;
+        eventDescription = `${nextValue.changeRate > 0 ? '+' : ''}${(nextValue.changeRate * 100).toFixed(1)}% from rate & liquidity`;
+      } else if (entity.id.includes('nvidia') || entity.id.includes('tsmc')) {
+        eventTitle = `${entity.name}: ${nextValue.isGrowing ? 'demand surge' : 'slowdown'}`;
+        eventDescription = `${nextValue.changeRate > 0 ? '+' : ''}${(nextValue.changeRate * 100).toFixed(1)}% on macro conditions`;
+      } else {
+        eventTitle = `${entity.name} ${nextValue.isGrowing ? 'surge' : 'decline'}`;
+        eventDescription = `${nextValue.changeRate > 0 ? '+' : ''}${(nextValue.changeRate * 100).toFixed(1)}% change`;
+      }
+
       events.push({
         date,
-        title: `${entity.name} ${nextValue.isGrowing ? 'surge' : 'decline'}`,
-        description: `${nextValue.changeRate > 0 ? '+' : ''}${(nextValue.changeRate * 100).toFixed(1)}% change`,
+        title: eventTitle,
+        description: eventDescription,
         affectedEntities: [entity.id, ...relatedEntities],
         impact: nextValue.changeRate > 0 ? 'positive' : 'negative',
         magnitude: Math.abs(nextValue.changeRate),
       });
     }
   });
-
-  // 매크로 상태도 약간씩 변화
-  const newMacroState = evolveMacroState(previousSnapshot.macroState, config);
 
   return {
     date,
@@ -237,23 +262,78 @@ function createInitialEntitySnapshot(
 }
 
 /**
- * 엔티티 진화 (한 기간 진행)
+ * 엔티티 진화 (한 기간 진행) - 실제 경제 관계 반영
  */
 function evolveEntity(
   previous: EntitySnapshot,
   config: DateSimulationConfig,
-  date: Date
+  date: Date,
+  macroState: MacroState,
+  previousMacroState: MacroState
 ): EntitySnapshot {
-  // 기본 성장률 (연간 → 일간)
+  // 1. 기본 성장률 (연간 → 일간)
   const dailyGrowthRate = config.growthRate / 365;
-  const periodGrowthRate = dailyGrowthRate * config.intervalDays;
+  let periodGrowthRate = dailyGrowthRate * config.intervalDays;
 
-  // 랜덤 변동 추가
+  // 2. 매크로 변수 변화 계산
+  const fedRateChange = (macroState.fed_funds_rate || 0) - (previousMacroState.fed_funds_rate || 0);
+  const m2Change = ((macroState.us_m2_money_supply || 0) - (previousMacroState.us_m2_money_supply || 0)) / (previousMacroState.us_m2_money_supply || 1);
+  const gdpChange = ((macroState.us_gdp_growth || 0) - (previousMacroState.us_gdp_growth || 0)) / 100;
+  const vixChange = ((macroState.vix || 0) - (previousMacroState.vix || 0)) / 100;
+
+  // 3. 엔티티 타입별 매크로 민감도 적용
+  let macroImpact = 0;
+  let impactSources: string[] = []; // 영향 원인 추적
+
+  // Banking sector: 금리 상승 → 수익 증가 (NIM 확대)
+  if (previous.entityId.includes('bank') || previous.entityType === 'COMPANY' && previous.entityName.toLowerCase().includes('bank')) {
+    const fedImpact = fedRateChange * 15; // 금리 1% 상승 → 15% 수익 증가
+    const m2Impact = m2Change * 5; // M2 증가는 소폭 긍정적
+    macroImpact += (fedImpact + m2Impact) / 100;
+    if (Math.abs(fedImpact) > 1) impactSources.push(`Fed rate ${fedRateChange > 0 ? '↑' : '↓'} ${Math.abs(fedImpact).toFixed(1)}%`);
+  }
+
+  // Real Estate / REITs: 금리 상승 → 수익 감소 (이자비용 증가)
+  if (previous.entityId.includes('reit') || previous.entityType === 'COMPANY' && previous.entityName.toLowerCase().includes('reit')) {
+    const fedImpact = -fedRateChange * 25; // 금리 1% 상승 → 25% 수익 감소
+    const m2Impact = m2Change * 8; // M2 증가는 자산 가격 상승으로 긍정적
+    macroImpact += (fedImpact + m2Impact) / 100;
+    if (Math.abs(fedImpact) > 1) impactSources.push(`Higher rates: ${fedImpact.toFixed(1)}%`);
+    if (Math.abs(m2Impact) > 1) impactSources.push(`M2 liquidity: +${m2Impact.toFixed(1)}%`);
+  }
+
+  // Semiconductor: 기술 혁신 + GDP 성장 영향
+  if (previous.entityId.includes('nvidia') || previous.entityId.includes('tsmc') || previous.entityId.includes('sk-hynix') ||
+      previous.entityId.includes('company-samsung') || previous.entityId.includes('company-intel')) {
+    const gdpImpact = gdpChange * 30;
+    const m2Impact = m2Change * 10;
+    const vixImpact = -vixChange * 20;
+    macroImpact += (gdpImpact + m2Impact + vixImpact) / 100;
+    if (Math.abs(gdpImpact) > 1) impactSources.push(`GDP: ${gdpImpact > 0 ? '+' : ''}${gdpImpact.toFixed(1)}%`);
+  }
+
+  // Manufacturing: GDP와 원자재 가격 영향
+  if (previous.entityType === 'COMPANY' && ['hyundai', 'toyota', 'tesla', 'ford', 'bmw'].some(name => previous.entityName.toLowerCase().includes(name))) {
+    const gdpImpact = gdpChange * 25;
+    const fedImpact = -fedRateChange * 10;
+    macroImpact += (gdpImpact + fedImpact) / 100;
+  }
+
+  // Crypto: M2와 변동성에 매우 민감
+  if (previous.entityId.includes('btc') || previous.entityId.includes('eth') || previous.entityId.includes('sol') || previous.entityType === 'CRYPTO') {
+    const m2Impact = m2Change * 40;
+    const fedImpact = -fedRateChange * 30;
+    const vixImpact = vixChange * 15;
+    macroImpact += (m2Impact + fedImpact + vixImpact) / 100;
+    if (Math.abs(m2Impact) > 2) impactSources.push(`Liquidity: ${m2Impact > 0 ? '+' : ''}${m2Impact.toFixed(1)}%`);
+  }
+
+  // 4. 랜덤 변동 추가 (실제 시장 노이즈)
   const randomFactor = (Math.random() - 0.5) * 2 * config.randomness;
   const volatilityFactor = (Math.random() - 0.5) * previous.volatility;
 
-  // 총 변화율
-  const totalChangeRate = periodGrowthRate + randomFactor + volatilityFactor;
+  // 5. 총 변화율 = 기본 성장 + 매크로 영향 + 랜덤 + 변동성
+  const totalChangeRate = periodGrowthRate + macroImpact + randomFactor + volatilityFactor;
 
   // 새 값 계산
   const newValue = previous.value * (1 + totalChangeRate);
@@ -282,26 +362,51 @@ function evolveEntity(
 }
 
 /**
- * 매크로 상태 진화
+ * 매크로 상태 진화 - 실제 경제 동학 반영
  */
 function evolveMacroState(
   previous: MacroState,
   config: DateSimulationConfig
 ): MacroState {
-  // 매크로 변수들도 시간에 따라 조금씩 변화
   const newState = { ...previous };
 
-  // Fed rate: 천천히 변화
-  newState.fed_funds_rate += (Math.random() - 0.5) * 0.0005;
+  // 1. Fed Rate: 경제 상황에 따라 변화 (인플레이션 대응)
+  const currentGDP = previous.us_gdp_growth || 0.025;
+  const currentVIX = previous.vix || 18.5;
+
+  // GDP 성장이 높으면 금리 인상, VIX 높으면 금리 인하
+  let fedRateAdjustment = 0;
+  if (currentGDP > 0.03) fedRateAdjustment += 0.0002; // 3% 이상 성장 시 금리 인상 압력
+  if (currentVIX > 25) fedRateAdjustment -= 0.0001; // 변동성 높으면 금리 인하 압력
+
+  newState.fed_funds_rate += fedRateAdjustment + (Math.random() - 0.5) * 0.0003;
   newState.fed_funds_rate = Math.max(0, Math.min(0.1, newState.fed_funds_rate));
 
-  // GDP growth: 분기마다 변동
-  newState.us_gdp_growth += (Math.random() - 0.5) * 0.002;
+  // 2. M2 Money Supply: Fed Rate와 반대 방향 (QE/QT)
+  const m2AdjustmentRate = -fedRateAdjustment * 100; // 금리 인상 시 M2 감소
+  const currentM2 = previous.us_m2_money_supply || 21.4;
+  newState.us_m2_money_supply = currentM2 * (1 + m2AdjustmentRate + (Math.random() - 0.5) * 0.002);
+  newState.us_m2_money_supply = Math.max(10, Math.min(40, newState.us_m2_money_supply));
+
+  // 3. GDP Growth: Fed Rate와 M2에 영향받음
+  let gdpAdjustment = 0;
+  if (newState.fed_funds_rate < previous.fed_funds_rate) gdpAdjustment += 0.001; // 금리 인하 → GDP 성장
+  if (newState.us_m2_money_supply > previous.us_m2_money_supply) gdpAdjustment += 0.0015; // M2 증가 → GDP 성장
+
+  newState.us_gdp_growth += gdpAdjustment + (Math.random() - 0.5) * 0.003;
   newState.us_gdp_growth = Math.max(-0.05, Math.min(0.08, newState.us_gdp_growth));
 
-  // VIX: 변동성
-  newState.vix += (Math.random() - 0.5) * 2;
-  newState.vix = Math.max(10, Math.min(50, newState.vix));
+  // 4. VIX: 경제 불확실성 반영
+  let vixAdjustment = 0;
+  if (Math.abs(newState.fed_funds_rate - previous.fed_funds_rate) > 0.001) vixAdjustment += 1; // 급격한 금리 변화 → 변동성 증가
+  if (newState.us_gdp_growth < 0) vixAdjustment += 2; // 경기 침체 → 변동성 증가
+
+  newState.vix += vixAdjustment + (Math.random() - 0.5) * 3;
+  newState.vix = Math.max(10, Math.min(80, newState.vix));
+
+  // 5. 10Y Treasury Yield: Fed Rate와 연동
+  newState.us_10y_yield = (newState.fed_funds_rate || 0) * 100 + 1.5 + (Math.random() - 0.5) * 0.3;
+  newState.us_10y_yield = Math.max(0, Math.min(10, newState.us_10y_yield));
 
   return newState;
 }
