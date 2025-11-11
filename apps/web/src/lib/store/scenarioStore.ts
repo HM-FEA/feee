@@ -6,14 +6,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { MacroState } from './macroStore';
+import { LevelState } from './levelStore';
 
 export interface Scenario {
   id: string;
   name: string;
   description: string;
+  icon?: string; // Emoji icon for scenario
 
   // Simulation state
   macroState: MacroState;
+  levelState?: LevelState; // Level-specific controls (9-level ontology)
 
   // User customizations (references to other stores)
   relationshipEdits?: Record<string, number>; // linkId → editedStrength
@@ -29,6 +32,11 @@ export interface Scenario {
   updatedAt: string;
   tags?: string[];
   isPublic: boolean; // Share with community
+
+  // Community features
+  upvotes?: number;
+  downvotes?: number;
+  isVerified?: boolean;
 
   // Statistics (auto-calculated when scenario is run)
   stats?: {

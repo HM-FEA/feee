@@ -5,7 +5,9 @@ import dynamic from 'next/dynamic';
 import { companies } from '@/data/companies';
 import { MACRO_CATEGORIES } from '@/data/macroVariables';
 import { useMacroStore } from '@/lib/store/macroStore';
+import { useLevelStore } from '@/lib/store/levelStore';
 import { useRelationshipStore, generateLinkId, getLinkColor } from '@/lib/store/relationshipStore';
+import { getImpactColor, getImpactSizeMultiplier } from '@/lib/utils/levelImpactCalculation';
 import {
   NVIDIA,
   NVIDIA_PRODUCTS,
@@ -556,6 +558,8 @@ export default function ForceNetworkGraph3D({
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
   const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+  const entityImpacts = useLevelStore(state => state.entityImpacts);
+  const getEntityImpact = useLevelStore(state => state.getEntityImpact);
   const {
     editedRelationships,
     getRelationshipStrength,
@@ -619,8 +623,33 @@ export default function ForceNetworkGraph3D({
   }, []);
 
   const filteredData = useMemo(() => {
-    if (filterLevel === 'all') return graphData;
-    const filteredNodes = graphData.nodes.filter(n => n.level === filterLevel);
+    // Apply level-specific impacts to nodes
+    const nodesWithImpact = graphData.nodes.map(node => {
+      // Get level impact for this entity (if it exists in knowledge graph)
+      const entityImpact = getEntityImpact(node.id);
+
+      if (entityImpact && Math.abs(entityImpact.impactScore) > 0.05) {
+        // Apply impact to node size and color
+        const impactSize = node.val * getImpactSizeMultiplier(entityImpact.impactScore);
+        const impactColor = getImpactColor(entityImpact.impactScore);
+
+        return {
+          ...node,
+          val: impactSize,
+          color: impactColor,
+          levelImpact: entityImpact, // Store for tooltip
+        };
+      }
+
+      return node;
+    });
+
+    // Filter by level if needed
+    if (filterLevel === 'all') {
+      return { nodes: nodesWithImpact, links: graphData.links };
+    }
+
+    const filteredNodes = nodesWithImpact.filter(n => n.level === filterLevel);
     const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
     const filteredLinks = graphData.links.filter(
       l => typeof l.source === 'string'
@@ -628,7 +657,7 @@ export default function ForceNetworkGraph3D({
         : filteredNodeIds.has((l.source as any).id) && filteredNodeIds.has((l.target as any).id)
     );
     return { nodes: filteredNodes, links: filteredLinks };
-  }, [graphData, filterLevel]);
+  }, [graphData, filterLevel, entityImpacts, getEntityImpact]);
 
   const handleNodeClick = useCallback((node: GraphNode) => {
     setSelectedNode(node);

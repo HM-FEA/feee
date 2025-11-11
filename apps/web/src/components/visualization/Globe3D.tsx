@@ -3,10 +3,12 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useMacroStore } from '@/lib/store/macroStore';
+import { useLevelStore } from '@/lib/store/levelStore';
 import { companies, Company } from '@/data/companies';
 import { getSectorColor } from '@/lib/config/sectors.config';
 import { MACRO_VARIABLES } from '@/data/macroVariables';
 import { TRADE_FLOWS, SHIPPING_ROUTES, SUPPLY_CHAIN_PATHS, CURRENCY_FLOWS } from '@/data/globalSupplyChain';
+import { getImpactColor, getImpactSizeMultiplier } from '@/lib/utils/levelImpactCalculation';
 
 // Dynamic import to avoid SSR issues
 const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
@@ -132,6 +134,8 @@ export default function Globe3D({
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const macroState = useMacroStore(state => state.macroState);
   const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+  const entityImpacts = useLevelStore(state => state.entityImpacts);
+  const getEntityImpact = useLevelStore(state => state.getEntityImpact);
 
   // Measure container size
   useEffect(() => {
@@ -243,19 +247,38 @@ export default function Globe3D({
 
         const isRelevant = !selectedSector || company.sector === selectedSector;
 
+        // Get level-specific impact for this company
+        const companyEntityId = `company-${company.ticker?.toLowerCase() || company.name.toLowerCase().replace(/\s+/g, '-')}`;
+        const levelImpact = getEntityImpact(companyEntityId);
+
+        // Combine macro sector impact with level-specific impact
+        const totalImpact = sectorImpact + (levelImpact?.impactPercentage || 0);
+
+        // Adjust size based on level impact (if any)
+        const baseSize = Math.log(company.financials.revenue + 1) * 0.3;
+        const adjustedSize = levelImpact
+          ? baseSize * getImpactSizeMultiplier(levelImpact.impactScore)
+          : baseSize;
+
+        // Use impact color if level impact exists, otherwise sector color
+        const pointColor = levelImpact && Math.abs(levelImpact.impactScore) > 0.05
+          ? getImpactColor(levelImpact.impactScore)
+          : isRelevant ? getSectorColor(company.sector) : 'rgba(100, 100, 100, 0.3)';
+
         return {
           lat: company.location!.lat,
           lng: company.location!.lng,
           name: company.name_en || company.name,
           ticker: company.ticker,
           sector: company.sector,
-          size: Math.log(company.financials.revenue + 1) * 0.3, // Size based on revenue
-          color: isRelevant ? getSectorColor(company.sector) : 'rgba(100, 100, 100, 0.3)',
-          impact: sectorImpact,
+          size: adjustedSize,
+          color: pointColor,
+          impact: totalImpact,
           company: company,
+          levelImpact: levelImpact, // Include for tooltip
         };
       });
-  }, [selectedSector, calculatedImpacts]);
+  }, [selectedSector, calculatedImpacts, entityImpacts, getEntityImpact]);
 
   // Helper to get RGB values from sector color (must come before dynamicImpactArcs)
   const getSectorRGB = (sector: string): string => {

@@ -6,6 +6,7 @@ import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown
 import { Card, SectionHeader } from '@/components/ui/DesignSystem';
 import { useMacroStore } from '@/lib/store/macroStore';
 import { useLevelStore } from '@/lib/store/levelStore';
+import { useScenarioStore } from '@/lib/store/scenarioStore';
 import { MACRO_CATEGORIES, MACRO_VARIABLES } from '@/data/macroVariables';
 import LevelControlPanel from '@/components/simulation/LevelControlPanel';
 import SupplyChainDiagram, { HBM_SUPPLY_CHAIN } from '@/components/visualization/SupplyChainDiagram';
@@ -109,6 +110,12 @@ export default function SimulationPage() {
   const levelState = useLevelStore(state => state.levelState);
   const updateLevelControl = useLevelStore(state => state.updateLevelControl);
 
+  const { saveScenario, loadScenario, getAllScenarios } = useScenarioStore();
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
+  const [scenarioName, setScenarioName] = useState('');
+  const [scenarioDescription, setScenarioDescription] = useState('');
+
   // Key macro controls (using correct variable IDs from macroVariables.ts)
   const macroControls: MacroControl[] = [
     {
@@ -199,6 +206,53 @@ export default function SimulationPage() {
       updateMacroVariable(key, value);
     });
 
+    setTimeout(() => {
+      setMacroChanging(false);
+    }, 1500);
+  };
+
+  const handleSaveScenario = () => {
+    if (!scenarioName.trim()) {
+      alert('Please enter a scenario name');
+      return;
+    }
+
+    const scenarioId = saveScenario({
+      name: scenarioName,
+      description: scenarioDescription || 'Custom scenario',
+      icon: '💾',
+      macroState,
+      levelState,
+      createdBy: 'user', // In real app, use actual user ID
+      isPublic: false,
+      tags: ['custom'],
+    });
+
+    setScenarioName('');
+    setScenarioDescription('');
+    setShowSaveDialog(false);
+    alert(`Scenario "${scenarioName}" saved successfully!`);
+  };
+
+  const handleLoadScenario = (scenarioId: string) => {
+    const scenario = loadScenario(scenarioId);
+    if (!scenario) return;
+
+    setMacroChanging(true);
+
+    // Apply macro state
+    Object.entries(scenario.macroState).forEach(([key, value]) => {
+      updateMacroVariable(key, value);
+    });
+
+    // Apply level state if available
+    if (scenario.levelState) {
+      Object.entries(scenario.levelState).forEach(([controlId, value]) => {
+        updateLevelControl(controlId, value);
+      });
+    }
+
+    setShowLoadDialog(false);
     setTimeout(() => {
       setMacroChanging(false);
     }, 1500);
@@ -764,15 +818,125 @@ export default function SimulationPage() {
                   </p>
 
                   <div className="space-y-1">
-                    <button className="w-full px-3 py-2 bg-accent-cyan text-black text-xs font-semibold rounded-lg hover:bg-accent-cyan/80 transition-all">
+                    <button
+                      onClick={() => setShowSaveDialog(true)}
+                      className="w-full px-3 py-2 bg-accent-cyan text-black text-xs font-semibold rounded-lg hover:bg-accent-cyan/80 transition-all"
+                    >
                       <Save size={12} className="inline mr-1" />
                       Save Current Scenario
                     </button>
-                    <button className="w-full px-3 py-2 bg-background-tertiary text-text-primary text-xs font-semibold rounded-lg hover:bg-background-secondary transition-all border border-border-primary">
+                    <button
+                      onClick={() => setShowLoadDialog(true)}
+                      className="w-full px-3 py-2 bg-background-tertiary text-text-primary text-xs font-semibold rounded-lg hover:bg-background-secondary transition-all border border-border-primary"
+                    >
                       <Play size={12} className="inline mr-1" />
-                      Load Scenario
+                      Load Scenario ({getAllScenarios().length})
                     </button>
                   </div>
+
+                  {/* Save Dialog */}
+                  {showSaveDialog && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                      <div className="bg-background-primary border-2 border-accent-cyan rounded-lg p-6 w-96 max-w-[90vw]">
+                        <h3 className="text-lg font-bold text-text-primary mb-4">Save Scenario</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-xs text-text-secondary mb-1 block">Scenario Name *</label>
+                            <input
+                              type="text"
+                              value={scenarioName}
+                              onChange={(e) => setScenarioName(e.target.value)}
+                              placeholder="e.g., My Custom Scenario"
+                              className="w-full px-3 py-2 bg-background-secondary border border-border-primary rounded text-sm text-text-primary focus:outline-none focus:border-accent-cyan"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-text-secondary mb-1 block">Description (Optional)</label>
+                            <textarea
+                              value={scenarioDescription}
+                              onChange={(e) => setScenarioDescription(e.target.value)}
+                              placeholder="Describe your scenario..."
+                              rows={3}
+                              className="w-full px-3 py-2 bg-background-secondary border border-border-primary rounded text-sm text-text-primary focus:outline-none focus:border-accent-cyan resize-none"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleSaveScenario}
+                              className="flex-1 px-4 py-2 bg-accent-cyan text-black font-semibold rounded hover:bg-accent-cyan/80 transition-all"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowSaveDialog(false);
+                                setScenarioName('');
+                                setScenarioDescription('');
+                              }}
+                              className="flex-1 px-4 py-2 bg-background-secondary text-text-primary border border-border-primary rounded hover:bg-background-tertiary transition-all"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Load Dialog */}
+                  {showLoadDialog && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                      <div className="bg-background-primary border-2 border-accent-magenta rounded-lg p-6 w-[500px] max-w-[90vw] max-h-[80vh] overflow-y-auto">
+                        <h3 className="text-lg font-bold text-text-primary mb-4">Load Scenario</h3>
+                        <div className="space-y-2">
+                          {getAllScenarios().length === 0 ? (
+                            <p className="text-sm text-text-tertiary text-center py-8">
+                              No saved scenarios yet. Save your current state to create one!
+                            </p>
+                          ) : (
+                            getAllScenarios().map((scenario) => (
+                              <button
+                                key={scenario.id}
+                                onClick={() => handleLoadScenario(scenario.id)}
+                                className="w-full px-4 py-3 bg-background-secondary border border-border-primary rounded-lg hover:border-accent-magenta hover:bg-background-tertiary transition-all text-left"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-base">{scenario.icon || '💾'}</span>
+                                      <span className="text-sm font-semibold text-text-primary">{scenario.name}</span>
+                                    </div>
+                                    <p className="text-xs text-text-tertiary line-clamp-2">{scenario.description}</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <span className="text-[10px] text-text-tertiary">
+                                        {new Date(scenario.createdAt).toLocaleDateString()}
+                                      </span>
+                                      {scenario.tags && scenario.tags.length > 0 && (
+                                        <div className="flex gap-1">
+                                          {scenario.tags.slice(0, 2).map(tag => (
+                                            <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-accent-cyan/10 text-accent-cyan rounded">
+                                              {tag}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Play size={16} className="text-accent-magenta mt-1" />
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                        <button
+                          onClick={() => setShowLoadDialog(false)}
+                          className="w-full mt-4 px-4 py-2 bg-background-secondary text-text-primary border border-border-primary rounded hover:bg-background-tertiary transition-all"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="pt-3 border-t border-border-primary">
                     <div className="text-xs font-semibold text-text-secondary mb-2">Historical Scenarios</div>
