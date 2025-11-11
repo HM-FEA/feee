@@ -16,6 +16,22 @@ import {
   SK_HYNIX,
   EntityType,
 } from '@/data/knowledgeGraph';
+import {
+  EXPANDED_RELATIONSHIPS,
+  AMD,
+  TSMC,
+  MICROSOFT,
+  APPLE,
+  ASML,
+  AMD_PRODUCTS,
+  APPLE_PRODUCTS,
+  MICROSOFT_PRODUCTS,
+  ADVANCED_COMPONENTS,
+  TECHNOLOGIES,
+  HYPERSCALERS,
+  ALL_EXPANDED_ENTITIES
+} from '@/data/expandedKnowledgeGraph';
+import SupplyChainDetailPanel from './SupplyChainDetailPanel';
 
 // Dynamic import to avoid SSR issues
 const ForceGraph3D = dynamic(() => import('react-force-graph-3d'), { ssr: false });
@@ -36,9 +52,10 @@ interface GraphLink {
   id?: string;
   source: string;
   target: string;
-  type: 'impact' | 'supply' | 'ownership' | 'loan' | 'competition';
+  type: 'impact' | 'supply' | 'ownership' | 'loan' | 'competition' | 'SUPPLIES' | 'MANUFACTURES' | 'BUYS' | 'USES' | 'REQUIRES' | 'PRODUCES' | 'DEVELOPS' | 'COMPETES_WITH';
   strength: number;
   color?: string;
+  metadata?: any; // Supply chain metadata (annualValue, capacity, product, etc.)
 }
 
 interface GraphData {
@@ -371,7 +388,107 @@ function generateGraphData(): GraphData {
     });
   });
 
+  // Add expanded knowledge graph entities (AMD, TSMC, Microsoft, Apple, etc.)
+  ALL_EXPANDED_ENTITIES.forEach(entity => {
+    const level = mapEntityTypeToLevel(entity.type);
+    const nodeColor = getNodeColorByType(entity.type, entity.metadata?.sector);
+
+    nodes.push({
+      id: entity.id,
+      name: entity.name,
+      level: level as any,
+      entityType: entity.type,
+      sector: entity.metadata?.sector,
+      val: getNodeSizeByType(entity.type),
+      color: nodeColor,
+      data: entity.metadata
+    });
+  });
+
+  // Add expanded knowledge graph relationships with supply chain metadata
+  EXPANDED_RELATIONSHIPS.forEach(relationship => {
+    // Only add if both source and target exist as nodes
+    const sourceExists = nodes.some(n => n.id === relationship.source);
+    const targetExists = nodes.some(n => n.id === relationship.target);
+
+    if (sourceExists && targetExists) {
+      links.push({
+        id: relationship.id,
+        source: relationship.source,
+        target: relationship.target,
+        type: relationship.type as any,
+        strength: relationship.weight * 2, // Scale weight to strength
+        color: getLinkColorByType(relationship.type),
+        metadata: relationship.metadata, // Include all supply chain metadata
+      });
+    }
+  });
+
   return { nodes, links };
+}
+
+// Helper: Map entity type to graph level
+function mapEntityTypeToLevel(entityType: EntityType): string {
+  const levelMap: Record<string, string> = {
+    COMPANY: 'company',
+    PRODUCT: 'product',
+    COMPONENT: 'component',
+    SHAREHOLDER: 'shareholder',
+    CUSTOMER: 'customer',
+    TECHNOLOGY: 'technology',
+    SECTOR: 'sector',
+    MACRO: 'macro'
+  };
+  return levelMap[entityType] || 'company';
+}
+
+// Helper: Get node color by entity type and sector
+function getNodeColorByType(entityType: EntityType, sector?: string): string {
+  if (entityType === 'COMPANY' && sector) {
+    return SECTOR_COLORS[sector] || '#00FF9F';
+  }
+
+  const typeColors: Record<string, string> = {
+    PRODUCT: '#FFD700',        // Gold
+    COMPONENT: '#FF6B00',      // Orange
+    SHAREHOLDER: '#9333EA',    // Purple
+    CUSTOMER: '#06B6D4',       // Cyan
+    TECHNOLOGY: '#6366F1',     // Indigo
+    SECTOR: '#00E5FF',         // Cyan
+    MACRO: '#FFD700'           // Gold
+  };
+
+  return typeColors[entityType] || '#FFFFFF';
+}
+
+// Helper: Get node size by entity type
+function getNodeSizeByType(entityType: EntityType): number {
+  const sizeMap: Record<string, number> = {
+    COMPANY: 20,
+    PRODUCT: 15,
+    COMPONENT: 12,
+    TECHNOLOGY: 18,
+    SHAREHOLDER: 16,
+    CUSTOMER: 18,
+    SECTOR: 25,
+    MACRO: 30
+  };
+  return sizeMap[entityType] || 15;
+}
+
+// Helper: Get link color by relationship type
+function getLinkColorByType(type: string): string {
+  const colorMap: Record<string, string> = {
+    SUPPLIES: 'rgba(0, 229, 255, 0.6)',        // Cyan
+    MANUFACTURES: 'rgba(245, 158, 11, 0.6)',   // Orange
+    BUYS: 'rgba(16, 185, 129, 0.6)',           // Green
+    USES: 'rgba(139, 92, 246, 0.6)',           // Purple
+    REQUIRES: 'rgba(230, 0, 122, 0.6)',        // Pink
+    PRODUCES: 'rgba(255, 170, 0, 0.6)',        // Amber
+    DEVELOPS: 'rgba(99, 102, 241, 0.6)',       // Indigo
+    COMPETES_WITH: 'rgba(239, 68, 68, 0.5)',   // Red
+  };
+  return colorMap[type] || 'rgba(255, 255, 255, 0.3)';
 }
 
 interface ForceNetworkGraph3DProps {
@@ -689,135 +806,12 @@ export default function ForceNetworkGraph3D({
         </div>
       )}
 
-      {/* Link Editor */}
+      {/* Supply Chain Detail Panel */}
       {selectedLink && (
-        <div className="absolute top-4 right-4 z-10 w-80 bg-black/90 backdrop-blur border border-accent-magenta rounded-lg p-4 shadow-2xl shadow-accent-magenta/20">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-accent-magenta">Relationship Editor</h3>
-            <button
-              onClick={() => setSelectedLink(null)}
-              className="text-text-tertiary hover:text-accent-magenta transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="space-y-3 text-xs">
-            {/* Relationship Type */}
-            <div className="p-2 bg-background-secondary rounded-lg">
-              <div className="text-text-tertiary mb-1">Type:</div>
-              <div className="text-text-primary font-semibold uppercase">{selectedLink.type}</div>
-            </div>
-
-            {/* Source → Target */}
-            <div className="p-2 bg-background-secondary rounded-lg">
-              <div className="text-text-tertiary mb-1">Connection:</div>
-              <div className="flex items-center gap-2">
-                <span className="text-text-primary font-mono text-xs">{selectedLink.source}</span>
-                <span className="text-accent-cyan">→</span>
-                <span className="text-text-primary font-mono text-xs">{selectedLink.target}</span>
-              </div>
-            </div>
-
-            {/* Strength Slider */}
-            <div className="p-2 bg-background-secondary rounded-lg">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-text-tertiary">Strength:</span>
-                <span className="text-accent-cyan font-bold">
-                  {selectedLink.id && isRelationshipEdited(selectedLink.id)
-                    ? getRelationshipStrength(selectedLink.id, selectedLink.strength).toFixed(2)
-                    : selectedLink.strength.toFixed(2)}
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="10"
-                step="0.1"
-                value={selectedLink.id ? getRelationshipStrength(selectedLink.id, selectedLink.strength) : selectedLink.strength}
-                onChange={(e) => {
-                  const newStrength = parseFloat(e.target.value);
-                  if (selectedLink.id) {
-                    editRelationship({
-                      id: selectedLink.id,
-                      source: typeof selectedLink.source === 'string' ? selectedLink.source : (selectedLink.source as any).id,
-                      target: typeof selectedLink.target === 'string' ? selectedLink.target : (selectedLink.target as any).id,
-                      originalStrength: selectedLink.strength,
-                      editedStrength: newStrength,
-                      type: selectedLink.type,
-                      metadata: {
-                        editedAt: new Date().toISOString(),
-                      },
-                    });
-                  }
-                }}
-                className="w-full h-2 bg-background-tertiary rounded-lg appearance-none cursor-pointer accent-accent-cyan"
-              />
-              <div className="flex justify-between mt-1 text-xs text-text-tertiary">
-                <span>0</span>
-                <span>5</span>
-                <span>10</span>
-              </div>
-            </div>
-
-            {/* Status */}
-            {selectedLink.id && isRelationshipEdited(selectedLink.id) && (
-              <div className="p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <span className="text-green-400">✓</span>
-                  <span className="text-green-400 text-xs">Modified by you</span>
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-2 border-t border-border-primary">
-              {selectedLink.id && isRelationshipEdited(selectedLink.id) && (
-                <button
-                  onClick={() => {
-                    if (selectedLink.id) {
-                      editRelationship({
-                        id: selectedLink.id,
-                        source: typeof selectedLink.source === 'string' ? selectedLink.source : (selectedLink.source as any).id,
-                        target: typeof selectedLink.target === 'string' ? selectedLink.target : (selectedLink.target as any).id,
-                        originalStrength: selectedLink.strength,
-                        editedStrength: selectedLink.strength, // Reset to original
-                        type: selectedLink.type,
-                      });
-                    }
-                  }}
-                  className="flex-1 px-3 py-2 bg-background-secondary hover:bg-background-tertiary text-text-primary rounded-lg transition-colors text-xs"
-                >
-                  Reset
-                </button>
-              )}
-              {selectedLink.id && !isRelationshipRemoved(selectedLink.id) && (
-                <button
-                  onClick={() => {
-                    if (selectedLink.id) {
-                      removeRelationship(selectedLink.id);
-                      setSelectedLink(null);
-                    }
-                  }}
-                  className="flex-1 px-3 py-2 bg-status-danger/20 hover:bg-status-danger/30 text-status-danger rounded-lg transition-colors text-xs"
-                >
-                  Remove Link
-                </button>
-              )}
-            </div>
-
-            {/* Info */}
-            <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-400">
-              <div className="flex items-start gap-2">
-                <span>💡</span>
-                <div>
-                  <p className="font-semibold mb-1">Polymarket-style Editing</p>
-                  <p>Adjust relationship strength based on your research. Your edits are saved locally.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <SupplyChainDetailPanel
+          link={selectedLink}
+          onClose={() => setSelectedLink(null)}
+        />
       )}
 
       {/* Stats */}
