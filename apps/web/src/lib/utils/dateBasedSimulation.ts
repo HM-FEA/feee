@@ -154,13 +154,14 @@ function simulateNextPeriod(
 
     entityValues.set(entity.id, nextValue);
 
-    // 큰 변화가 있으면 이벤트 생성
+    // 큰 변화가 있으면 이벤트 생성 (관련 엔티티 포함)
     if (Math.abs(nextValue.changeRate) > 0.1) {
+      const relatedEntities = getRelatedEntities(entity.id);
       events.push({
         date,
         title: `${entity.name} ${nextValue.isGrowing ? 'surge' : 'decline'}`,
         description: `${nextValue.changeRate > 0 ? '+' : ''}${(nextValue.changeRate * 100).toFixed(1)}% change`,
-        affectedEntities: [entity.id],
+        affectedEntities: [entity.id, ...relatedEntities],
         impact: nextValue.changeRate > 0 ? 'positive' : 'negative',
         magnitude: Math.abs(nextValue.changeRate),
       });
@@ -321,6 +322,76 @@ function getEntityColor(value: number): string {
  */
 function getEntitySize(value: number): number {
   return 0.5 + (value / 100) * 1.5; // 0.5 ~ 2.0
+}
+
+/**
+ * 관련 엔티티 찾기 (supply chain & business relationships)
+ */
+function getRelatedEntities(entityId: string): string[] {
+  // Define supply chain and business relationships
+  const relationships: Record<string, string[]> = {
+    // NVIDIA affects suppliers and customers
+    'company-nvidia': [
+      'company-tsmc',
+      'company-sk-hynix',
+      'component-hbm3e',
+      'product-h100',
+      'customer-microsoft',
+      'customer-meta',
+      'customer-google',
+    ],
+
+    // TSMC affects customers and products
+    'company-tsmc': [
+      'company-nvidia',
+      'company-apple',
+      'product-h100',
+      'component-cowos',
+    ],
+
+    // SK Hynix affects memory products and customers
+    'company-sk-hynix': [
+      'company-nvidia',
+      'component-hbm3e',
+      'component-hbm2e',
+      'product-h100',
+    ],
+
+    // Samsung affects memory and semiconductor industry
+    'company-samsung': [
+      'component-hbm3e',
+      'product-smartphone',
+      'company-tsmc',
+    ],
+
+    // H100 product affects supply chain
+    'product-h100': [
+      'company-nvidia',
+      'component-hbm3e',
+      'component-cowos',
+      'customer-microsoft',
+      'customer-google',
+    ],
+
+    // HBM3E component affects GPU products
+    'component-hbm3e': [
+      'company-sk-hynix',
+      'company-samsung',
+      'product-h100',
+      'product-a100',
+    ],
+
+    // Hyperscalers affect GPU demand
+    'customer-microsoft': ['product-h100', 'company-nvidia'],
+    'customer-google': ['product-h100', 'product-tpu-v5', 'company-nvidia'],
+    'customer-meta': ['product-h100', 'company-nvidia'],
+    'customer-amazon': ['product-h100', 'product-aws-trainium', 'company-nvidia'],
+
+    // Apple affects suppliers
+    'company-apple': ['company-tsmc', 'product-smartphone', 'company-sk-hynix'],
+  };
+
+  return relationships[entityId] || [];
 }
 
 /**

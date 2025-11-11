@@ -645,10 +645,13 @@ export default function SimulationPage() {
                     Globe 3D - {globeViewMode === 'companies' ? 'Companies' : globeViewMode === 'flows' ? 'Cash Flows' : 'M2 Liquidity'}
                   </span>
                 </div>
-                {/* Date Overlay */}
+                {/* Date Legend - Top Right */}
                 {currentSnapshot && (
-                  <div className="absolute bottom-4 left-4 z-10 bg-black/90 backdrop-blur-md border-2 border-accent-emerald rounded-lg px-4 py-3 shadow-2xl">
-                    <div className="text-xs text-text-tertiary mb-1">Simulation Date</div>
+                  <div className="absolute top-4 right-4 z-10 bg-black/95 backdrop-blur-md border-2 border-accent-emerald/50 rounded-lg px-4 py-3 shadow-2xl shadow-emerald-500/20">
+                    <div className="text-xs text-text-tertiary mb-1 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+                      SIMULATION TIME
+                    </div>
                     <div className="text-2xl font-bold text-accent-emerald font-mono">
                       {currentSnapshot.date.toLocaleDateString('en-US', {
                         year: 'numeric',
@@ -656,8 +659,9 @@ export default function SimulationPage() {
                         day: 'numeric'
                       })}
                     </div>
-                    <div className="text-xs text-text-secondary mt-1">
-                      {currentSnapshot.events.length} events
+                    <div className="text-xs text-text-secondary mt-1 flex items-center justify-between">
+                      <span>{currentSnapshot.events.length} events</span>
+                      <span className="text-accent-cyan">●</span>
                     </div>
                   </div>
                 )}
@@ -667,10 +671,13 @@ export default function SimulationPage() {
                 <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-magenta rounded px-2 py-1">
                   <span className="text-xs font-semibold text-accent-magenta">Network Graph - Relationships</span>
                 </div>
-                {/* Date Overlay */}
+                {/* Date Legend - Top Right */}
                 {currentSnapshot && (
-                  <div className="absolute bottom-4 left-4 z-10 bg-black/90 backdrop-blur-md border-2 border-accent-emerald rounded-lg px-4 py-3 shadow-2xl">
-                    <div className="text-xs text-text-tertiary mb-1">Simulation Date</div>
+                  <div className="absolute top-4 right-4 z-10 bg-black/95 backdrop-blur-md border-2 border-accent-emerald/50 rounded-lg px-4 py-3 shadow-2xl shadow-emerald-500/20">
+                    <div className="text-xs text-text-tertiary mb-1 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+                      SIMULATION TIME
+                    </div>
                     <div className="text-2xl font-bold text-accent-emerald font-mono">
                       {currentSnapshot.date.toLocaleDateString('en-US', {
                         year: 'numeric',
@@ -678,8 +685,9 @@ export default function SimulationPage() {
                         day: 'numeric'
                       })}
                     </div>
-                    <div className="text-xs text-text-secondary mt-1">
-                      {currentSnapshot.events.length} events
+                    <div className="text-xs text-text-secondary mt-1 flex items-center justify-between">
+                      <span>{currentSnapshot.events.length} events</span>
+                      <span className="text-accent-cyan">●</span>
                     </div>
                   </div>
                 )}
@@ -695,10 +703,13 @@ export default function SimulationPage() {
                   Globe 3D - {globeViewMode === 'companies' ? 'Companies' : globeViewMode === 'flows' ? 'Cash Flows' : 'M2 Liquidity'}
                 </span>
               </div>
-              {/* Date Overlay */}
+              {/* Date Legend - Top Right */}
               {currentSnapshot && (
-                <div className="absolute bottom-4 left-4 z-10 bg-black/90 backdrop-blur-md border-2 border-accent-emerald rounded-lg px-4 py-3 shadow-2xl">
-                  <div className="text-xs text-text-tertiary mb-1">Simulation Date</div>
+                <div className="absolute top-4 right-4 z-10 bg-black/95 backdrop-blur-md border-2 border-accent-emerald/50 rounded-lg px-4 py-3 shadow-2xl shadow-emerald-500/20">
+                  <div className="text-xs text-text-tertiary mb-1 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+                    SIMULATION TIME
+                  </div>
                   <div className="text-2xl font-bold text-accent-emerald font-mono">
                     {currentSnapshot.date.toLocaleDateString('en-US', {
                       year: 'numeric',
@@ -706,8 +717,9 @@ export default function SimulationPage() {
                       day: 'numeric'
                     })}
                   </div>
-                  <div className="text-xs text-text-secondary mt-1">
-                    {currentSnapshot.events.length} events
+                  <div className="text-xs text-text-secondary mt-1 flex items-center justify-between">
+                    <span>{currentSnapshot.events.length} events</span>
+                    <span className="text-accent-cyan">●</span>
                   </div>
                 </div>
               )}
@@ -720,10 +732,13 @@ export default function SimulationPage() {
               <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-magenta rounded px-2 py-1">
                 <span className="text-xs font-semibold text-accent-magenta">Network Graph - Relationships</span>
               </div>
-              {/* Date Overlay */}
+              {/* Date Legend - Top Right */}
               {currentSnapshot && (
-                <div className="absolute bottom-4 left-4 z-10 bg-black/90 backdrop-blur-md border-2 border-accent-emerald rounded-lg px-4 py-3 shadow-2xl">
-                  <div className="text-xs text-text-tertiary mb-1">Simulation Date</div>
+                <div className="absolute top-4 right-4 z-10 bg-black/95 backdrop-blur-md border-2 border-accent-emerald/50 rounded-lg px-4 py-3 shadow-2xl shadow-emerald-500/20">
+                  <div className="text-xs text-text-tertiary mb-1 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+                    SIMULATION TIME
+                  </div>
                   <div className="text-2xl font-bold text-accent-emerald font-mono">
                     {currentSnapshot.date.toLocaleDateString('en-US', {
                       year: 'numeric',
@@ -731,8 +746,9 @@ export default function SimulationPage() {
                       day: 'numeric'
                     })}
                   </div>
-                  <div className="text-xs text-text-secondary mt-1">
-                    {currentSnapshot.events.length} events
+                  <div className="text-xs text-text-secondary mt-1 flex items-center justify-between">
+                    <span>{currentSnapshot.events.length} events</span>
+                    <span className="text-accent-cyan">●</span>
                   </div>
                 </div>
               )}

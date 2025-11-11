@@ -270,6 +270,10 @@ export default function Globe3D({
 
         let finalSize = adjustedSize;
 
+        // Check if entity is affected by recent events
+        let isAffected = false;
+        let affectedByEvent: any = null;
+
         // Override with snapshot data if available
         if (snapshot) {
           const snapshotEntity = snapshot.entityValues.get(companyEntityId);
@@ -277,6 +281,14 @@ export default function Globe3D({
             finalSize = snapshotEntity.size * baseSize; // Use snapshot size
             pointColor = snapshotEntity.color; // Use snapshot color
           }
+
+          // Check if this entity is in any recent events
+          snapshot.events.forEach(event => {
+            if (event.affectedEntities.includes(companyEntityId)) {
+              isAffected = true;
+              affectedByEvent = event;
+            }
+          });
         }
 
         return {
@@ -290,6 +302,8 @@ export default function Globe3D({
           impact: totalImpact,
           company: company,
           levelImpact: levelImpact, // Include for tooltip
+          isAffected, // NEW: flag for visual indicator
+          affectedByEvent, // NEW: event details
         };
       });
   }, [selectedSector, calculatedImpacts, entityImpacts, getEntityImpact, snapshot]);
@@ -307,6 +321,59 @@ export default function Globe3D({
     };
     return colorMap[sector] || '255, 255, 255';
   };
+
+  // Generate dynamic impact arcs from snapshot events (time-based simulation)
+  const snapshotImpactArcs = useMemo(() => {
+    if (!snapshot || !snapshot.events || snapshot.events.length === 0) return [];
+
+    const arcs: CapitalFlow[] = [];
+    const companyLocationMap = new Map<string, { lat: number; lng: number }>();
+
+    // Build location map for all companies
+    companies.forEach(company => {
+      if (company.location) {
+        const entityId = `company-${company.ticker?.toLowerCase() || company.name.toLowerCase().replace(/\s+/g, '-')}`;
+        companyLocationMap.set(entityId, company.location);
+      }
+    });
+
+    // Create arcs from snapshot events
+    snapshot.events.forEach(event => {
+      event.affectedEntities.forEach(targetEntityId => {
+        const targetLocation = companyLocationMap.get(targetEntityId);
+
+        // Find source entity location (if it's a company)
+        // For now, we'll create arcs from a central point or from affected entities to each other
+        if (targetLocation && event.affectedEntities.length > 1) {
+          // Create arcs between affected entities
+          event.affectedEntities.forEach(sourceEntityId => {
+            if (sourceEntityId !== targetEntityId) {
+              const sourceLocation = companyLocationMap.get(sourceEntityId);
+              if (sourceLocation) {
+                const color = event.impact === 'positive'
+                  ? 'rgba(0, 255, 159, 0.6)'  // emerald
+                  : event.impact === 'negative'
+                  ? 'rgba(239, 68, 68, 0.6)'  // red
+                  : 'rgba(148, 163, 184, 0.4)'; // gray
+
+                arcs.push({
+                  startLat: sourceLocation.lat,
+                  startLng: sourceLocation.lng,
+                  endLat: targetLocation.lat,
+                  endLng: targetLocation.lng,
+                  amount: event.magnitude * 100,
+                  color,
+                  label: event.title,
+                });
+              }
+            }
+          });
+        }
+      });
+    });
+
+    return arcs;
+  }, [snapshot]);
 
   // Generate dynamic impact arcs based on macro variable changes
   const dynamicImpactArcs = useMemo(() => {
@@ -373,16 +440,48 @@ export default function Globe3D({
     });
   }, [selectedSector]);
 
-  // Combine static flows with dynamic impact arcs
+  // Combine static flows with dynamic impact arcs and snapshot-based arcs
   const allArcs = useMemo(() => {
     if (viewMode === 'flows') {
-      return [...visibleFlows, ...dynamicImpactArcs];
+      return [...visibleFlows, ...dynamicImpactArcs, ...snapshotImpactArcs];
     } else if (viewMode === 'companies') {
-      // In companies mode, only show dynamic macro impact arcs
-      return dynamicImpactArcs;
+      // In companies mode, show both macro and snapshot impact arcs
+      return [...dynamicImpactArcs, ...snapshotImpactArcs];
+    } else if (viewMode === 'm2') {
+      // In split mode, show snapshot arcs (time-based simulation arcs)
+      return snapshotImpactArcs;
     }
     return [];
-  }, [viewMode, visibleFlows, dynamicImpactArcs]);
+  }, [viewMode, visibleFlows, dynamicImpactArcs, snapshotImpactArcs]);
+
+  // Create pulsing rings for affected entities (problem indicators)
+  const affectedEntityRings = useMemo(() => {
+    if (!snapshot || viewMode !== 'companies') return [];
+
+    const rings: any[] = [];
+    companyPoints.forEach(point => {
+      if (point.isAffected && point.affectedByEvent) {
+        const event = point.affectedByEvent;
+        const ringColor = event.impact === 'positive'
+          ? 'rgba(0, 255, 159, 0.8)'  // emerald for positive
+          : event.impact === 'negative'
+          ? 'rgba(239, 68, 68, 0.8)'  // red for negative
+          : 'rgba(148, 163, 184, 0.6)'; // gray for neutral
+
+        rings.push({
+          lat: point.lat,
+          lng: point.lng,
+          maxR: 3, // Maximum ring radius
+          propagationSpeed: 1.5, // How fast the ring expands
+          repeatPeriod: 1200, // Repeat every 1.2 seconds
+          color: ringColor,
+          label: event.title,
+        });
+      }
+    });
+
+    return rings;
+  }, [snapshot, companyPoints, viewMode]);
 
   return (
     <div ref={containerRef} className="w-full h-full relative bg-black">
@@ -861,6 +960,20 @@ export default function Globe3D({
             </div>
           `;
         }}
+
+        // Pulsing rings for affected entities (problem indicators)
+        ringsData={affectedEntityRings}
+        ringLat="lat"
+        ringLng="lng"
+        ringMaxRadius="maxR"
+        ringPropagationSpeed="propagationSpeed"
+        ringRepeatPeriod="repeatPeriod"
+        ringColor="color"
+        ringLabel={(d: any) => `
+          <div style="background: rgba(0, 0, 0, 0.95); padding: 8px; border-radius: 6px; border: 2px solid ${d.color};">
+            <div style="color: ${d.color}; font-weight: bold; font-size: 12px;">⚠️ ${d.label}</div>
+          </div>
+        `}
 
         // Atmosphere
         atmosphereColor="#00E5FF"
