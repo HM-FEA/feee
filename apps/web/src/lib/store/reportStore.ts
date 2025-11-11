@@ -432,8 +432,8 @@ Taiwan Semiconductor Manufacturing Company ([[TSMC]]) dominates the advanced log
     entityId: 'company-amd',
     entityType: 'company',
     entityName: 'AMD',
-    title: 'AMD MI300X: Challenging NVIDIA's AI Dominance',
-    summary: 'Deep dive into AMD's MI300X AI accelerator and its competitive positioning against NVIDIA H100.',
+    title: 'AMD MI300X: Challenging NVIDIA\'s AI Dominance',
+    summary: 'Deep dive into AMD\'s MI300X AI accelerator and its competitive positioning against NVIDIA H100.',
     content: `# AMD MI300X AI Accelerator
 
 ## Product Overview
