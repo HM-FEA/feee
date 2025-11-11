@@ -11,6 +11,7 @@ import { MACRO_CATEGORIES, MACRO_VARIABLES } from '@/data/macroVariables';
 import LevelControlPanel from '@/components/simulation/LevelControlPanel';
 import SupplyChainDiagram, { HBM_SUPPLY_CHAIN } from '@/components/visualization/SupplyChainDiagram';
 import CascadeEffects from '@/components/simulation/CascadeEffects';
+import SimulationTimeline from '@/components/simulation/SimulationTimeline';
 
 // Dynamic imports
 const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), { ssr: false });
@@ -668,6 +669,11 @@ export default function SimulationPage() {
                   title="NVIDIA H100 Supply Chain Analysis"
                   description="Critical path analysis of AI accelerator manufacturing dependencies - Click nodes to explore relationships"
                 />
+
+                {/* Timeline Simulation */}
+                <div className="mt-6">
+                  <SimulationTimeline />
+                </div>
 
                 {/* Additional Supply Chain Insights */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">

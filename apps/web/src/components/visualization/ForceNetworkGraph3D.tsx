@@ -808,24 +808,32 @@ export default function ForceNetworkGraph3D({
                   <span className="text-text-tertiary">Name:</span>
                   <span className="text-text-primary font-semibold">{selectedNode.data.name}</span>
                 </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-text-tertiary">Sector:</span>
-                  <span className="text-accent-cyan">{selectedNode.data.sector}</span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-text-tertiary">Revenue:</span>
-                  <span className="text-accent-emerald font-mono">${selectedNode.data.financials.revenue.toLocaleString()}M</span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-text-tertiary">Net Income:</span>
-                  <span className="text-accent-emerald font-mono">${selectedNode.data.financials.net_income.toLocaleString()}M</span>
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-text-tertiary">ICR:</span>
-                  <span className={`font-mono ${selectedNode.data.ratios?.icr > 2.5 ? 'text-status-safe' : 'text-status-caution'}`}>
-                    {selectedNode.data.ratios?.icr?.toFixed(2) || 'N/A'}x
-                  </span>
-                </div>
+                {selectedNode.data.sector && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-text-tertiary">Sector:</span>
+                    <span className="text-accent-cyan">{selectedNode.data.sector}</span>
+                  </div>
+                )}
+                {selectedNode.data.financials?.revenue && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-text-tertiary">Revenue:</span>
+                    <span className="text-accent-emerald font-mono">${selectedNode.data.financials.revenue.toLocaleString()}M</span>
+                  </div>
+                )}
+                {selectedNode.data.financials?.net_income && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-text-tertiary">Net Income:</span>
+                    <span className="text-accent-emerald font-mono">${selectedNode.data.financials.net_income.toLocaleString()}M</span>
+                  </div>
+                )}
+                {selectedNode.data.ratios?.icr && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-text-tertiary">ICR:</span>
+                    <span className={`font-mono ${selectedNode.data.ratios.icr > 2.5 ? 'text-status-safe' : 'text-status-caution'}`}>
+                      {selectedNode.data.ratios.icr.toFixed(2)}x
+                    </span>
+                  </div>
+                )}
 
                 {/* Show macro impact */}
                 {selectedNode.data.sector && (
