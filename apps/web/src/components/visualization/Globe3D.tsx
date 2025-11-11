@@ -225,6 +225,35 @@ export default function Globe3D({
     return impacts;
   }, [macroState]);
 
+  // Prepare company points for Globe (must come before dynamicImpactArcs)
+  const companyPoints = useMemo(() => {
+    return companies
+      .filter(c => c.location) // Only companies with location data
+      .map(company => {
+        const sectorImpact =
+          company.sector === 'BANKING' ? calculatedImpacts.banking :
+          company.sector === 'REALESTATE' ? calculatedImpacts.realEstate :
+          company.sector === 'MANUFACTURING' ? calculatedImpacts.manufacturing :
+          company.sector === 'SEMICONDUCTOR' ? calculatedImpacts.semiconductor :
+          company.sector === 'CRYPTO' ? calculatedImpacts.crypto :
+          0;
+
+        const isRelevant = !selectedSector || company.sector === selectedSector;
+
+        return {
+          lat: company.location!.lat,
+          lng: company.location!.lng,
+          name: company.name_en || company.name,
+          ticker: company.ticker,
+          sector: company.sector,
+          size: Math.log(company.financials.revenue + 1) * 0.3, // Size based on revenue
+          color: isRelevant ? getSectorColor(company.sector) : 'rgba(100, 100, 100, 0.3)',
+          impact: sectorImpact,
+          company: company,
+        };
+      });
+  }, [selectedSector, calculatedImpacts]);
+
   // Generate dynamic impact arcs based on macro variable changes
   const dynamicImpactArcs = useMemo(() => {
     const arcs: CapitalFlow[] = [];
@@ -314,35 +343,6 @@ export default function Globe3D({
     }
     return [];
   }, [viewMode, visibleFlows, dynamicImpactArcs]);
-
-  // Prepare company points for Globe
-  const companyPoints = useMemo(() => {
-    return companies
-      .filter(c => c.location) // Only companies with location data
-      .map(company => {
-        const sectorImpact =
-          company.sector === 'BANKING' ? calculatedImpacts.banking :
-          company.sector === 'REALESTATE' ? calculatedImpacts.realEstate :
-          company.sector === 'MANUFACTURING' ? calculatedImpacts.manufacturing :
-          company.sector === 'SEMICONDUCTOR' ? calculatedImpacts.semiconductor :
-          company.sector === 'CRYPTO' ? calculatedImpacts.crypto :
-          0;
-
-        const isRelevant = !selectedSector || company.sector === selectedSector;
-
-        return {
-          lat: company.location!.lat,
-          lng: company.location!.lng,
-          name: company.name_en || company.name,
-          ticker: company.ticker,
-          sector: company.sector,
-          size: Math.log(company.financials.revenue + 1) * 0.3, // Size based on revenue
-          color: isRelevant ? getSectorColor(company.sector) : 'rgba(100, 100, 100, 0.3)',
-          impact: sectorImpact,
-          company: company,
-        };
-      });
-  }, [selectedSector, calculatedImpacts]);
 
   return (
     <div ref={containerRef} className="w-full h-full relative bg-black">
