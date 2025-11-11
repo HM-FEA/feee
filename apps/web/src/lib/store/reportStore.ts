@@ -58,6 +58,7 @@ export interface Report {
 
 interface ReportStore {
   reports: Record<string, Report>;
+  bookmarkedReports: string[]; // Array of report IDs
 
   // Actions
   createReport: (report: Omit<Report, 'id' | 'createdAt' | 'updatedAt' | 'version' | 'upvotes' | 'downvotes' | 'views'>) => string;
@@ -65,6 +66,8 @@ interface ReportStore {
   deleteReport: (reportId: string) => void;
   voteReport: (reportId: string, vote: 'up' | 'down') => void;
   incrementViews: (reportId: string) => void;
+  bookmarkReport: (reportId: string) => void;
+  unbookmarkReport: (reportId: string) => void;
 
   // Getters
   getReportsByEntity: (entityId: string) => Report[];
@@ -74,12 +77,15 @@ interface ReportStore {
   getPublicReports: () => Report[];
   getLinkedReports: (entityId: string) => Report[]; // Reports that link to this entity
   searchReports: (query: string) => Report[];
+  getBookmarkedReports: () => Report[];
+  isBookmarked: (reportId: string) => boolean;
 }
 
 export const useReportStore = create<ReportStore>()(
   persist(
     (set, get) => ({
       reports: {},
+      bookmarkedReports: [],
 
       createReport: (report) => {
         const id = `report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -171,6 +177,23 @@ export const useReportStore = create<ReportStore>()(
         }));
       },
 
+      bookmarkReport: (reportId) => {
+        set(state => {
+          if (state.bookmarkedReports.includes(reportId)) {
+            return state; // Already bookmarked
+          }
+          return {
+            bookmarkedReports: [...state.bookmarkedReports, reportId],
+          };
+        });
+      },
+
+      unbookmarkReport: (reportId) => {
+        set(state => ({
+          bookmarkedReports: state.bookmarkedReports.filter(id => id !== reportId),
+        }));
+      },
+
       // Getters
       getReportsByEntity: (entityId) => {
         return Object.values(get().reports)
@@ -218,6 +241,18 @@ export const useReportStore = create<ReportStore>()(
             r.tags.some(tag => tag.toLowerCase().includes(lowerQuery))
           )
           .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      },
+
+      getBookmarkedReports: () => {
+        const { reports, bookmarkedReports } = get();
+        return bookmarkedReports
+          .map(id => reports[id])
+          .filter(Boolean) // Remove any undefined reports
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      },
+
+      isBookmarked: (reportId) => {
+        return get().bookmarkedReports.includes(reportId);
       },
     }),
     {
