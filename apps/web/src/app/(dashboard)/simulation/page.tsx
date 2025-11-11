@@ -489,6 +489,19 @@ export default function SimulationPage() {
           )}
 
           {/* Advanced Level Controls Toggle */}
+          {/* Time-Based Simulation */}
+          <div className="mb-6">
+            <div className="bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Zap size={16} className="text-accent-emerald" />
+                <span className="text-sm font-semibold text-text-primary">
+                  Date Simulation
+                </span>
+              </div>
+              <DateSimulator onSnapshotChange={setCurrentSnapshot} />
+            </div>
+          </div>
+
           <div className="mb-6">
             <button
               onClick={() => setShowAdvancedControls(!showAdvancedControls)}
@@ -632,12 +645,44 @@ export default function SimulationPage() {
                     Globe 3D - {globeViewMode === 'companies' ? 'Companies' : globeViewMode === 'flows' ? 'Cash Flows' : 'M2 Liquidity'}
                   </span>
                 </div>
+                {/* Date Overlay */}
+                {currentSnapshot && (
+                  <div className="absolute bottom-4 left-4 z-10 bg-black/90 backdrop-blur-md border-2 border-accent-emerald rounded-lg px-4 py-3 shadow-2xl">
+                    <div className="text-xs text-text-tertiary mb-1">Simulation Date</div>
+                    <div className="text-2xl font-bold text-accent-emerald font-mono">
+                      {currentSnapshot.date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </div>
+                    <div className="text-xs text-text-secondary mt-1">
+                      {currentSnapshot.events.length} events
+                    </div>
+                  </div>
+                )}
                 <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} snapshot={currentSnapshot} />
               </div>
               <div className="relative h-full w-full">
                 <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-magenta rounded px-2 py-1">
                   <span className="text-xs font-semibold text-accent-magenta">Network Graph - Relationships</span>
                 </div>
+                {/* Date Overlay */}
+                {currentSnapshot && (
+                  <div className="absolute bottom-4 left-4 z-10 bg-black/90 backdrop-blur-md border-2 border-accent-emerald rounded-lg px-4 py-3 shadow-2xl">
+                    <div className="text-xs text-text-tertiary mb-1">Simulation Date</div>
+                    <div className="text-2xl font-bold text-accent-emerald font-mono">
+                      {currentSnapshot.date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </div>
+                    <div className="text-xs text-text-secondary mt-1">
+                      {currentSnapshot.events.length} events
+                    </div>
+                  </div>
+                )}
                 <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} snapshot={currentSnapshot} />
               </div>
             </div>
@@ -650,6 +695,22 @@ export default function SimulationPage() {
                   Globe 3D - {globeViewMode === 'companies' ? 'Companies' : globeViewMode === 'flows' ? 'Cash Flows' : 'M2 Liquidity'}
                 </span>
               </div>
+              {/* Date Overlay */}
+              {currentSnapshot && (
+                <div className="absolute bottom-4 left-4 z-10 bg-black/90 backdrop-blur-md border-2 border-accent-emerald rounded-lg px-4 py-3 shadow-2xl">
+                  <div className="text-xs text-text-tertiary mb-1">Simulation Date</div>
+                  <div className="text-2xl font-bold text-accent-emerald font-mono">
+                    {currentSnapshot.date.toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </div>
+                  <div className="text-xs text-text-secondary mt-1">
+                    {currentSnapshot.events.length} events
+                  </div>
+                </div>
+              )}
               <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} snapshot={currentSnapshot} />
             </div>
           )}
@@ -659,6 +720,22 @@ export default function SimulationPage() {
               <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-magenta rounded px-2 py-1">
                 <span className="text-xs font-semibold text-accent-magenta">Network Graph - Relationships</span>
               </div>
+              {/* Date Overlay */}
+              {currentSnapshot && (
+                <div className="absolute bottom-4 left-4 z-10 bg-black/90 backdrop-blur-md border-2 border-accent-emerald rounded-lg px-4 py-3 shadow-2xl">
+                  <div className="text-xs text-text-tertiary mb-1">Simulation Date</div>
+                  <div className="text-2xl font-bold text-accent-emerald font-mono">
+                    {currentSnapshot.date.toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </div>
+                  <div className="text-xs text-text-secondary mt-1">
+                    {currentSnapshot.events.length} events
+                  </div>
+                </div>
+              )}
               <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} snapshot={currentSnapshot} />
             </div>
           )}
@@ -672,11 +749,6 @@ export default function SimulationPage() {
                   title="NVIDIA H100 Supply Chain Analysis"
                   description="Critical path analysis of AI accelerator manufacturing dependencies - Click nodes to explore relationships"
                 />
-
-                {/* Date-Based Simulator */}
-                <div className="mt-6">
-                  <DateSimulator onSnapshotChange={setCurrentSnapshot} />
-                </div>
 
                 {/* Timeline Simulation (Legacy) */}
                 <div className="mt-6">
