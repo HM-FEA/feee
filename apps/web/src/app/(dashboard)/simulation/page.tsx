@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown, ChevronUp, Info, GitBranch } from 'lucide-react';
+import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown, ChevronUp, Info, GitBranch, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Card, SectionHeader } from '@/components/ui/DesignSystem';
 import { useMacroStore } from '@/lib/store/macroStore';
 import { useLevelStore } from '@/lib/store/levelStore';
@@ -14,6 +14,7 @@ import CascadeEffects from '@/components/simulation/CascadeEffects';
 import SimulationTimeline from '@/components/simulation/SimulationTimeline';
 import DateSimulator from '@/components/simulation/DateSimulator';
 import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
+import { SUPPLY_CHAIN_SCENARIOS, voteOnScenario } from '@/data/supplyChainScenarios';
 
 // Dynamic imports
 const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), { ssr: false });
@@ -109,6 +110,7 @@ export default function SimulationPage() {
   const [currentSnapshot, setCurrentSnapshot] = useState<DateSnapshot | null>(null);
   const [simStartDate, setSimStartDate] = useState<string>('2024-01-01');
   const [simEndDate, setSimEndDate] = useState<string>('2024-12-31');
+  const [selectedSCScenario, setSelectedSCScenario] = useState<string>('nvidia-h100-hbm');
 
   const macroState = useMacroStore(state => state.macroState);
   const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
@@ -774,12 +776,117 @@ export default function SimulationPage() {
           {viewMode === 'supply-chain' && (
             <div className="h-full relative overflow-auto p-6">
               <div className="max-w-7xl mx-auto">
-                <SupplyChainDiagram
-                  nodes={HBM_SUPPLY_CHAIN.nodes}
-                  links={HBM_SUPPLY_CHAIN.links}
-                  title="NVIDIA H100 Supply Chain Analysis"
-                  description="Critical path analysis of AI accelerator manufacturing dependencies - Click nodes to explore relationships"
-                />
+                {/* Supply Chain Marketplace */}
+                <div className="mb-6 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-white mb-1">Supply Chain Marketplace</h2>
+                      <p className="text-sm text-text-secondary">Community-driven supply chain analysis - Vote on scenarios</p>
+                    </div>
+                    <div className="text-xs text-text-tertiary">
+                      {SUPPLY_CHAIN_SCENARIOS.length} scenarios
+                    </div>
+                  </div>
+
+                  {/* Scenario Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {SUPPLY_CHAIN_SCENARIOS.map((scenario) => {
+                      const approvalRate = scenario.upvotes + scenario.downvotes > 0
+                        ? (scenario.upvotes / (scenario.upvotes + scenario.downvotes)) * 100
+                        : 0;
+                      const isSelected = selectedSCScenario === scenario.id;
+
+                      return (
+                        <div
+                          key={scenario.id}
+                          onClick={() => setSelectedSCScenario(scenario.id)}
+                          className={`bg-background-secondary border rounded-lg p-4 cursor-pointer transition-all hover:border-accent-cyan/50 ${
+                            isSelected ? 'border-accent-cyan ring-2 ring-accent-cyan/20' : 'border-border-primary'
+                          }`}
+                        >
+                          {/* Header */}
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl">{scenario.icon}</span>
+                              <div>
+                                <h3 className="text-sm font-semibold text-text-primary">{scenario.name}</h3>
+                                <p className="text-xs text-text-tertiary mt-0.5">{scenario.createdBy}</p>
+                              </div>
+                            </div>
+
+                            {/* Voting */}
+                            <div className="flex flex-col items-center gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  voteOnScenario(scenario.id, true);
+                                }}
+                                className="text-text-tertiary hover:text-accent-emerald transition-colors"
+                              >
+                                <ThumbsUp size={14} />
+                              </button>
+                              <span className={`text-xs font-bold ${
+                                scenario.votes > 0 ? 'text-accent-emerald' : scenario.votes < 0 ? 'text-red-400' : 'text-text-tertiary'
+                              }`}>
+                                {scenario.votes > 0 ? `+${scenario.votes}` : scenario.votes}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  voteOnScenario(scenario.id, false);
+                                }}
+                                className="text-text-tertiary hover:text-red-400 transition-colors"
+                              >
+                                <ThumbsDown size={14} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-xs text-text-secondary mb-3 line-clamp-2">{scenario.description}</p>
+
+                          {/* Tags */}
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {scenario.tags.slice(0, 3).map((tag) => (
+                              <span key={tag} className="text-xs px-2 py-0.5 bg-accent-cyan/10 text-accent-cyan rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Stats */}
+                          <div className="flex items-center justify-between text-xs">
+                            <span className={`font-semibold ${
+                              scenario.criticality === 'critical' ? 'text-red-400' :
+                              scenario.criticality === 'high' ? 'text-orange-400' :
+                              scenario.criticality === 'medium' ? 'text-yellow-400' : 'text-green-400'
+                            }`}>
+                              {scenario.criticality.toUpperCase()} RISK
+                            </span>
+                            {approvalRate >= 70 && (
+                              <span className="text-accent-emerald font-semibold">
+                                {approvalRate.toFixed(0)}% approval
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Selected Supply Chain Diagram */}
+                {(() => {
+                  const selected = SUPPLY_CHAIN_SCENARIOS.find(s => s.id === selectedSCScenario);
+                  return selected ? (
+                    <SupplyChainDiagram
+                      nodes={selected.nodes}
+                      links={selected.links}
+                      title={selected.name}
+                      description={selected.description}
+                    />
+                  ) : null;
+                })()}
 
                 {/* Timeline Simulation (Legacy) */}
                 <div className="mt-6">
