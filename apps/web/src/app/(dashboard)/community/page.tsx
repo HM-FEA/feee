@@ -12,6 +12,11 @@ import {
   getApprovalRate,
   hasUserVoted
 } from '@/lib/store/proposalStore';
+import { useScenarioStore, Scenario } from '@/lib/store/scenarioStore';
+import { useMacroStore } from '@/lib/store/macroStore';
+import { useLevelStore } from '@/lib/store/levelStore';
+import ScenarioSection from '@/components/community/ScenarioSection';
+import ReportSection from '@/components/community/ReportSection';
 
 // Types
 interface Post {
@@ -212,11 +217,12 @@ const PROPOSAL_TYPE_LABELS: Record<ProposalType, { label: string; icon: string; 
 };
 
 export default function CommunityPage() {
-  const [mainTab, setMainTab] = useState<'feed' | 'proposals'>('feed');
+  const [mainTab, setMainTab] = useState<'feed' | 'proposals' | 'scenarios' | 'reports'>('feed');
   const [activeFilter, setActiveFilter] = useState<'all' | 'discussion' | 'question' | 'analysis' | 'news'>('all');
   const [proposalFilter, setProposalFilter] = useState<'trending' | 'pending' | 'approved' | 'rejected'>('trending');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
+  const [showCreateScenario, setShowCreateScenario] = useState(false);
 
   const {
     proposals,
@@ -299,41 +305,96 @@ export default function CommunityPage() {
         />
 
         <div className="px-6 py-4 border-b border-border-primary bg-black/50 backdrop-blur">
-          {/* Filters */}
-          <div className="flex gap-3 mb-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
-              <input
-                type="text"
-                placeholder="Search posts, tags, users..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-background-secondary border border-border-primary rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-accent-cyan"
-              />
-            </div>
+          {/* Main Tab Navigation */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setMainTab('feed')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                mainTab === 'feed'
+                  ? 'bg-accent-cyan text-black'
+                  : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <MessageCircle size={16} className="inline mr-2" />
+              Feed
+            </button>
+            <button
+              onClick={() => setMainTab('proposals')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                mainTab === 'proposals'
+                  ? 'bg-accent-magenta text-black'
+                  : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <ClipboardList size={16} className="inline mr-2" />
+              Proposals
+            </button>
+            <button
+              onClick={() => setMainTab('scenarios')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                mainTab === 'scenarios'
+                  ? 'bg-accent-emerald text-black'
+                  : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <TrendingUp size={16} className="inline mr-2" />
+              Scenarios
+            </button>
+            <button
+              onClick={() => setMainTab('reports')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                mainTab === 'reports'
+                  ? 'bg-accent-magenta text-black'
+                  : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <Newspaper size={16} className="inline mr-2" />
+              AI Reports
+            </button>
           </div>
 
-          <div className="flex gap-2">
-            {(['all', 'analysis', 'question', 'discussion', 'news'] as const).map(filter => (
-              <button
-                key={filter}
-                onClick={() => setActiveFilter(filter)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  activeFilter === filter
-                    ? 'bg-accent-cyan text-black'
-                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                {filter.charAt(0).toUpperCase() + filter.slice(1)}
-              </button>
-            ))}
-          </div>
+          {/* Filters - Only show for Feed tab */}
+          {mainTab === 'feed' && (
+            <>
+              <div className="flex gap-3 mb-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
+                  <input
+                    type="text"
+                    placeholder="Search posts, tags, users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-background-secondary border border-border-primary rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-accent-cyan"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                {(['all', 'analysis', 'question', 'discussion', 'news'] as const).map(filter => (
+                  <button
+                    key={filter}
+                    onClick={() => setActiveFilter(filter)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      activeFilter === filter
+                        ? 'bg-accent-cyan text-black'
+                        : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-4 gap-6 px-6 py-6 h-[calc(100vh-240px)]">
-          {/* Left Sidebar - 20% */}
-          <div className="col-span-1 overflow-y-auto pr-2 space-y-4">
+        <div className="px-6 py-6 h-[calc(100vh-240px)]">
+          {/* Feed Tab */}
+          {mainTab === 'feed' && (
+            <div className="grid grid-cols-4 gap-6 h-full">
+              {/* Left Sidebar - 20% */}
+              <div className="col-span-1 overflow-y-auto pr-2 space-y-4">
             {/* Top Contributors */}
             <Card>
               <h3 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
@@ -462,6 +523,32 @@ export default function CommunityPage() {
               </div>
             </Card>
           </div>
+            </div>
+          )}
+
+          {/* Proposals Tab */}
+          {mainTab === 'proposals' && (
+            <div className="max-w-6xl mx-auto">
+              <Card className="text-center py-12">
+                <h3 className="text-lg font-semibold text-text-primary mb-2">Proposals Section</h3>
+                <p className="text-sm text-text-secondary">Community proposals for knowledge graph edits coming soon...</p>
+              </Card>
+            </div>
+          )}
+
+          {/* Scenarios Tab */}
+          {mainTab === 'scenarios' && (
+            <div className="max-w-6xl mx-auto overflow-y-auto h-full">
+              <ScenarioSection />
+            </div>
+          )}
+
+          {/* Reports Tab */}
+          {mainTab === 'reports' && (
+            <div className="max-w-7xl mx-auto overflow-y-auto h-full">
+              <ReportSection />
+            </div>
+          )}
         </div>
       </div>
     </div>

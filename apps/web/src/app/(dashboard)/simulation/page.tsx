@@ -10,6 +10,7 @@ import { useScenarioStore } from '@/lib/store/scenarioStore';
 import { MACRO_CATEGORIES, MACRO_VARIABLES } from '@/data/macroVariables';
 import LevelControlPanel from '@/components/simulation/LevelControlPanel';
 import SupplyChainDiagram, { HBM_SUPPLY_CHAIN } from '@/components/visualization/SupplyChainDiagram';
+import CascadeEffects from '@/components/simulation/CascadeEffects';
 
 // Dynamic imports
 const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), { ssr: false });
@@ -997,6 +998,9 @@ export default function SimulationPage() {
           </div>
         </div>
       </div>
+
+      {/* Cascade Effects Animation */}
+      <CascadeEffects />
     </div>
   );
 }
