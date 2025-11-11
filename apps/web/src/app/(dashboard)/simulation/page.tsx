@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { Card, SectionHeader } from '@/components/ui/DesignSystem';
 import { useMacroStore } from '@/lib/store/macroStore';
-import { MACRO_CATEGORIES } from '@/data/macroVariables';
+import { MACRO_CATEGORIES, MACRO_VARIABLES } from '@/data/macroVariables';
 import LevelControlPanel from '@/components/simulation/LevelControlPanel';
 
 // Dynamic imports
@@ -228,6 +228,112 @@ export default function SimulationPage() {
               ))}
             </div>
           </div>
+
+          {/* Legend - Globe Style */}
+          <div className="mb-6">
+            <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-3">
+                <Info size={14} className="text-accent-cyan" />
+                <div className="text-xs text-text-tertiary font-semibold">Legend</div>
+              </div>
+              {globeViewMode === 'm2' ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-accent-cyan shadow-lg" style={{ boxShadow: '0 0 10px #00E5FF' }} />
+                    <span className="text-xs text-text-primary">Point Size = M2 Supply</span>
+                  </div>
+                  <div className="text-xs text-text-tertiary mt-2">
+                    Larger = More Money Supply
+                  </div>
+                </div>
+              ) : globeViewMode === 'flows' ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-0.5 bg-gradient-to-r from-accent-cyan to-transparent" />
+                    <span className="text-xs text-text-primary">Static Flow</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-0.5 bg-gradient-to-r from-accent-emerald to-transparent shadow-lg" style={{ boxShadow: '0 0 8px #00FF9F' }} />
+                    <span className="text-xs text-accent-emerald font-semibold">⚡ Macro Impact</span>
+                  </div>
+                  <div className="text-xs text-text-tertiary mt-2">
+                    Brighter arcs = Higher macro variable impact
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-accent-emerald shadow-lg" style={{ boxShadow: '0 0 10px #00FF9F' }} />
+                    <span className="text-xs text-text-primary">Companies</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-0.5 bg-gradient-to-r from-accent-emerald to-transparent shadow-lg" style={{ boxShadow: '0 0 8px #00FF9F' }} />
+                    <span className="text-xs text-accent-emerald font-semibold">⚡ Macro Impact</span>
+                  </div>
+                  <div className="text-xs text-text-tertiary mt-2">
+                    Arcs show macro variable effects on sectors
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Active Macro Impacts - Globe Style */}
+          {Object.values(calculatedImpacts).some(v => Math.abs(v) > 0) && (
+            <div className="mb-6">
+              <div className="bg-black/80 backdrop-blur border-2 border-accent-emerald rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-accent-emerald animate-pulse" />
+                  <div className="text-xs font-bold text-accent-emerald">Active Macro Impacts</div>
+                </div>
+                <div className="space-y-1 text-xs">
+                  {macroControls
+                    .map(control => {
+                      // Calculate impact based on deviation from baseline
+                      const baseline = {
+                        'fed_funds_rate': 5.25,
+                        'us_10y_yield': 4.5,
+                        'us_gdp_growth': 2.5,
+                        'us_m2_money_supply': 21.4,
+                        'wti_oil': 85,
+                        'vix': 18.5
+                      }[control.id] || 0;
+                      const deviation = Math.abs((control.value - baseline) / baseline);
+                      return { ...control, impact: deviation };
+                    })
+                    .filter(control => control.impact > 0.05)
+                    .slice(0, 5)
+                    .map(control => (
+                      <div key={control.id} className="flex justify-between items-center">
+                        <span className="text-text-tertiary truncate max-w-[140px]">{control.label}:</span>
+                        <div className="flex items-center gap-1">
+                          <div
+                            className="h-1 bg-gradient-to-r from-accent-emerald to-transparent rounded"
+                            style={{ width: `${Math.min(control.impact * 100, 40)}px` }}
+                          />
+                          <span className="text-accent-emerald font-mono">{(control.impact * 100).toFixed(0)}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  {macroControls.every(c => {
+                    const baseline = {
+                      'fed_funds_rate': 5.25,
+                      'us_10y_yield': 4.5,
+                      'us_gdp_growth': 2.5,
+                      'us_m2_money_supply': 21.4,
+                      'wti_oil': 85,
+                      'vix': 18.5
+                    }[c.id] || 0;
+                    return Math.abs((c.value - baseline) / baseline) <= 0.05;
+                  }) && (
+                    <div className="text-text-tertiary text-xs italic">
+                      Adjust macro variables above to see impacts
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Advanced Level Controls Toggle */}
           <div className="mb-6">

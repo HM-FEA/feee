@@ -2,14 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Network, Trophy, BookOpen, Zap, Landmark, Bot, BarChart, Globe, Sparkles, Users, Settings, FileText } from 'lucide-react';
+import { Home, Network, Trophy, BookOpen, Zap, Landmark, Bot, BarChart, Globe, Sparkles, Users, Settings, FileText, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const mainNavigation = [
   { name: 'Home', href: '/dashboard', icon: Home, group: 'core' },
   { name: 'Sim Lab', href: '/simulation', icon: Sparkles, group: 'core' },
-  { name: 'Network', href: '/network-graph', icon: Network, group: 'visualization' },
-  { name: 'Globe', href: '/globe', icon: Globe, group: 'visualization' },
   { name: 'Ontology', href: '/ontology', icon: Landmark, group: 'platform' },
   { name: 'Reports', href: '/reports', icon: FileText, group: 'platform' },
   { name: 'Arena', href: '/arena', icon: Trophy, group: 'platform' },
@@ -117,9 +115,18 @@ export function GlobalTopNav() {
             <span className="absolute top-1 right-1 w-2 h-2 bg-accent-magenta rounded-full"></span>
           </button>
 
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-cyan to-accent-magenta flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity">
-            <span className="text-xs font-semibold text-white">U</span>
-          </div>
+          <Link
+            href="/mypage"
+            className={cn(
+              'w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all',
+              pathname === '/mypage'
+                ? 'bg-gradient-to-br from-accent-cyan to-accent-magenta ring-2 ring-accent-cyan/50'
+                : 'bg-gradient-to-br from-accent-cyan/80 to-accent-magenta/80 hover:opacity-80'
+            )}
+            title="My Page"
+          >
+            <User className="w-4 h-4 text-white" />
+          </Link>
         </div>
       </div>
     </nav>
