@@ -13,6 +13,8 @@ import SupplyChainDiagram, { HBM_SUPPLY_CHAIN } from '@/components/visualization
 import CascadeEffects from '@/components/simulation/CascadeEffects';
 import SimulationTimeline from '@/components/simulation/SimulationTimeline';
 import DateSimulator from '@/components/simulation/DateSimulator';
+import EconomicFlowDashboard from '@/components/simulation/EconomicFlowDashboard';
+import HedgeFundSimulator from '@/components/simulation/HedgeFundSimulator';
 import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
 import { SUPPLY_CHAIN_SCENARIOS, voteOnScenario } from '@/data/supplyChainScenarios';
 
@@ -98,7 +100,7 @@ const SCENARIOS = [
 
 export default function SimulationPage() {
   const [selectedSector, setSelectedSector] = useState<Sector>(null);
-  const [viewMode, setViewMode] = useState<'split' | 'globe' | 'network' | 'supply-chain'>('split');
+  const [viewMode, setViewMode] = useState<'split' | 'globe' | 'network' | 'supply-chain' | 'economic-flow' | 'hedge-fund'>('split');
   const [globeViewMode, setGlobeViewMode] = useState<'companies' | 'flows' | 'm2'>('companies');
   const [showElementLibrary, setShowElementLibrary] = useState(false);
   const [showScenarios, setShowScenarios] = useState(true); // Open by default
@@ -108,6 +110,7 @@ export default function SimulationPage() {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const [currentSnapshot, setCurrentSnapshot] = useState<DateSnapshot | null>(null);
+  const [previousMacro, setPreviousMacro] = useState<typeof macroState>(macroState);
   const [simStartDate, setSimStartDate] = useState<string>('2024-01-01');
   const [simEndDate, setSimEndDate] = useState<string>('2024-12-31');
   const [selectedSCScenario, setSelectedSCScenario] = useState<string>('nvidia-h100-hbm');
@@ -182,6 +185,14 @@ export default function SimulationPage() {
       unit: ''
     }
   ];
+
+  // Track previous macro state for flow calculation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPreviousMacro(macroState);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [macroState]);
 
   const handleMacroChange = (id: string, value: number) => {
     setMacroChanging(true);
@@ -604,6 +615,28 @@ export default function SimulationPage() {
                 <GitBranch size={12} className="inline mr-1" />
                 Supply Chain
               </button>
+              <button
+                onClick={() => setViewMode('economic-flow')}
+                className={`w-full px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  viewMode === 'economic-flow'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <Activity size={12} className="inline mr-1" />
+                Economic Flows
+              </button>
+              <button
+                onClick={() => setViewMode('hedge-fund')}
+                className={`w-full px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  viewMode === 'hedge-fund'
+                    ? 'bg-pink-500 text-white'
+                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                <DollarSign size={12} className="inline mr-1" />
+                Hedge Fund
+              </button>
             </div>
           </div>
 
@@ -770,6 +803,26 @@ export default function SimulationPage() {
                 </div>
               )}
               <ForceNetworkGraph3D selectedSector={selectedSector} showControls={false} snapshot={currentSnapshot} />
+            </div>
+          )}
+
+          {viewMode === 'economic-flow' && (
+            <div className="h-full relative overflow-auto p-6">
+              <div className="max-w-7xl mx-auto">
+                <EconomicFlowDashboard
+                  currentMacro={macroState}
+                  previousMacro={previousMacro}
+                  levelState={levelState}
+                />
+              </div>
+            </div>
+          )}
+
+          {viewMode === 'hedge-fund' && (
+            <div className="h-full relative overflow-auto p-6">
+              <div className="max-w-7xl mx-auto">
+                <HedgeFundSimulator initialCapital={100_000_000} />
+              </div>
             </div>
           )}
 
