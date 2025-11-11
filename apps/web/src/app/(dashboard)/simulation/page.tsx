@@ -91,42 +91,6 @@ export default function SimulationPage() {
       max: 80,
       step: 1,
       unit: ''
-    },
-    {
-      id: 'ai_investment',
-      label: 'AI Investment',
-      value: macroState['ai_investment'] || 150,
-      min: 50,
-      max: 500,
-      step: 10,
-      unit: 'B'
-    },
-    {
-      id: 'gpu_demand_index',
-      label: 'GPU Demand',
-      value: macroState['gpu_demand_index'] || 85,
-      min: 0,
-      max: 150,
-      step: 5,
-      unit: ''
-    },
-    {
-      id: 'container_rate_us_china',
-      label: 'Container Rate (US-China)',
-      value: macroState['container_rate_us_china'] || 3500,
-      min: 1000,
-      max: 10000,
-      step: 100,
-      unit: '$'
-    },
-    {
-      id: 'dram_price_index',
-      label: 'DRAM Price Index',
-      value: macroState['dram_price_index'] || 100,
-      min: 50,
-      max: 200,
-      step: 5,
-      unit: ''
     }
   ];
 
