@@ -1,3 +1,7 @@
+'use client';
+
+import UnifiedLayout from '@/components/layout/UnifiedLayout';
+
 export const metadata = {
   title: 'Arena | Nexus-Alpha',
 };
@@ -7,5 +11,9 @@ export default function ArenaLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <UnifiedLayout>
+      {children}
+    </UnifiedLayout>
+  );
 }
