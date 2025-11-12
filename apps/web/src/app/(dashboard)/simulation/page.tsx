@@ -99,6 +99,17 @@ const SCENARIOS = [
 ];
 
 export default function SimulationPage() {
+  // Zustand stores - must be called first
+  const macroState = useMacroStore(state => state.macroState);
+  const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
+  const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
+
+  const levelState = useLevelStore(state => state.levelState);
+  const updateLevelControl = useLevelStore(state => state.updateLevelControl);
+
+  const { saveScenario, loadScenario, getAllScenarios } = useScenarioStore();
+
+  // Local state
   const [selectedSector, setSelectedSector] = useState<Sector>(null);
   const [viewMode, setViewMode] = useState<'split' | 'globe' | 'network' | 'supply-chain' | 'economic-flow' | 'hedge-fund'>('split');
   const [globeViewMode, setGlobeViewMode] = useState<'companies' | 'flows' | 'm2'>('companies');
@@ -110,19 +121,10 @@ export default function SimulationPage() {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const [currentSnapshot, setCurrentSnapshot] = useState<DateSnapshot | null>(null);
-  const [previousMacro, setPreviousMacro] = useState<typeof macroState>(macroState);
+  const [previousMacro, setPreviousMacro] = useState(macroState);
   const [simStartDate, setSimStartDate] = useState<string>('2024-01-01');
   const [simEndDate, setSimEndDate] = useState<string>('2024-12-31');
   const [selectedSCScenario, setSelectedSCScenario] = useState<string>('nvidia-h100-hbm');
-
-  const macroState = useMacroStore(state => state.macroState);
-  const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
-  const calculatedImpacts = useMacroStore(state => state.calculatedImpacts);
-
-  const levelState = useLevelStore(state => state.levelState);
-  const updateLevelControl = useLevelStore(state => state.updateLevelControl);
-
-  const { saveScenario, loadScenario, getAllScenarios } = useScenarioStore();
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [scenarioName, setScenarioName] = useState('');
