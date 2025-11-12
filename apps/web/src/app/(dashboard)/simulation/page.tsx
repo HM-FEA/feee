@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown, ChevronUp, Info, GitBranch, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Settings, Globe, Network, Zap, Play, Save, Users, Sparkles, ChevronDown, ChevronUp, Info, GitBranch, ThumbsUp, ThumbsDown, Activity, DollarSign } from 'lucide-react';
 import { Card, SectionHeader } from '@/components/ui/DesignSystem';
 import { useMacroStore } from '@/lib/store/macroStore';
 import { useLevelStore } from '@/lib/store/levelStore';
