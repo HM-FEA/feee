@@ -17,6 +17,7 @@ import EconomicFlowDashboard from '@/components/simulation/EconomicFlowDashboard
 import HedgeFundSimulator from '@/components/simulation/HedgeFundSimulator';
 import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
 import { SUPPLY_CHAIN_SCENARIOS, voteOnScenario } from '@/data/supplyChainScenarios';
+import { calculateEconomicFlows, EconomicFlow } from '@/lib/utils/economicFlows';
 
 // Dynamic imports
 const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), { ssr: false });
@@ -195,6 +196,11 @@ export default function SimulationPage() {
     }, 100);
     return () => clearTimeout(timer);
   }, [macroState]);
+
+  // Calculate economic flows for Globe visualization
+  const currentEconomicFlows = useMemo(() => {
+    return calculateEconomicFlows(macroState, previousMacro, levelState);
+  }, [macroState, previousMacro, levelState]);
 
   const handleMacroChange = (id: string, value: number) => {
     setMacroChanging(true);
@@ -717,7 +723,7 @@ export default function SimulationPage() {
                     </div>
                   </div>
                 )}
-                <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} snapshot={currentSnapshot} />
+                <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} snapshot={currentSnapshot} economicFlows={currentEconomicFlows} />
               </div>
               <div className="relative h-full w-full">
                 <div className="absolute top-2 left-2 z-10 bg-black/80 backdrop-blur border border-accent-magenta rounded px-2 py-1">
@@ -775,7 +781,7 @@ export default function SimulationPage() {
                   </div>
                 </div>
               )}
-              <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} snapshot={currentSnapshot} />
+              <Globe3D selectedSector={selectedSector} showControls={false} viewMode={globeViewMode} snapshot={currentSnapshot} economicFlows={currentEconomicFlows} />
             </div>
           )}
 

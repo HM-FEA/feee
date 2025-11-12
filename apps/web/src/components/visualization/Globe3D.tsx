@@ -10,6 +10,7 @@ import { MACRO_VARIABLES } from '@/data/macroVariables';
 import { TRADE_FLOWS, SHIPPING_ROUTES, SUPPLY_CHAIN_PATHS, CURRENCY_FLOWS } from '@/data/globalSupplyChain';
 import { getImpactColor, getImpactSizeMultiplier } from '@/lib/utils/levelImpactCalculation';
 import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
+import { EconomicFlow } from '@/lib/utils/economicFlows';
 
 // Dynamic import to avoid SSR issues
 const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
@@ -119,13 +120,15 @@ interface Globe3DProps {
   showControls?: boolean;
   viewMode?: 'm2' | 'flows' | 'companies';
   snapshot?: DateSnapshot | null;
+  economicFlows?: EconomicFlow[];
 }
 
 export default function Globe3D({
   selectedSector = null,
   showControls = true,
   viewMode: externalViewMode,
-  snapshot = null
+  snapshot = null,
+  economicFlows = []
 }: Globe3DProps) {
   const globeRef = useRef<any>();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -440,19 +443,85 @@ export default function Globe3D({
     });
   }, [selectedSector]);
 
-  // Combine static flows with dynamic impact arcs and snapshot-based arcs
+  // Convert Economic Flows to Globe arcs with smooth transitions
+  const economicFlowArcs = useMemo(() => {
+    if (!economicFlows || economicFlows.length === 0) return [];
+
+    // Entity to location mapping (conceptual locations for economic entities)
+    const entityLocationMap: Record<string, { lat: number; lng: number }> = {
+      // Central Banks
+      'Federal Reserve': { lat: 38.8951, lng: -77.0369 }, // Washington DC
+      'European Central Bank': { lat: 50.1109, lng: 8.6821 }, // Frankfurt
+      'Bank of Japan': { lat: 35.6762, lng: 139.6503 }, // Tokyo
+      'People\'s Bank of China': { lat: 39.9042, lng: 116.4074 }, // Beijing
+
+      // Sectors
+      'Banking Sector': { lat: 40.7128, lng: -74.0060 }, // New York (Wall Street)
+      'Corporate Sector': { lat: 37.7749, lng: -122.4194 }, // San Francisco (Silicon Valley)
+      'Real Estate': { lat: 34.0522, lng: -118.2437 }, // Los Angeles
+      'Technology Sector': { lat: 37.3861, lng: -122.0839 }, // Mountain View
+      'Semiconductor Industry': { lat: 37.5665, lng: 126.9780 }, // Seoul
+      'Consumer Sector': { lat: 41.8781, lng: -87.6298 }, // Chicago
+      'Employment': { lat: 38.9072, lng: -77.0369 }, // Washington DC
+
+      // Markets
+      'Money Supply (M2)': { lat: 40.7589, lng: -73.9851 }, // New York Fed
+      'Equity Markets': { lat: 40.7128, lng: -74.0060 }, // NYSE
+      'Crypto Markets': { lat: 37.7749, lng: -122.4194 }, // San Francisco
+      'Bond Markets': { lat: 51.5074, lng: -0.1278 }, // London
+      'Safe Havens (Bonds, Gold)': { lat: 47.3769, lng: 8.5417 }, // Zurich
+      'Risk Assets': { lat: 1.3521, lng: 103.8198 }, // Singapore
+
+      // Macro
+      'GDP Growth': { lat: 38.8951, lng: -77.0369 }, // Washington DC
+      'Corporate Earnings': { lat: 40.7128, lng: -74.0060 }, // New York
+      'Market Volatility (VIX)': { lat: 41.8781, lng: -87.6298 }, // Chicago (CBOE)
+    };
+
+    const arcs: CapitalFlow[] = [];
+
+    economicFlows.forEach(flow => {
+      const fromLoc = entityLocationMap[flow.from];
+      const toLoc = entityLocationMap[flow.to];
+
+      if (fromLoc && toLoc) {
+        // Color based on impact
+        const color = flow.impact === 'positive'
+          ? `rgba(0, 255, 159, ${Math.min(flow.magnitude / 100, 0.9)})` // Emerald
+          : flow.impact === 'negative'
+          ? `rgba(239, 68, 68, ${Math.min(flow.magnitude / 100, 0.9)})` // Red
+          : `rgba(100, 116, 139, ${Math.min(flow.magnitude / 100, 0.7)})`; // Gray
+
+        arcs.push({
+          startLat: fromLoc.lat,
+          startLng: fromLoc.lng,
+          endLat: toLoc.lat,
+          endLng: toLoc.lng,
+          amount: flow.magnitude,
+          color: color,
+          label: `${flow.from} → ${flow.to}: ${flow.description} (${flow.magnitude.toFixed(0)} × ${flow.multiplier.toFixed(1)})`
+        });
+      }
+    });
+
+    return arcs;
+  }, [economicFlows]);
+
+  // Combine static flows with dynamic impact arcs, snapshot-based arcs, and economic flow arcs
   const allArcs = useMemo(() => {
+    const baseArcs = economicFlowArcs; // Always show economic flows
+
     if (viewMode === 'flows') {
-      return [...visibleFlows, ...dynamicImpactArcs, ...snapshotImpactArcs];
+      return [...visibleFlows, ...dynamicImpactArcs, ...snapshotImpactArcs, ...baseArcs];
     } else if (viewMode === 'companies') {
-      // In companies mode, show both macro and snapshot impact arcs
-      return [...dynamicImpactArcs, ...snapshotImpactArcs];
+      // In companies mode, show both macro and snapshot impact arcs + economic flows
+      return [...dynamicImpactArcs, ...snapshotImpactArcs, ...baseArcs];
     } else if (viewMode === 'm2') {
-      // In split mode, show snapshot arcs (time-based simulation arcs)
-      return snapshotImpactArcs;
+      // In M2 mode, show snapshot arcs + economic flows
+      return [...snapshotImpactArcs, ...baseArcs];
     }
-    return [];
-  }, [viewMode, visibleFlows, dynamicImpactArcs, snapshotImpactArcs]);
+    return baseArcs;
+  }, [viewMode, visibleFlows, dynamicImpactArcs, snapshotImpactArcs, economicFlowArcs]);
 
   // Create pulsing rings for affected entities (problem indicators)
   const affectedEntityRings = useMemo(() => {
