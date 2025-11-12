@@ -1031,9 +1031,140 @@ export default function SimulationPage() {
           )}
         </div>
 
-        {/* Right Sidebar - Element Library & Scenarios */}
+        {/* Right Sidebar - Stats & Activity */}
         <div className="w-80 border-l border-border-primary bg-black/50 backdrop-blur overflow-y-auto">
           <div className="p-4 space-y-4">
+            {/* Stats Panel */}
+            <div className="bg-gradient-to-br from-accent-emerald/10 to-accent-cyan/10 border border-accent-emerald/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Activity size={18} className="text-accent-emerald" />
+                <h3 className="text-sm font-bold text-text-primary">Live Stats</h3>
+              </div>
+
+              <div className="space-y-3">
+                {/* Simulation Time */}
+                <div className="bg-black/20 rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">Simulation Time</div>
+                  <div className="text-lg font-bold text-accent-emerald font-mono">
+                    {currentSnapshot
+                      ? currentSnapshot.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    }
+                  </div>
+                </div>
+
+                {/* Active Events */}
+                <div className="bg-black/20 rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">Active Events</div>
+                  <div className="text-lg font-bold text-accent-cyan">
+                    {currentSnapshot?.events.length || 0}
+                  </div>
+                </div>
+
+                {/* Top Performer */}
+                <div className="bg-black/20 rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">Top Performer</div>
+                  <div className="text-sm font-bold text-accent-magenta">
+                    {(() => {
+                      if (!currentSnapshot) return 'N/A';
+                      const growing = Array.from(currentSnapshot.entityValues.values())
+                        .filter(e => e.isGrowing)
+                        .sort((a, b) => b.changeRate - a.changeRate);
+                      if (growing.length === 0) return 'N/A';
+                      return `${growing[0].entityName.slice(0, 15)}...`;
+                    })()}
+                  </div>
+                  {currentSnapshot && (() => {
+                    const growing = Array.from(currentSnapshot.entityValues.values())
+                      .filter(e => e.isGrowing)
+                      .sort((a, b) => b.changeRate - a.changeRate);
+                    return growing.length > 0 && (
+                      <div className="text-xs text-accent-emerald font-mono mt-1">
+                        +{(growing[0].changeRate * 100).toFixed(1)}%
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* View Mode */}
+                <div className="bg-black/20 rounded-lg p-3">
+                  <div className="text-xs text-text-tertiary mb-1">Current View</div>
+                  <div className="text-sm font-semibold text-text-primary capitalize">
+                    {viewMode.replace('-', ' ')}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Activity Feed */}
+            <div className="bg-gradient-to-br from-accent-magenta/10 to-accent-cyan/10 border border-accent-magenta/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Zap size={18} className="text-accent-magenta" />
+                <h3 className="text-sm font-bold text-text-primary">Activity Feed</h3>
+              </div>
+
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {/* Macro changes */}
+                {(() => {
+                  const activities: { time: string; message: string; type: 'macro' | 'sector' | 'event' }[] = [];
+
+                  // Add macro changes
+                  Object.entries(macroState).slice(0, 3).forEach(([key, value]) => {
+                    const variable = MACRO_VARIABLES.find(v => v.id === key);
+                    if (variable && typeof value === 'number') {
+                      activities.push({
+                        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                        message: `${variable.name}: ${value.toFixed(2)}${variable.unit}`,
+                        type: 'macro'
+                      });
+                    }
+                  });
+
+                  // Add sector impacts
+                  Object.entries(calculatedImpacts).forEach(([sector, impact]) => {
+                    if (Math.abs(impact) > 0.1) {
+                      activities.push({
+                        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                        message: `${sector} sector: ${impact >= 0 ? '+' : ''}${impact.toFixed(1)}%`,
+                        type: 'sector'
+                      });
+                    }
+                  });
+
+                  // Add events from snapshot
+                  if (currentSnapshot) {
+                    currentSnapshot.events.slice(0, 2).forEach(event => {
+                      activities.push({
+                        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                        message: event.title,
+                        type: 'event'
+                      });
+                    });
+                  }
+
+                  return activities.slice(0, 8).map((activity, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-xs p-2 bg-black/20 rounded">
+                      <span className="text-text-tertiary font-mono">{activity.time}</span>
+                      <span className={`flex-1 ${
+                        activity.type === 'macro' ? 'text-accent-cyan' :
+                        activity.type === 'sector' ? 'text-accent-emerald' :
+                        'text-accent-magenta'
+                      }`}>
+                        {activity.message}
+                      </span>
+                    </div>
+                  ));
+                })()}
+
+                {/* Empty state */}
+                {(!currentSnapshot && Object.keys(macroState).length === 0) && (
+                  <div className="text-xs text-text-tertiary text-center py-4">
+                    No recent activity
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Element Library */}
             <div>
               <button
