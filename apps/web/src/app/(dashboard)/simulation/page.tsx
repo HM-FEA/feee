@@ -10,6 +10,7 @@ import { useScenarioStore } from '@/lib/store/scenarioStore';
 import { MACRO_CATEGORIES, MACRO_VARIABLES } from '@/data/macroVariables';
 import LevelControlPanel from '@/components/simulation/LevelControlPanel';
 import SupplyChainDiagram, { HBM_SUPPLY_CHAIN } from '@/components/visualization/SupplyChainDiagram';
+import SupplyChainFlow, { H100_SUPPLY_CHAIN_DATA } from '@/components/visualization/SupplyChainFlow';
 import CascadeEffects from '@/components/simulation/CascadeEffects';
 import SimulationTimeline from '@/components/simulation/SimulationTimeline';
 import DateSimulator from '@/components/simulation/DateSimulator';
@@ -22,6 +23,7 @@ import { calculateEconomicFlows, EconomicFlow } from '@/lib/utils/economicFlows'
 // Dynamic imports
 const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), { ssr: false });
 const ForceNetworkGraph3D = dynamic(() => import('@/components/visualization/ForceNetworkGraph3D'), { ssr: false });
+const H100DigitalTwin3D = dynamic(() => import('@/components/visualization/H100DigitalTwin3D'), { ssr: false });
 
 type Sector = 'BANKING' | 'REALESTATE' | 'MANUFACTURING' | 'SEMICONDUCTOR' | null;
 
@@ -125,6 +127,7 @@ export default function SimulationPage() {
   const [simStartDate, setSimStartDate] = useState<string>('2024-01-01');
   const [simEndDate, setSimEndDate] = useState<string>('2024-12-31');
   const [selectedSCScenario, setSelectedSCScenario] = useState<string>('nvidia-h100-hbm');
+  const [supplyChainViewMode, setSupplyChainViewMode] = useState<'2d' | '3d' | 'diagram'>('diagram');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [scenarioName, setScenarioName] = useState('');
@@ -935,8 +938,48 @@ export default function SimulationPage() {
                   </div>
                 </div>
 
-                {/* Selected Supply Chain Diagram */}
-                {(() => {
+                {/* View Mode Toggle */}
+                <div className="mb-6 flex items-center justify-between bg-background-secondary border border-border-primary rounded-lg p-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary mb-1">Visualization Mode</h3>
+                    <p className="text-xs text-text-tertiary">Choose how to view the supply chain</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSupplyChainViewMode('diagram')}
+                      className={`px-4 py-2 rounded text-xs font-medium transition-all ${
+                        supplyChainViewMode === 'diagram'
+                          ? 'bg-purple-500 text-white'
+                          : 'bg-background-tertiary text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      📊 SVG Diagram
+                    </button>
+                    <button
+                      onClick={() => setSupplyChainViewMode('2d')}
+                      className={`px-4 py-2 rounded text-xs font-medium transition-all ${
+                        supplyChainViewMode === '2d'
+                          ? 'bg-accent-cyan text-black'
+                          : 'bg-background-tertiary text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      🗺️ 2D Network
+                    </button>
+                    <button
+                      onClick={() => setSupplyChainViewMode('3d')}
+                      className={`px-4 py-2 rounded text-xs font-medium transition-all ${
+                        supplyChainViewMode === '3d'
+                          ? 'bg-accent-emerald text-black'
+                          : 'bg-background-tertiary text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      🎮 3D Digital Twin
+                    </button>
+                  </div>
+                </div>
+
+                {/* Selected Supply Chain Visualization */}
+                {supplyChainViewMode === 'diagram' && (() => {
                   const selected = SUPPLY_CHAIN_SCENARIOS.find(s => s.id === selectedSCScenario);
                   return selected ? (
                     <SupplyChainDiagram
@@ -947,6 +990,23 @@ export default function SimulationPage() {
                     />
                   ) : null;
                 })()}
+
+                {supplyChainViewMode === '2d' && (
+                  <div className="h-[600px] mb-6">
+                    <SupplyChainFlow
+                      nodes={H100_SUPPLY_CHAIN_DATA.nodes}
+                      links={H100_SUPPLY_CHAIN_DATA.links}
+                      title="H100 Supply Chain Network"
+                      description="Interactive 2D network diagram with drag & drop"
+                    />
+                  </div>
+                )}
+
+                {supplyChainViewMode === '3d' && (
+                  <div className="h-[700px] mb-6">
+                    <H100DigitalTwin3D />
+                  </div>
+                )}
 
                 {/* Timeline Simulation (Legacy) */}
                 <div className="mt-6">
