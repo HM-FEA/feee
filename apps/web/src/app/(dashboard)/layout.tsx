@@ -1,6 +1,6 @@
 'use client';
 
-import { GlobalTopNav } from '@/components/layout/GlobalTopNav';
+import UnifiedLayout from '@/components/layout/UnifiedLayout';
 
 export default function DashboardLayout({
   children,
@@ -8,11 +8,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-black">
-      <GlobalTopNav />
-      <main>
-        {children}
-      </main>
-    </div>
+    <UnifiedLayout>
+      {children}
+    </UnifiedLayout>
   );
 }
