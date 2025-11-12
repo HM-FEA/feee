@@ -998,36 +998,88 @@ export default function Globe3D({
           }
         }}
 
-        // Arcs (Capital Flows + Dynamic Macro Impacts)
+        // Arcs (Capital Flows + Dynamic Macro Impacts + Economic Flows)
         arcsData={allArcs}
         arcStartLat="startLat"
         arcStartLng="startLng"
         arcEndLat="endLat"
         arcEndLng="endLng"
-        arcColor="color"
+        arcColor={(d: any) => d.color}
         arcStroke={(d: any) => {
-          // Dynamic arcs (from macro impacts) are thicker
+          // Economic flows (from calculateEconomicFlows) have magnitude property
+          const isEconomicFlow = d.label && (d.label.includes('→') && d.label.includes('×'));
           const isDynamic = d.label && d.label.includes('Impact');
-          return isDynamic ? Math.sqrt(d.amount) * 0.04 : Math.sqrt(d.amount) * 0.02;
+
+          if (isEconomicFlow) {
+            // Attention-score-like thickness based on magnitude
+            // magnitude 0-200 → stroke 0.1-1.5
+            const magnitude = d.amount || 0;
+            return Math.min(0.1 + (magnitude / 100) * 1.4, 1.5);
+          } else if (isDynamic) {
+            return Math.sqrt(d.amount) * 0.04;
+          } else {
+            return Math.sqrt(d.amount) * 0.02;
+          }
         }}
-        arcDashLength={0.4}
-        arcDashGap={0.2}
+        arcAltitude={(d: any) => {
+          // Higher altitude for more important flows (self-attention style)
+          const isEconomicFlow = d.label && (d.label.includes('→') && d.label.includes('×'));
+          if (isEconomicFlow) {
+            const magnitude = d.amount || 0;
+            // magnitude 0-200 → altitude 0.1-0.4
+            return 0.1 + (magnitude / 200) * 0.3;
+          }
+          return 0.2; // Default altitude
+        }}
+        arcDashLength={0.9} // Longer dashes for smoother flow
+        arcDashGap={0.1} // Smaller gaps
         arcDashAnimateTime={(d: any) => {
-          // Dynamic arcs pulse faster
+          // Economic flows pulse faster (like attention weights updating)
+          const isEconomicFlow = d.label && (d.label.includes('→') && d.label.includes('×'));
           const isDynamic = d.label && d.label.includes('Impact');
-          return isDynamic ? 1500 : 2000;
+
+          if (isEconomicFlow) {
+            // Faster animation for active economic flows (500-800ms)
+            const magnitude = d.amount || 0;
+            return Math.max(500, 1000 - magnitude * 3);
+          } else if (isDynamic) {
+            return 800; // Fast for macro impacts
+          } else {
+            return 1500; // Slower for static flows
+          }
         }}
+        arcTransitionDuration={1000} // Smooth fade in/out over 1 second
         arcLabel={(d: any) => {
+          const isEconomicFlow = d.label && (d.label.includes('→') && d.label.includes('×'));
           const isDynamic = d.label && d.label.includes('Impact');
-          return `
-            <div style="background: rgba(0, 0, 0, 0.95); padding: 10px; border-radius: 8px; border: 2px solid ${isDynamic ? '#00FF9F' : '#E6007A'};">
-              <div style="color: ${isDynamic ? '#00FF9F' : '#E6007A'}; font-weight: bold; margin-bottom: 4px; font-size: 13px;">${d.label}</div>
-              ${isDynamic ?
-                `<div style="color: #FFD700; font-size: 11px; margin-top: 4px;">⚡ Macro Impact Active</div>` :
-                `<div style="color: white; font-size: 12px;">Flow: $${d.amount}B</div>`
-              }
-            </div>
-          `;
+
+          if (isEconomicFlow) {
+            // Parse magnitude from label
+            const magnitude = d.amount || 0;
+            const intensityColor = magnitude > 100 ? '#00FF9F' : magnitude > 50 ? '#FFD700' : '#06B6D4';
+
+            return `
+              <div style="background: rgba(0, 0, 0, 0.95); padding: 12px; border-radius: 8px; border: 2px solid ${intensityColor}; box-shadow: 0 0 20px ${intensityColor}80;">
+                <div style="color: ${intensityColor}; font-weight: bold; margin-bottom: 6px; font-size: 13px;">⚡ Economic Flow</div>
+                <div style="color: white; font-size: 11px; margin-bottom: 4px;">${d.label}</div>
+                <div style="color: ${intensityColor}; font-size: 12px; font-weight: bold;">Intensity: ${magnitude.toFixed(0)}</div>
+              </div>
+            `;
+          } else if (isDynamic) {
+            return `
+              <div style="background: rgba(0, 0, 0, 0.95); padding: 10px; border-radius: 8px; border: 2px solid #00FF9F;">
+                <div style="color: #00FF9F; font-weight: bold; margin-bottom: 4px; font-size: 13px;">${d.label}</div>
+                <div style="color: #FFD700; font-size: 11px; margin-top: 4px;">⚡ Macro Impact Active</div>
+              </div>
+            `;
+          } else {
+            return `
+              <div style="background: rgba(0, 0, 0, 0.95); padding: 10px; border-radius: 8px; border: 2px solid #E6007A;">
+                <div style="color: #E6007A; font-weight: bold; margin-bottom: 4px; font-size: 13px;">${d.label}</div>
+                <div style="color: white; font-size: 12px;">Flow: $${d.amount}B</div>
+              </div>
+            `;
+          }
         }}
 
         // Pulsing rings for affected entities (problem indicators)
