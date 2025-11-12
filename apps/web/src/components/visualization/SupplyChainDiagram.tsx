@@ -63,15 +63,15 @@ export default function SupplyChainDiagram({
     : [];
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-lg p-6">
+    <div className="bg-background-secondary border border-border-primary rounded-lg p-6">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-white mb-2">{title}</h2>
-        {description && <p className="text-sm text-slate-400">{description}</p>}
+        <h2 className="text-xl font-bold text-text-primary mb-2">{title}</h2>
+        {description && <p className="text-sm text-text-secondary">{description}</p>}
       </div>
 
       {/* Main Diagram */}
-      <div className="relative bg-slate-950 border border-slate-800 rounded-lg p-8 mb-6 overflow-auto">
+      <div className="relative bg-background-primary border border-border-secondary rounded-lg p-8 mb-6 overflow-auto">
         <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
           <defs>
             <marker
@@ -82,7 +82,7 @@ export default function SupplyChainDiagram({
               refY="3"
               orient="auto"
             >
-              <polygon points="0 0, 10 3, 0 6" fill="#64748b" />
+              <polygon points="0 0, 10 3, 0 6" fill="rgb(82, 82, 91)" />
             </marker>
             <marker
               id="arrowhead-bottleneck"
@@ -112,7 +112,7 @@ export default function SupplyChainDiagram({
               ? '#ef4444'
               : isHighlighted
               ? '#06b6d4'
-              : '#64748b';
+              : 'rgb(82, 82, 91)';
             const strokeWidth = isHighlighted ? 3 : 2;
             const opacity = !selectedNode || isHighlighted ? 1 : 0.3;
 
@@ -170,14 +170,14 @@ export default function SupplyChainDiagram({
                 onMouseLeave={() => setHoveredNode(null)}
               >
                 <div className="flex items-start gap-2 mb-2">
-                  <div className="flex-shrink-0 w-8 h-8 rounded bg-slate-800 flex items-center justify-center">
+                  <div className="flex-shrink-0 w-8 h-8 rounded bg-background-tertiary flex items-center justify-center">
                     {node.icon}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-white truncate">
+                    <h3 className="text-sm font-semibold text-text-primary truncate">
                       {node.name}
                     </h3>
-                    <p className="text-xs text-slate-400">{node.details.role}</p>
+                    <p className="text-xs text-text-tertiary">{node.details.role}</p>
                   </div>
                 </div>
 
@@ -190,7 +190,7 @@ export default function SupplyChainDiagram({
                 )}
 
                 {/* Quick Stats */}
-                <div className="mt-2 text-xs text-slate-400 space-y-1">
+                <div className="mt-2 text-xs text-text-tertiary space-y-1">
                   {node.details.marketShare && (
                     <div>Share: {node.details.marketShare}</div>
                   )}
@@ -206,20 +206,20 @@ export default function SupplyChainDiagram({
 
       {/* Node Details Panel */}
       {selectedNodeData && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+        <div className="bg-background-tertiary border border-border-primary rounded-lg p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded bg-slate-900 flex items-center justify-center">
+              <div className="w-10 h-10 rounded bg-background-secondary flex items-center justify-center">
                 {selectedNodeData.icon}
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">{selectedNodeData.name}</h3>
-                <p className="text-sm text-slate-400">{selectedNodeData.details.role}</p>
+                <h3 className="text-lg font-bold text-text-primary">{selectedNodeData.name}</h3>
+                <p className="text-sm text-text-secondary">{selectedNodeData.details.role}</p>
               </div>
             </div>
             <button
               onClick={() => setSelectedNode(null)}
-              className="text-slate-400 hover:text-white transition-colors"
+              className="text-text-tertiary hover:text-text-primary transition-colors"
             >
               ✕
             </button>
@@ -228,31 +228,31 @@ export default function SupplyChainDiagram({
           <div className="grid grid-cols-2 gap-4 mb-4">
             {selectedNodeData.details.marketShare && (
               <div>
-                <div className="text-xs text-slate-500 mb-1">Market Share</div>
-                <div className="text-sm font-semibold text-white">
+                <div className="text-xs text-text-tertiary mb-1">Market Share</div>
+                <div className="text-sm font-semibold text-text-primary">
                   {selectedNodeData.details.marketShare}
                 </div>
               </div>
             )}
             {selectedNodeData.details.leadTime && (
               <div>
-                <div className="text-xs text-slate-500 mb-1">Lead Time</div>
-                <div className="text-sm font-semibold text-white">
+                <div className="text-xs text-text-tertiary mb-1">Lead Time</div>
+                <div className="text-sm font-semibold text-text-primary">
                   {selectedNodeData.details.leadTime}
                 </div>
               </div>
             )}
             {selectedNodeData.details.cost && (
               <div>
-                <div className="text-xs text-slate-500 mb-1">Cost Impact</div>
-                <div className="text-sm font-semibold text-white">
+                <div className="text-xs text-text-tertiary mb-1">Cost Impact</div>
+                <div className="text-sm font-semibold text-text-primary">
                   {selectedNodeData.details.cost}
                 </div>
               </div>
             )}
             {selectedNodeData.details.risk && (
               <div>
-                <div className="text-xs text-slate-500 mb-1">Supply Risk</div>
+                <div className="text-xs text-text-tertiary mb-1">Supply Risk</div>
                 <div className={`text-sm font-semibold inline-flex items-center gap-1 ${riskColors[selectedNodeData.details.risk].split(' ')[2]}`}>
                   {selectedNodeData.details.risk === 'critical' && (
                     <AlertTriangle className="w-4 h-4" />
@@ -267,7 +267,7 @@ export default function SupplyChainDiagram({
           {/* Connected Nodes */}
           {relatedLinks.length > 0 && (
             <div>
-              <div className="text-xs font-semibold text-slate-400 mb-2">
+              <div className="text-xs font-semibold text-text-tertiary mb-2">
                 Supply Chain Connections
               </div>
               <div className="space-y-1">
@@ -280,12 +280,12 @@ export default function SupplyChainDiagram({
                   return (
                     <div
                       key={idx}
-                      className="flex items-center gap-2 text-xs text-slate-300 bg-slate-900 rounded p-2"
+                      className="flex items-center gap-2 text-xs text-text-primary bg-background-secondary rounded p-2"
                     >
-                      <span className="text-slate-500">{direction}</span>
+                      <span className="text-text-tertiary">{direction}</span>
                       <span>{otherNode?.name}</span>
-                      <span className="text-slate-500">·</span>
-                      <span className="text-slate-400">{link.label}</span>
+                      <span className="text-text-tertiary">·</span>
+                      <span className="text-text-secondary">{link.label}</span>
                       {link.bottleneck && (
                         <span className="ml-auto px-2 py-0.5 bg-red-500/20 text-red-400 rounded text-xs font-medium">
                           Bottleneck
@@ -301,9 +301,9 @@ export default function SupplyChainDiagram({
       )}
 
       {/* Legend */}
-      <div className="mt-4 flex items-center gap-6 text-xs text-slate-400">
+      <div className="mt-4 flex items-center gap-6 text-xs text-text-tertiary">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-slate-600 rounded"></div>
+          <div className="w-3 h-3 bg-border-secondary rounded"></div>
           <span>Normal Flow</span>
         </div>
         <div className="flex items-center gap-2">
