@@ -933,6 +933,10 @@ export default function ForceNetworkGraph3D({
         height={dimensions.height}
         nodeLabel="name"
         nodeVal="val"
+        cooldownTicks={100}
+        d3AlphaDecay={0.02}
+        d3VelocityDecay={0.3}
+        warmupTicks={50}
         nodeColor={(node: any) => {
           const n = node as GraphNode;
 

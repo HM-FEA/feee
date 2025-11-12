@@ -10,6 +10,7 @@ import { MACRO_VARIABLES } from '@/data/macroVariables';
 import { TRADE_FLOWS, SHIPPING_ROUTES, SUPPLY_CHAIN_PATHS, CURRENCY_FLOWS } from '@/data/globalSupplyChain';
 import { getImpactColor, getImpactSizeMultiplier } from '@/lib/utils/levelImpactCalculation';
 import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
+import { EconomicFlow } from '@/lib/utils/economicFlows';
 
 // Dynamic import to avoid SSR issues
 const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
@@ -119,13 +120,15 @@ interface Globe3DProps {
   showControls?: boolean;
   viewMode?: 'm2' | 'flows' | 'companies';
   snapshot?: DateSnapshot | null;
+  economicFlows?: EconomicFlow[];
 }
 
 export default function Globe3D({
   selectedSector = null,
   showControls = true,
   viewMode: externalViewMode,
-  snapshot = null
+  snapshot = null,
+  economicFlows = []
 }: Globe3DProps) {
   const globeRef = useRef<any>();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -440,19 +443,85 @@ export default function Globe3D({
     });
   }, [selectedSector]);
 
-  // Combine static flows with dynamic impact arcs and snapshot-based arcs
+  // Convert Economic Flows to Globe arcs with smooth transitions
+  const economicFlowArcs = useMemo(() => {
+    if (!economicFlows || economicFlows.length === 0) return [];
+
+    // Entity to location mapping (conceptual locations for economic entities)
+    const entityLocationMap: Record<string, { lat: number; lng: number }> = {
+      // Central Banks
+      'Federal Reserve': { lat: 38.8951, lng: -77.0369 }, // Washington DC
+      'European Central Bank': { lat: 50.1109, lng: 8.6821 }, // Frankfurt
+      'Bank of Japan': { lat: 35.6762, lng: 139.6503 }, // Tokyo
+      'People\'s Bank of China': { lat: 39.9042, lng: 116.4074 }, // Beijing
+
+      // Sectors
+      'Banking Sector': { lat: 40.7128, lng: -74.0060 }, // New York (Wall Street)
+      'Corporate Sector': { lat: 37.7749, lng: -122.4194 }, // San Francisco (Silicon Valley)
+      'Real Estate': { lat: 34.0522, lng: -118.2437 }, // Los Angeles
+      'Technology Sector': { lat: 37.3861, lng: -122.0839 }, // Mountain View
+      'Semiconductor Industry': { lat: 37.5665, lng: 126.9780 }, // Seoul
+      'Consumer Sector': { lat: 41.8781, lng: -87.6298 }, // Chicago
+      'Employment': { lat: 38.9072, lng: -77.0369 }, // Washington DC
+
+      // Markets
+      'Money Supply (M2)': { lat: 40.7589, lng: -73.9851 }, // New York Fed
+      'Equity Markets': { lat: 40.7128, lng: -74.0060 }, // NYSE
+      'Crypto Markets': { lat: 37.7749, lng: -122.4194 }, // San Francisco
+      'Bond Markets': { lat: 51.5074, lng: -0.1278 }, // London
+      'Safe Havens (Bonds, Gold)': { lat: 47.3769, lng: 8.5417 }, // Zurich
+      'Risk Assets': { lat: 1.3521, lng: 103.8198 }, // Singapore
+
+      // Macro
+      'GDP Growth': { lat: 38.8951, lng: -77.0369 }, // Washington DC
+      'Corporate Earnings': { lat: 40.7128, lng: -74.0060 }, // New York
+      'Market Volatility (VIX)': { lat: 41.8781, lng: -87.6298 }, // Chicago (CBOE)
+    };
+
+    const arcs: CapitalFlow[] = [];
+
+    economicFlows.forEach(flow => {
+      const fromLoc = entityLocationMap[flow.from];
+      const toLoc = entityLocationMap[flow.to];
+
+      if (fromLoc && toLoc) {
+        // Color based on impact
+        const color = flow.impact === 'positive'
+          ? `rgba(0, 255, 159, ${Math.min(flow.magnitude / 100, 0.9)})` // Emerald
+          : flow.impact === 'negative'
+          ? `rgba(239, 68, 68, ${Math.min(flow.magnitude / 100, 0.9)})` // Red
+          : `rgba(100, 116, 139, ${Math.min(flow.magnitude / 100, 0.7)})`; // Gray
+
+        arcs.push({
+          startLat: fromLoc.lat,
+          startLng: fromLoc.lng,
+          endLat: toLoc.lat,
+          endLng: toLoc.lng,
+          amount: flow.magnitude,
+          color: color,
+          label: `${flow.from} → ${flow.to}: ${flow.description} (${flow.magnitude.toFixed(0)} × ${flow.multiplier.toFixed(1)})`
+        });
+      }
+    });
+
+    return arcs;
+  }, [economicFlows]);
+
+  // Combine static flows with dynamic impact arcs, snapshot-based arcs, and economic flow arcs
   const allArcs = useMemo(() => {
+    const baseArcs = economicFlowArcs; // Always show economic flows
+
     if (viewMode === 'flows') {
-      return [...visibleFlows, ...dynamicImpactArcs, ...snapshotImpactArcs];
+      return [...visibleFlows, ...dynamicImpactArcs, ...snapshotImpactArcs, ...baseArcs];
     } else if (viewMode === 'companies') {
-      // In companies mode, show both macro and snapshot impact arcs
-      return [...dynamicImpactArcs, ...snapshotImpactArcs];
+      // In companies mode, show both macro and snapshot impact arcs + economic flows
+      return [...dynamicImpactArcs, ...snapshotImpactArcs, ...baseArcs];
     } else if (viewMode === 'm2') {
-      // In split mode, show snapshot arcs (time-based simulation arcs)
-      return snapshotImpactArcs;
+      // In M2 mode, show snapshot arcs + economic flows
+      return [...snapshotImpactArcs, ...baseArcs];
     }
-    return [];
-  }, [viewMode, visibleFlows, dynamicImpactArcs, snapshotImpactArcs]);
+    return baseArcs;
+  }, [viewMode, visibleFlows, dynamicImpactArcs, snapshotImpactArcs, economicFlowArcs]);
 
   // Create pulsing rings for affected entities (problem indicators)
   const affectedEntityRings = useMemo(() => {
@@ -929,36 +998,88 @@ export default function Globe3D({
           }
         }}
 
-        // Arcs (Capital Flows + Dynamic Macro Impacts)
+        // Arcs (Capital Flows + Dynamic Macro Impacts + Economic Flows)
         arcsData={allArcs}
         arcStartLat="startLat"
         arcStartLng="startLng"
         arcEndLat="endLat"
         arcEndLng="endLng"
-        arcColor="color"
+        arcColor={(d: any) => d.color}
         arcStroke={(d: any) => {
-          // Dynamic arcs (from macro impacts) are thicker
+          // Economic flows (from calculateEconomicFlows) have magnitude property
+          const isEconomicFlow = d.label && (d.label.includes('→') && d.label.includes('×'));
           const isDynamic = d.label && d.label.includes('Impact');
-          return isDynamic ? Math.sqrt(d.amount) * 0.04 : Math.sqrt(d.amount) * 0.02;
+
+          if (isEconomicFlow) {
+            // Attention-score-like thickness based on magnitude
+            // magnitude 0-200 → stroke 0.1-1.5
+            const magnitude = d.amount || 0;
+            return Math.min(0.1 + (magnitude / 100) * 1.4, 1.5);
+          } else if (isDynamic) {
+            return Math.sqrt(d.amount) * 0.04;
+          } else {
+            return Math.sqrt(d.amount) * 0.02;
+          }
         }}
-        arcDashLength={0.4}
-        arcDashGap={0.2}
+        arcAltitude={(d: any) => {
+          // Higher altitude for more important flows (self-attention style)
+          const isEconomicFlow = d.label && (d.label.includes('→') && d.label.includes('×'));
+          if (isEconomicFlow) {
+            const magnitude = d.amount || 0;
+            // magnitude 0-200 → altitude 0.1-0.4
+            return 0.1 + (magnitude / 200) * 0.3;
+          }
+          return 0.2; // Default altitude
+        }}
+        arcDashLength={0.9} // Longer dashes for smoother flow
+        arcDashGap={0.1} // Smaller gaps
         arcDashAnimateTime={(d: any) => {
-          // Dynamic arcs pulse faster
+          // Economic flows pulse faster (like attention weights updating)
+          const isEconomicFlow = d.label && (d.label.includes('→') && d.label.includes('×'));
           const isDynamic = d.label && d.label.includes('Impact');
-          return isDynamic ? 1500 : 2000;
+
+          if (isEconomicFlow) {
+            // Faster animation for active economic flows (500-800ms)
+            const magnitude = d.amount || 0;
+            return Math.max(500, 1000 - magnitude * 3);
+          } else if (isDynamic) {
+            return 800; // Fast for macro impacts
+          } else {
+            return 1500; // Slower for static flows
+          }
         }}
+        arcTransitionDuration={1000} // Smooth fade in/out over 1 second
         arcLabel={(d: any) => {
+          const isEconomicFlow = d.label && (d.label.includes('→') && d.label.includes('×'));
           const isDynamic = d.label && d.label.includes('Impact');
-          return `
-            <div style="background: rgba(0, 0, 0, 0.95); padding: 10px; border-radius: 8px; border: 2px solid ${isDynamic ? '#00FF9F' : '#E6007A'};">
-              <div style="color: ${isDynamic ? '#00FF9F' : '#E6007A'}; font-weight: bold; margin-bottom: 4px; font-size: 13px;">${d.label}</div>
-              ${isDynamic ?
-                `<div style="color: #FFD700; font-size: 11px; margin-top: 4px;">⚡ Macro Impact Active</div>` :
-                `<div style="color: white; font-size: 12px;">Flow: $${d.amount}B</div>`
-              }
-            </div>
-          `;
+
+          if (isEconomicFlow) {
+            // Parse magnitude from label
+            const magnitude = d.amount || 0;
+            const intensityColor = magnitude > 100 ? '#00FF9F' : magnitude > 50 ? '#FFD700' : '#06B6D4';
+
+            return `
+              <div style="background: rgba(0, 0, 0, 0.95); padding: 12px; border-radius: 8px; border: 2px solid ${intensityColor}; box-shadow: 0 0 20px ${intensityColor}80;">
+                <div style="color: ${intensityColor}; font-weight: bold; margin-bottom: 6px; font-size: 13px;">⚡ Economic Flow</div>
+                <div style="color: white; font-size: 11px; margin-bottom: 4px;">${d.label}</div>
+                <div style="color: ${intensityColor}; font-size: 12px; font-weight: bold;">Intensity: ${magnitude.toFixed(0)}</div>
+              </div>
+            `;
+          } else if (isDynamic) {
+            return `
+              <div style="background: rgba(0, 0, 0, 0.95); padding: 10px; border-radius: 8px; border: 2px solid #00FF9F;">
+                <div style="color: #00FF9F; font-weight: bold; margin-bottom: 4px; font-size: 13px;">${d.label}</div>
+                <div style="color: #FFD700; font-size: 11px; margin-top: 4px;">⚡ Macro Impact Active</div>
+              </div>
+            `;
+          } else {
+            return `
+              <div style="background: rgba(0, 0, 0, 0.95); padding: 10px; border-radius: 8px; border: 2px solid #E6007A;">
+                <div style="color: #E6007A; font-weight: bold; margin-bottom: 4px; font-size: 13px;">${d.label}</div>
+                <div style="color: white; font-size: 12px;">Flow: $${d.amount}B</div>
+              </div>
+            `;
+          }
         }}
 
         // Pulsing rings for affected entities (problem indicators)

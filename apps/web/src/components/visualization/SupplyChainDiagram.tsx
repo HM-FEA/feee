@@ -99,7 +99,12 @@ export default function SupplyChainDiagram({
           {links.map((link, idx) => {
             const fromNode = nodes.find(n => n.id === link.from);
             const toNode = nodes.find(n => n.id === link.to);
-            if (!fromNode || !toNode) return null;
+
+            // Defensive: check both node existence AND position existence
+            if (!fromNode || !toNode || !fromNode.position || !toNode.position) {
+              console.warn(`SupplyChainDiagram: Missing node or position for link ${link.from} -> ${link.to}`);
+              return null;
+            }
 
             const isHighlighted =
               selectedNode === link.from || selectedNode === link.to;
