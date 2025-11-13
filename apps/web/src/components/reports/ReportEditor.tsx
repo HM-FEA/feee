@@ -86,26 +86,26 @@ export default function ReportEditor({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-700 rounded-lg p-6">
+    <div className="bg-background-secondary border border-border-primary rounded-lg p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-700">
-        <h2 className="text-xl font-bold text-white">
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-border-primary">
+        <h2 className="text-xl font-bold text-text-primary">
           {initialReport ? 'Edit Report' : 'New Analyst Report'}
         </h2>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setMode(mode === 'edit' ? 'preview' : 'edit')}
-            className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 bg-background-tertiary hover:bg-background-primary border border-border-secondary rounded transition-colors"
           >
             {mode === 'edit' ? (
               <>
-                <Eye className="w-4 h-4 text-slate-300" />
-                <span className="text-sm text-slate-300">Preview</span>
+                <Eye className="w-4 h-4 text-text-tertiary" />
+                <span className="text-sm text-text-tertiary">Preview</span>
               </>
             ) : (
               <>
-                <Edit3 className="w-4 h-4 text-slate-300" />
-                <span className="text-sm text-slate-300">Edit</span>
+                <Edit3 className="w-4 h-4 text-text-tertiary" />
+                <span className="text-sm text-text-tertiary">Edit</span>
               </>
             )}
           </button>
@@ -116,32 +116,32 @@ export default function ReportEditor({
         <div className="space-y-4">
           {/* Entity Info (if creating new report) */}
           {!initialReport && (
-            <div className="bg-slate-800/50 border border-slate-600 rounded p-3">
-              <div className="text-xs text-slate-400 mb-1">Report for:</div>
+            <div className="bg-background-tertiary border border-border-secondary rounded p-3">
+              <div className="text-xs text-text-secondary mb-1">Report for:</div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-slate-300">
+                <span className="px-2 py-1 bg-background-primary border border-border-secondary rounded text-xs text-text-tertiary">
                   {entityType.toUpperCase()}
                 </span>
-                <span className="text-sm font-medium text-white">{entityName || entityId}</span>
+                <span className="text-sm font-medium text-text-primary">{entityName || entityId}</span>
               </div>
             </div>
           )}
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Title</label>
+            <label className="block text-sm font-medium text-text-tertiary mb-2">Title</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="NVIDIA H100 Supply Chain Analysis"
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 bg-background-tertiary border border-border-secondary rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-cyan"
             />
           </div>
 
           {/* Summary */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-text-tertiary mb-2">
               Summary (1-2 sentences)
             </label>
             <textarea
@@ -149,17 +149,17 @@ export default function ReportEditor({
               onChange={(e) => setSummary(e.target.value)}
               placeholder="Brief overview of the report..."
               rows={2}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
+              className="w-full px-3 py-2 bg-background-tertiary border border-border-secondary rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-cyan resize-none"
             />
           </div>
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Category</label>
+            <label className="block text-sm font-medium text-text-tertiary mb-2">Category</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as Report['category'])}
-              className="px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:border-blue-500"
+              className="px-3 py-2 bg-background-tertiary border border-border-secondary rounded text-text-primary focus:outline-none focus:border-accent-cyan"
             >
               <option value="technical">Technical</option>
               <option value="financial">Financial</option>
@@ -172,12 +172,12 @@ export default function ReportEditor({
           {/* Content */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-slate-300">
+              <label className="block text-sm font-medium text-text-tertiary">
                 Content (Markdown supported)
               </label>
               <button
                 onClick={insertLink}
-                className="flex items-center gap-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded text-xs text-slate-300 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 bg-background-tertiary hover:bg-background-primary border border-border-secondary rounded text-xs text-text-tertiary transition-colors"
               >
                 <LinkIcon className="w-3 h-3" />
                 Insert [[Link]]
@@ -188,16 +188,16 @@ export default function ReportEditor({
               onChange={(e) => setContent(e.target.value)}
               placeholder="# Report Title&#10;&#10;## Section 1&#10;Use [[Entity Name]] to link to other entities...&#10;&#10;### Key Points&#10;- Point 1&#10;- Point 2"
               rows={16}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono text-sm resize-none"
+              className="w-full px-3 py-2 bg-background-tertiary border border-border-secondary rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-cyan font-mono text-sm resize-none"
             />
-            <div className="mt-1 text-xs text-slate-500">
+            <div className="mt-1 text-xs text-text-tertiary">
               Use [[Entity Name]] syntax to link entities. Markdown formatting supported.
             </div>
           </div>
 
           {/* Tags */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Tags</label>
+            <label className="block text-sm font-medium text-text-tertiary mb-2">Tags</label>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"
@@ -205,11 +205,11 @@ export default function ReportEditor({
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
                 placeholder="Add tag..."
-                className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="flex-1 px-3 py-2 bg-background-tertiary border border-border-secondary rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-cyan"
               />
               <button
                 onClick={handleAddTag}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                className="px-4 py-2 bg-accent-cyan hover:bg-accent-cyan/80 text-black rounded transition-colors"
               >
                 Add
               </button>
@@ -219,13 +219,13 @@ export default function ReportEditor({
                 {tags.map(tag => (
                   <span
                     key={tag}
-                    className="flex items-center gap-1 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-xs text-slate-300"
+                    className="flex items-center gap-1 px-2 py-1 bg-background-tertiary border border-border-secondary rounded text-xs text-text-tertiary"
                   >
                     <Tag className="w-3 h-3" />
                     {tag}
                     <button
                       onClick={() => handleRemoveTag(tag)}
-                      className="ml-1 text-slate-500 hover:text-slate-300"
+                      className="ml-1 text-text-tertiary hover:text-text-secondary"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -237,7 +237,7 @@ export default function ReportEditor({
 
           {/* Sources */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Sources (URLs)</label>
+            <label className="block text-sm font-medium text-text-tertiary mb-2">Sources (URLs)</label>
             <div className="flex gap-2 mb-2">
               <input
                 type="url"
@@ -245,11 +245,11 @@ export default function ReportEditor({
                 onChange={(e) => setSourceInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAddSource()}
                 placeholder="https://..."
-                className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="flex-1 px-3 py-2 bg-background-tertiary border border-border-secondary rounded text-text-primary placeholder-text-tertiary focus:outline-none focus:border-accent-cyan"
               />
               <button
                 onClick={handleAddSource}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                className="px-4 py-2 bg-accent-cyan hover:bg-accent-cyan/80 text-black rounded transition-colors"
               >
                 Add
               </button>
@@ -259,12 +259,12 @@ export default function ReportEditor({
                 {sources.map((source, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between px-2 py-1 bg-slate-800 border border-slate-600 rounded"
+                    className="flex items-center justify-between px-2 py-1 bg-background-tertiary border border-border-secondary rounded"
                   >
-                    <span className="text-xs text-slate-300 truncate flex-1">{source}</span>
+                    <span className="text-xs text-text-tertiary truncate flex-1">{source}</span>
                     <button
                       onClick={() => handleRemoveSource(source)}
-                      className="ml-2 text-slate-500 hover:text-slate-300"
+                      className="ml-2 text-text-tertiary hover:text-text-secondary"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -281,9 +281,9 @@ export default function ReportEditor({
               id="isPublic"
               checked={isPublic}
               onChange={(e) => setIsPublic(e.target.checked)}
-              className="w-4 h-4 bg-slate-800 border-slate-600 rounded"
+              className="w-4 h-4 bg-background-tertiary border-border-secondary rounded"
             />
-            <label htmlFor="isPublic" className="text-sm text-slate-300">
+            <label htmlFor="isPublic" className="text-sm text-text-tertiary">
               Make this report public (visible to community)
             </label>
           </div>
@@ -292,11 +292,11 @@ export default function ReportEditor({
         // Preview Mode
         <div className="prose prose-invert prose-sm max-w-none">
           <h1>{title || 'Untitled Report'}</h1>
-          <p className="text-slate-400 italic">{summary || 'No summary provided'}</p>
+          <p className="text-text-secondary italic">{summary || 'No summary provided'}</p>
           <div
             dangerouslySetInnerHTML={{
               __html: content
-                .replace(/\[\[([^\]]+)\]\]/g, '<span class="text-blue-400">$1</span>')
+                .replace(/\[\[([^\]]+)\]\]/g, '<span class="text-accent-cyan">$1</span>')
                 .replace(/\n/g, '<br/>')
             }}
           />
@@ -304,16 +304,16 @@ export default function ReportEditor({
       )}
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-700">
+      <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-border-primary">
         <button
           onClick={onCancel}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 rounded transition-colors"
+          className="px-4 py-2 bg-background-tertiary hover:bg-background-primary border border-border-secondary text-text-tertiary rounded transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-accent-cyan hover:bg-accent-cyan/80 text-black rounded transition-colors"
         >
           <Save className="w-4 h-4" />
           {initialReport ? 'Update Report' : 'Create Report'}
