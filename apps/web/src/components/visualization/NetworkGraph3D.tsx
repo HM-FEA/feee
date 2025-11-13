@@ -187,19 +187,26 @@ function generateNodePositions(): { nodes: GraphNode[]; edges: GraphEdge[] } {
 }
 
 // Node Component
-function Node({ node, onClick, isHovered, onHover }: {
+function Node({ node, onClick, isHovered, onHover, isPropagating = false }: {
   node: GraphNode;
   onClick: (node: GraphNode) => void;
   isHovered: boolean;
   onHover: (node: GraphNode | null) => void;
+  isPropagating?: boolean;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
 
   useFrame((state) => {
-    if (meshRef.current && isHovered) {
-      meshRef.current.scale.setScalar(1.2);
-    } else if (meshRef.current) {
-      meshRef.current.scale.setScalar(1);
+    if (meshRef.current) {
+      if (isPropagating) {
+        // Pulsing animation for propagating nodes
+        const scale = 1 + Math.sin(state.clock.elapsedTime * 3) * 0.15;
+        meshRef.current.scale.setScalar(scale);
+      } else if (isHovered) {
+        meshRef.current.scale.setScalar(1.2);
+      } else {
+        meshRef.current.scale.setScalar(1);
+      }
     }
   });
 
@@ -213,19 +220,31 @@ function Node({ node, onClick, isHovered, onHover }: {
         onPointerOut={() => onHover(null)}
       >
         <meshStandardMaterial
-          color={node.color}
-          emissive={node.color}
-          emissiveIntensity={isHovered ? 0.5 : 0.2}
+          color={isPropagating ? '#00E5FF' : node.color}
+          emissive={isPropagating ? '#00E5FF' : node.color}
+          emissiveIntensity={isPropagating ? 0.8 : (isHovered ? 0.5 : 0.2)}
           metalness={0.8}
           roughness={0.2}
         />
       </Sphere>
+
+      {/* Glow effect for propagating nodes */}
+      {isPropagating && (
+        <Sphere args={[node.size * 1.5, 32, 32]}>
+          <meshBasicMaterial
+            color="#00E5FF"
+            transparent
+            opacity={0.2}
+          />
+        </Sphere>
+      )}
 
       {isHovered && (
         <Html distanceFactor={10}>
           <div className="bg-black/90 border border-accent-cyan rounded-lg px-3 py-2 text-xs text-white whitespace-nowrap pointer-events-none">
             <div className="font-semibold">{node.label}</div>
             <div className="text-text-tertiary text-xs">{node.level.toUpperCase()}</div>
+            {isPropagating && <div className="text-accent-cyan text-[10px] mt-1">● PROPAGATING</div>}
           </div>
         </Html>
       )}
@@ -233,7 +252,7 @@ function Node({ node, onClick, isHovered, onHover }: {
       <Text
         position={[0, -node.size - 0.3, 0]}
         fontSize={0.3}
-        color="white"
+        color={isPropagating ? '#00E5FF' : 'white'}
         anchorX="center"
         anchorY="middle"
       >
@@ -267,13 +286,24 @@ function Edge({ edge, nodes }: { edge: GraphEdge; nodes: GraphNode[] }) {
 }
 
 // Scene Component
-function Scene({ nodes, edges, selectedNode, onNodeClick, hoveredNode, onNodeHover }: {
+function Scene({
+  nodes,
+  edges,
+  selectedNode,
+  onNodeClick,
+  hoveredNode,
+  onNodeHover,
+  highlightedNodes = new Set(),
+  activeLevel
+}: {
   nodes: GraphNode[];
   edges: GraphEdge[];
   selectedNode: GraphNode | null;
   onNodeClick: (node: GraphNode) => void;
   hoveredNode: GraphNode | null;
   onNodeHover: (node: GraphNode | null) => void;
+  highlightedNodes?: Set<string>;
+  activeLevel?: number;
 }) {
   return (
     <>
@@ -285,15 +315,22 @@ function Scene({ nodes, edges, selectedNode, onNodeClick, hoveredNode, onNodeHov
         <Edge key={i} edge={edge} nodes={nodes} />
       ))}
 
-      {nodes.map(node => (
-        <Node
-          key={node.id}
-          node={node}
-          onClick={onNodeClick}
-          isHovered={hoveredNode?.id === node.id}
-          onHover={onNodeHover}
-        />
-      ))}
+      {nodes.map(node => {
+        // Check if this node is propagating
+        const isPropagating = highlightedNodes.has(node.id) ||
+          (activeLevel !== undefined && activeLevel >= 0);
+
+        return (
+          <Node
+            key={node.id}
+            node={node}
+            onClick={onNodeClick}
+            isHovered={hoveredNode?.id === node.id}
+            onHover={onNodeHover}
+            isPropagating={isPropagating}
+          />
+        );
+      })}
 
       <OrbitControls
         enablePan
@@ -306,8 +343,20 @@ function Scene({ nodes, edges, selectedNode, onNodeClick, hoveredNode, onNodeHov
   );
 }
 
+interface NetworkGraph3DProps {
+  highlightedNodes?: Set<string>;
+  activeLevel?: number;
+  compact?: boolean;
+  onNodeClick?: (nodeId: string) => void;
+}
+
 // Main Component
-export default function NetworkGraph3D() {
+export default function NetworkGraph3D({
+  highlightedNodes = new Set(),
+  activeLevel,
+  compact = false,
+  onNodeClick
+}: NetworkGraph3DProps) {
   const { nodes, edges } = useMemo(() => generateNodePositions(), []);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
@@ -320,53 +369,55 @@ export default function NetworkGraph3D() {
 
   return (
     <div className="w-full h-full flex flex-col bg-black">
-      {/* Controls */}
-      <div className="absolute top-4 left-4 z-10 space-y-2">
-        <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
-          <div className="text-xs text-text-tertiary mb-2">Filter by Level</div>
-          <div className="flex gap-2">
-            {(['all', 'macro', 'sector', 'company', 'asset'] as const).map(level => (
-              <button
-                key={level}
-                onClick={() => setFilterLevel(level)}
-                className={`px-3 py-1 rounded text-xs transition-all ${
-                  filterLevel === level
-                    ? 'bg-accent-cyan text-black'
-                    : 'bg-background-secondary text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                {level === 'all' ? 'All' : level.charAt(0).toUpperCase() + level.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
-          <div className="text-xs text-text-tertiary mb-2">Levels</div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: LEVEL_COLORS.macro }} />
-              <span className="text-xs text-text-primary">Macro Variables</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: LEVEL_COLORS.sector }} />
-              <span className="text-xs text-text-primary">Sectors</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: LEVEL_COLORS.company }} />
-              <span className="text-xs text-text-primary">Companies</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: LEVEL_COLORS.asset }} />
-              <span className="text-xs text-text-primary">Assets</span>
+      {/* Controls - Hide in compact mode */}
+      {!compact && (
+        <div className="absolute top-4 left-4 z-10 space-y-2">
+          <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
+            <div className="text-xs text-text-tertiary mb-2">Filter by Level</div>
+            <div className="flex gap-2">
+              {(['all', 'macro', 'sector', 'company', 'asset'] as const).map(level => (
+                <button
+                  key={level}
+                  onClick={() => setFilterLevel(level)}
+                  className={`px-3 py-1 rounded text-xs transition-all ${
+                    filterLevel === level
+                      ? 'bg-accent-cyan text-black'
+                      : 'bg-background-secondary text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {level === 'all' ? 'All' : level.charAt(0).toUpperCase() + level.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Node Details */}
-      {selectedNode && (
+          {/* Legend */}
+          <div className="bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
+            <div className="text-xs text-text-tertiary mb-2">Levels</div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: LEVEL_COLORS.macro }} />
+                <span className="text-xs text-text-primary">Macro Variables</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: LEVEL_COLORS.sector }} />
+                <span className="text-xs text-text-primary">Sectors</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: LEVEL_COLORS.company }} />
+                <span className="text-xs text-text-primary">Companies</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: LEVEL_COLORS.asset }} />
+                <span className="text-xs text-text-primary">Assets</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Node Details - Hide in compact mode */}
+      {!compact && selectedNode && (
         <div className="absolute top-4 right-4 z-10 w-64 bg-black/90 backdrop-blur border border-accent-cyan rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-accent-cyan">{selectedNode.label}</h3>
@@ -420,40 +471,47 @@ export default function NetworkGraph3D() {
         </div>
       )}
 
-      {/* Stats */}
-      <div className="absolute bottom-4 left-4 z-10 bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
-        <div className="grid grid-cols-4 gap-4 text-xs">
-          <div>
-            <div className="text-text-tertiary">Nodes</div>
-            <div className="text-accent-cyan font-semibold">{filteredNodes.length}</div>
-          </div>
-          <div>
-            <div className="text-text-tertiary">Edges</div>
-            <div className="text-accent-magenta font-semibold">{edges.length}</div>
-          </div>
-          <div>
-            <div className="text-text-tertiary">Levels</div>
-            <div className="text-accent-emerald font-semibold">4</div>
-          </div>
-          <div>
-            <div className="text-text-tertiary">Sectors</div>
-            <div className="text-text-primary font-semibold">4</div>
+      {/* Stats - Hide in compact mode */}
+      {!compact && (
+        <div className="absolute bottom-4 left-4 z-10 bg-black/80 backdrop-blur border border-border-primary rounded-lg p-3">
+          <div className="grid grid-cols-4 gap-4 text-xs">
+            <div>
+              <div className="text-text-tertiary">Nodes</div>
+              <div className="text-accent-cyan font-semibold">{filteredNodes.length}</div>
+            </div>
+            <div>
+              <div className="text-text-tertiary">Edges</div>
+              <div className="text-accent-magenta font-semibold">{edges.length}</div>
+            </div>
+            <div>
+              <div className="text-text-tertiary">Levels</div>
+              <div className="text-accent-emerald font-semibold">4</div>
+            </div>
+            <div>
+              <div className="text-text-tertiary">Sectors</div>
+              <div className="text-text-primary font-semibold">4</div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 3D Canvas */}
       <Canvas
-        camera={{ position: [15, 10, 15], fov: 60 }}
+        camera={{ position: [compact ? 20 : 15, compact ? 12 : 10, compact ? 20 : 15], fov: 60 }}
         style={{ background: 'radial-gradient(circle at center, #0A0A0C 0%, #000000 100%)' }}
       >
         <Scene
           nodes={filteredNodes}
           edges={edges}
           selectedNode={selectedNode}
-          onNodeClick={setSelectedNode}
+          onNodeClick={(node) => {
+            setSelectedNode(node);
+            if (onNodeClick) onNodeClick(node.id);
+          }}
           hoveredNode={hoveredNode}
           onNodeHover={setHoveredNode}
+          highlightedNodes={highlightedNodes}
+          activeLevel={activeLevel}
         />
       </Canvas>
     </div>

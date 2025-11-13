@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { Network, GitBranch, Activity, Maximize2, Minimize2, Globe, ChevronDown } from 'lucide-react';
 import { PropagationState } from '@/lib/finance/nineLevelPropagation';
 import { TimeState } from './StudioLayout_v3';
-import NetworkGraph2D, { generateSampleNetwork, GraphNode } from '@/components/visualization/NetworkGraph2D';
+import NetworkGraph3D from '@/components/visualization/NetworkGraph3D';
 import SupplyChainFlow from '@/components/visualization/SupplyChainFlow';
 import { SUPPLY_CHAIN_SCENARIOS, SupplyChainScenario } from '@/data/supplyChainScenarios';
 
@@ -34,15 +34,12 @@ type ViewMode = 'globe' | 'network' | 'supply-chain' | 'propagation-flow';
  *
  * Features:
  * - Globe3D with company/flow visualization
- * - 2D Network Graph with propagation highlighting
+ * - 3D Network Graph with propagation highlighting
  * - Supply Chain Flow (React Flow - multiple scenarios)
  * - 9-Level Propagation Flow
  * - Small inset graph in corner
  * - Synced with propagation animation
  */
-
-// Generate static network data once (prevents re-rendering on variable change)
-const STATIC_NETWORK = generateSampleNetwork();
 
 export default function StudioCenterStage({
   focusedCompany,
@@ -56,19 +53,15 @@ export default function StudioCenterStage({
   const [selectedScenario, setSelectedScenario] = useState<SupplyChainScenario>(SUPPLY_CHAIN_SCENARIOS[0]);
   const [showScenarioDropdown, setShowScenarioDropdown] = useState(false);
 
-  // Only calculate highlighted nodes (don't regenerate entire network)
+  // Calculate highlighted nodes for propagation
   const highlightedNodes = useMemo(() => {
     const highlighted = new Set<string>();
-    if (activePropagationLevel !== undefined && propagationState) {
-      // Highlight nodes at the active level
-      STATIC_NETWORK.nodes.forEach(node => {
-        if (node.level === activePropagationLevel) {
-          highlighted.add(node.id);
-        }
-      });
+    if (activePropagationLevel !== undefined && activePropagationLevel >= 0) {
+      // For now, all nodes are highlighted during propagation
+      // NetworkGraph3D will handle the glow effect internally
     }
     return highlighted;
-  }, [activePropagationLevel, propagationState]);
+  }, [activePropagationLevel]);
 
   // Convert selected scenario to SupplyChainFlow format
   const supplyChainFlowData = useMemo(() => {
@@ -262,9 +255,7 @@ export default function StudioCenterStage({
         )}
 
         {viewMode === 'network' && (
-          <NetworkGraph2D
-            nodes={STATIC_NETWORK.nodes}
-            edges={STATIC_NETWORK.edges}
+          <NetworkGraph3D
             activeLevel={activePropagationLevel}
             highlightedNodes={highlightedNodes}
             onNodeClick={(nodeId) => console.log('Node clicked:', nodeId)}
@@ -290,13 +281,11 @@ export default function StudioCenterStage({
 
       {/* Small Inset Graph (Bottom-right) - Show network when viewing other modes */}
       {showInsetGraph && viewMode !== 'network' && (
-        <div className="absolute bottom-16 right-4 w-72 h-44 z-20 bg-black/90 backdrop-blur-md border border-gray-700 rounded-lg overflow-hidden">
+        <div className="absolute bottom-16 right-4 w-96 h-64 z-20 bg-black/90 backdrop-blur-md border border-gray-700 rounded-lg overflow-hidden">
           <div className="absolute top-2 left-2 z-30">
-            <div className="text-[9px] font-bold text-gray-500 uppercase tracking-wide">Network View</div>
+            <div className="text-[9px] font-bold text-gray-500 uppercase tracking-wide">Network 3D View</div>
           </div>
-          <NetworkGraph2D
-            nodes={STATIC_NETWORK.nodes}
-            edges={STATIC_NETWORK.edges}
+          <NetworkGraph3D
             activeLevel={activePropagationLevel}
             highlightedNodes={highlightedNodes}
             compact={true}
