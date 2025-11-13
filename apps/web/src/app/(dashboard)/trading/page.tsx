@@ -8,7 +8,7 @@ export default function TradingPage() {
   const { bots, createBot, runBacktest, subscribeToBot } = useTradingBotStore();
   const [viewMode, setViewMode] = useState<'marketplace' | 'myBots' | 'create'>('marketplace');
   const [selectedBot, setSelectedBot] = useState<TradingBot | null>(null);
-  const [creating Bot, setCreatingBot] = useState(false);
+  const [creatingBot, setCreatingBot] = useState(false);
 
   // Initialize with sample bots
   useEffect(() => {
