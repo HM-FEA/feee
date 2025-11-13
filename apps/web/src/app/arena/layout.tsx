@@ -1,8 +1,7 @@
-'use client';
-
 import UnifiedLayout from '@/components/layout/UnifiedLayout';
+import { Metadata } from 'next';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Arena | Nexus-Alpha',
 };
 

@@ -15,6 +15,10 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Briefcase,
+  TrendingUp,
+  LineChart,
+  Wallet,
 } from 'lucide-react';
 import NavSection from './NavSection';
 
@@ -41,7 +45,7 @@ interface NavGroup {
  * 기능:
  * - Desktop: 240px → 64px (접기)
  * - Mobile: slide-in overlay
- * - 섹션별 그룹화 (Core, Platform, Social, System)
+ * - 섹션별 그룹화 (Core, Personal, Platform, Social, System)
  * - Active state 표시
  */
 export default function LeftSidebar({ collapsed, onToggleCollapse }: LeftSidebarProps) {
@@ -55,6 +59,15 @@ export default function LeftSidebar({ collapsed, onToggleCollapse }: LeftSidebar
         { name: 'Simulation', href: '/simulation', icon: <Sparkles size={20} />, badge: 'New' },
         { name: 'Ontology', href: '/ontology', icon: <Globe size={20} /> },
         { name: 'Reports', href: '/reports', icon: <FileText size={20} /> },
+      ],
+    },
+    {
+      title: 'Personal',
+      items: [
+        { name: 'Portfolio Manager', href: '/portfolio-manager', icon: <Briefcase size={20} />, badge: 'New' },
+        { name: 'My Analysis', href: '/my-analysis', icon: <LineChart size={20} /> },
+        { name: 'Trading Bots', href: '/trading', icon: <TrendingUp size={20} /> },
+        { name: 'Watchlist', href: '/watchlist', icon: <Wallet size={20} /> },
       ],
     },
     {
@@ -80,53 +93,54 @@ export default function LeftSidebar({ collapsed, onToggleCollapse }: LeftSidebar
   ];
 
   return (
-    <>
-      {/* Desktop Sidebar */}
-      <aside
-        className={`hidden md:flex flex-col bg-background-secondary border-r border-border-primary transition-all duration-300 flex-shrink-0 ${
-          collapsed ? 'w-16' : 'w-60'
-        }`}
-      >
-        {/* Collapse Toggle */}
-        <div className="h-14 flex items-center justify-end px-3 border-b border-border-primary">
-          <button
-            onClick={onToggleCollapse}
-            className="w-8 h-8 rounded hover:bg-background-tertiary flex items-center justify-center transition-colors"
-            title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-          >
-            {collapsed ? (
-              <ChevronRight size={18} className="text-text-tertiary" />
-            ) : (
-              <ChevronLeft size={18} className="text-text-tertiary" />
-            )}
-          </button>
-        </div>
+    <aside
+      className={`
+        fixed left-0 top-[56px] bottom-0 z-40
+        bg-background-primary border-r border-border-primary
+        transition-all duration-300 ease-in-out
+        ${collapsed ? 'w-16' : 'w-60'}
+        flex flex-col
+      `}
+    >
+      {/* Navigation Groups */}
+      <nav className="flex-1 overflow-y-auto py-4 px-2">
+        {navGroups.map((group) => (
+          <NavSection
+            key={group.title}
+            title={group.title}
+            items={group.items}
+            collapsed={collapsed}
+            currentPath={pathname}
+          />
+        ))}
+      </nav>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4">
-          {navGroups.map((group, idx) => (
-            <NavSection
-              key={idx}
-              title={group.title}
-              items={group.items}
-              collapsed={collapsed}
-              currentPath={pathname}
-            />
-          ))}
-        </nav>
+      {/* Collapse Toggle */}
+      <div className="p-2 border-t border-border-primary">
+        <button
+          onClick={onToggleCollapse}
+          className="
+            w-full flex items-center justify-center
+            py-2 rounded-lg
+            text-text-secondary hover:text-text-primary
+            hover:bg-background-secondary
+            transition-colors
+          "
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+        </button>
+      </div>
 
-        {/* Footer */}
-        {!collapsed && (
-          <div className="p-4 border-t border-border-primary">
-            <div className="text-xs text-text-tertiary text-center">
-              Nexus-Alpha v3.0
-            </div>
+      {/* Footer (when expanded) */}
+      {!collapsed && (
+        <div className="p-4 border-t border-border-primary">
+          <div className="text-xs text-text-tertiary">
+            <div className="font-semibold">Nexus-Alpha</div>
+            <div className="mt-1">v0.9.0 Beta</div>
           </div>
-        )}
-      </aside>
-
-      {/* Mobile Sidebar - TODO: Implement slide-in overlay */}
-      {/* For now, mobile will use the existing layout */}
-    </>
+        </div>
+      )}
+    </aside>
   );
 }
