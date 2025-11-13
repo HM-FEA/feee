@@ -26,7 +26,7 @@ const generatePerformanceData = (botId: string, finalReturn: number) => {
 };
 
 const Card = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
-  <div className={`bg-[#0D0D0F] border border-[#1A1A1F] rounded-2xl p-4 sm:p-6 ${className}`}>
+  <div className={`bg-background-secondary border border-border-primary rounded-2xl p-4 sm:p-6 ${className}`}>
     {children}
   </div>
 );
@@ -39,7 +39,7 @@ const BotCard = ({ bot, onView }: { bot: TradingBot, onView: () => void }) => {
 
   return (
     <div onClick={onView} className="cursor-pointer">
-      <Card className="hover:border-[#2A2A3F] transition-all group h-full">
+      <Card className="hover:border-accent-cyan/50 transition-all group h-full">
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
@@ -51,7 +51,7 @@ const BotCard = ({ bot, onView }: { bot: TradingBot, onView: () => void }) => {
             <p className="text-xs text-text-secondary line-clamp-2">{bot.description}</p>
             <p className="text-xs text-text-tertiary mt-1">By <span className="text-accent-cyan">{bot.createdBy}</span></p>
           </div>
-          <div className={`text-xs px-2 py-1 rounded-full font-semibold ${bot.status === 'running' ? 'bg-green-500/20 text-green-400' : bot.status === 'completed' ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-500/20 text-slate-400'}`}>
+          <div className={`text-xs px-2 py-1 rounded-full font-semibold ${bot.status === 'running' ? 'bg-status-safe/20 text-status-safe' : bot.status === 'completed' ? 'bg-accent-cyan/20 text-accent-cyan' : 'bg-background-tertiary text-text-tertiary'}`}>
             {bot.status.charAt(0).toUpperCase() + bot.status.slice(1)}
           </div>
         </div>
@@ -115,7 +115,7 @@ const TournamentCard = ({ tournament, onJoin, userBots }: { tournament: Tourname
   const canJoin = tournament.status !== 'completed' && userBots.length > 0;
 
   return (
-    <Card className="hover:border-[#2A2A3F] transition-all group h-full">
+    <Card className="hover:border-accent-cyan/50 transition-all group h-full">
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -126,7 +126,7 @@ const TournamentCard = ({ tournament, onJoin, userBots }: { tournament: Tourname
           </div>
           <p className="text-xs text-text-secondary">{tournament.description}</p>
         </div>
-        <div className={`text-xs px-2 py-1 rounded-full font-semibold whitespace-nowrap ${tournament.status === 'active' ? 'bg-green-500/20 text-green-400' : tournament.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/20 text-gray-400'}`}>
+        <div className={`text-xs px-2 py-1 rounded-full font-semibold whitespace-nowrap ${tournament.status === 'active' ? 'bg-status-safe/20 text-status-safe' : tournament.status === 'upcoming' ? 'bg-accent-cyan/20 text-accent-cyan' : 'bg-background-tertiary text-text-tertiary'}`}>
           {tournament.status.charAt(0).toUpperCase() + tournament.status.slice(1)}
         </div>
       </div>
@@ -152,7 +152,7 @@ const TournamentCard = ({ tournament, onJoin, userBots }: { tournament: Tourname
         className={`w-full py-2 font-semibold rounded-lg transition-all text-xs ${
           canJoin
             ? 'bg-accent-cyan text-black hover:bg-accent-cyan/80'
-            : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+            : 'bg-background-tertiary text-text-tertiary cursor-not-allowed'
         }`}
       >
         {tournament.status === 'active'
