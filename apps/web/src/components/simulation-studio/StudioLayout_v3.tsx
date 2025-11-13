@@ -9,6 +9,7 @@ import StudioTimeControls from './StudioTimeControls';
 import ScenarioSelector from './ScenarioSelector';
 import { PropagationWave, usePropagationAnimation } from './PropagationAnimationController';
 import { useMacroStore } from '@/lib/store/macroStore';
+import { useLevelStore } from '@/lib/store/levelStore';
 import { propagateAllLevels, PropagationState } from '@/lib/finance/nineLevelPropagation';
 import { companies } from '@/data/companies';
 
@@ -44,6 +45,7 @@ export default function StudioLayout_v3() {
   // Global state
   const macroState = useMacroStore(state => state.macroState);
   const updateMacroVariable = useMacroStore(state => state.updateMacroVariable);
+  const levelState = useLevelStore(state => state.levelState);
 
   // Local state
   const [searchTicker, setSearchTicker] = useState('');
@@ -65,17 +67,17 @@ export default function StudioLayout_v3() {
   // Propagation animation hook
   const { animationState, startPropagation, stopPropagation } = usePropagationAnimation();
 
-  // Calculate propagation whenever macro changes
+  // Calculate propagation whenever macro or level 0 changes
   useEffect(() => {
     const level0 = {
-      container_rate_us_china: 3500,
-      semiconductor_tariff: 0,
-      energy_cost_index: 100,
+      container_rate_us_china: levelState['container_rate_us_china'] || 3500,
+      semiconductor_tariff: levelState['semiconductor_tariff'] || 0,
+      energy_cost_index: levelState['energy_cost_index'] || 100,
     };
 
     const state = propagateAllLevels(level0, macroState, companies);
     setPropagationState(state);
-  }, [macroState]);
+  }, [macroState, levelState]);
 
   // Time-based simulation
   useEffect(() => {

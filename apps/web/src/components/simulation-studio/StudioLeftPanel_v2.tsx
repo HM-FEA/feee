@@ -77,7 +77,7 @@ export default function StudioLeftPanel({
         {
           id: 'container_rate_us_china',
           label: 'Container Rate (US-China)',
-          value: 3500,
+          value: levelState['container_rate_us_china'] || 3500,
           min: 1000,
           max: 10000,
           step: 100,
@@ -87,7 +87,7 @@ export default function StudioLeftPanel({
         {
           id: 'semiconductor_tariff',
           label: 'Semiconductor Tariffs',
-          value: 0,
+          value: levelState['semiconductor_tariff'] || 0,
           min: 0,
           max: 50,
           step: 5,
@@ -97,7 +97,7 @@ export default function StudioLeftPanel({
         {
           id: 'energy_cost_index',
           label: 'Energy Cost Index',
-          value: 100,
+          value: levelState['energy_cost_index'] || 100,
           min: 60,
           max: 200,
           step: 5,
@@ -461,7 +461,10 @@ export default function StudioLeftPanel({
   ];
 
   const handleControlChange = (level: number, controlId: string, value: number) => {
-    if (level === 1) {
+    if (level === 0) {
+      // Level 0: Trade & Logistics → use levelStore
+      updateLevelControl(controlId, value);
+    } else if (level === 1) {
       // Level 1: Macro variables → use macroStore
       if (controlId === 'us_cpi') {
         updateMacroVariable(controlId, value / 100); // Convert percentage to decimal
@@ -469,7 +472,7 @@ export default function StudioLeftPanel({
         updateMacroVariable(controlId, value);
       }
     } else {
-      // Other levels → use levelStore
+      // Other levels (2-9) → use levelStore
       updateLevelControl(controlId, value);
     }
 

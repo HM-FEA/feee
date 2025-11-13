@@ -288,7 +288,7 @@ export function calculateAdjustedFinancials(
   // Cost of Equity (CAPM)
   const riskFreeRate = fedRate;
   const marketReturn = 0.10; // 10% historical market return
-  const beta = calculateSectorBeta(company.sector);
+  const beta = calculateSectorBeta(company.sector, macroState);
   const costOfEquity = calculateCostOfEquity(riskFreeRate, beta, marketReturn);
 
   // DCF Fair Value

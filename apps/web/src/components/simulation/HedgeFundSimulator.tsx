@@ -9,18 +9,18 @@ import {
   riskParityPortfolio,
   minimumVariancePortfolio,
   analyzePortfolio,
-} from '@/lib/financial/portfolioOptimization';
+} from '@/lib/finance/portfolioOptimization';
 import {
   VaRResult,
   portfolioVaR,
   stressTest,
   STRESS_SCENARIOS,
   StressTestResult,
-} from '@/lib/financial/riskMetrics';
+} from '@/lib/finance/riskMetrics';
 import {
   blackScholes,
   OptionPriceResult,
-} from '@/lib/financial/blackScholes';
+} from '@/lib/finance/blackScholes';
 
 /**
  * Hedge Fund Strategies

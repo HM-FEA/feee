@@ -7,10 +7,10 @@ import type { Company } from '@/data/companies';
 import { ArrowLeft, TrendingUp, DollarSign, BarChart3, PieChart, Calculator } from 'lucide-react';
 import Link from 'next/link';
 
-// Import financial libraries
+// Import financial libraries (consolidated under /lib/finance)
 import { calculateCAPM, calculateBeta, calculateCostOfEquity } from '@/lib/finance/capm';
 import { calculateDCF, calculateWACC } from '@/lib/finance/dcf';
-import { bondPrice, yieldToMaturity, macaulayDuration } from '@/lib/financial/fixedIncome';
+import { bondPrice, yieldToMaturity, macaulayDuration } from '@/lib/finance/fixedIncome';
 
 export default function CompanyDetailPage() {
   const params = useParams();
