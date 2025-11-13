@@ -532,20 +532,42 @@ export default function Globe3D({
   }, [economicFlows]);
 
   // Combine static flows with dynamic impact arcs, snapshot-based arcs, and economic flow arcs
+  // Add level information to each arc for sequential animation
   const allArcs = useMemo(() => {
-    const baseArcs = economicFlowArcs; // Always show economic flows
+    const baseArcs = economicFlowArcs.map(arc => ({ ...arc, level: 1 })); // Economic flows = Level 1 (Macro)
+
+    let combinedArcs: any[] = [];
 
     if (viewMode === 'flows') {
-      return [...visibleFlows, ...dynamicImpactArcs, ...snapshotImpactArcs, ...baseArcs];
+      combinedArcs = [
+        ...visibleFlows.map(arc => ({ ...arc, level: 1 })), // Capital flows = Level 1
+        ...dynamicImpactArcs.map(arc => ({ ...arc, level: 2 })), // Sector impacts = Level 2
+        ...snapshotImpactArcs.map(arc => ({ ...arc, level: 3 })), // Company impacts = Level 3
+        ...baseArcs
+      ];
     } else if (viewMode === 'companies') {
-      // In companies mode, show both macro and snapshot impact arcs + economic flows
-      return [...dynamicImpactArcs, ...snapshotImpactArcs, ...baseArcs];
+      combinedArcs = [
+        ...dynamicImpactArcs.map(arc => ({ ...arc, level: 2 })), // Sector impacts = Level 2
+        ...snapshotImpactArcs.map(arc => ({ ...arc, level: 3 })), // Company impacts = Level 3
+        ...baseArcs
+      ];
     } else if (viewMode === 'm2') {
-      // In M2 mode, show snapshot arcs + economic flows
-      return [...snapshotImpactArcs, ...baseArcs];
+      combinedArcs = [
+        ...snapshotImpactArcs.map(arc => ({ ...arc, level: 3 })), // Company impacts = Level 3
+        ...baseArcs
+      ];
+    } else {
+      combinedArcs = baseArcs;
     }
-    return baseArcs;
-  }, [viewMode, visibleFlows, dynamicImpactArcs, snapshotImpactArcs, economicFlowArcs]);
+
+    // Filter arcs based on activeLevel (sequential animation)
+    if (activeLevel !== undefined && activeLevel >= 0) {
+      // Show only arcs at or below the current level
+      return combinedArcs.filter(arc => (arc.level || 1) <= activeLevel);
+    }
+
+    return combinedArcs;
+  }, [viewMode, visibleFlows, dynamicImpactArcs, snapshotImpactArcs, economicFlowArcs, activeLevel]);
 
   // Create pulsing rings for affected entities (problem indicators)
   const affectedEntityRings = useMemo(() => {

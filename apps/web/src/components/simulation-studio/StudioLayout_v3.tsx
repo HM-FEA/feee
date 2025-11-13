@@ -140,10 +140,14 @@ export default function StudioLayout_v3() {
     startPropagation(changeSummary);
   };
 
-  // Handle scenario selection - trigger propagation animation
+  // Handle scenario selection (just select, don't start animation)
   const handleScenarioSelect = (scenarioId: string) => {
     setSelectedScenarioId(scenarioId);
-    // Start propagation animation for scenario
+  };
+
+  // Handle Run button - trigger propagation animation
+  const handleRunSimulation = (scenarioId: string) => {
+    setShowPropagation(true); // Enable propagation display
     startPropagation(`Scenario: ${scenarioId}`);
   };
 
@@ -235,6 +239,7 @@ export default function StudioLayout_v3() {
                 <ScenarioSelector
                   onScenarioSelect={handleScenarioSelect}
                   selectedScenarioId={selectedScenarioId}
+                  onRunSimulation={handleRunSimulation}
                 />
               </div>
             </details>
@@ -258,6 +263,7 @@ export default function StudioLayout_v3() {
             focusedCompany={focusedCompany}
             propagationState={propagationState}
             showPropagation={showPropagation}
+            activePropagationLevel={animationState.currentLevel}
           />
         </div>
       </div>

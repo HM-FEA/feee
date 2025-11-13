@@ -8,6 +8,7 @@ interface StudioRightPanelProps {
   focusedCompany: string | null;
   propagationState: PropagationState | null;
   showPropagation: boolean;
+  activePropagationLevel?: number; // Current animation level
 }
 
 type TabMode = 'terminal' | 'news' | 'charts' | 'knowledge-graph' | 'er-diagram';
@@ -26,7 +27,8 @@ type TabMode = 'terminal' | 'news' | 'charts' | 'knowledge-graph' | 'er-diagram'
 export default function StudioRightPanel({
   focusedCompany,
   propagationState,
-  showPropagation
+  showPropagation,
+  activePropagationLevel
 }: StudioRightPanelProps) {
   const [activeTab, setActiveTab] = useState<TabMode>('terminal');
 
@@ -73,6 +75,7 @@ export default function StudioRightPanel({
             propagationState={propagationState}
             focusedCompany={focusedCompany}
             showPropagation={showPropagation}
+            activePropagationLevel={activePropagationLevel}
           />
         )}
         {activeTab === 'news' && <NewsTab focusedCompany={focusedCompany} />}
@@ -113,91 +116,112 @@ function TabButton({
 }
 
 /**
- * Terminal Tab - Bloomberg/cmd style command-line output
+ * Terminal Tab - Bloomberg/cmd style command-line output with sequential updates
  */
 function TerminalTab({
   propagationState,
   focusedCompany,
-  showPropagation
+  showPropagation,
+  activePropagationLevel
 }: {
   propagationState: PropagationState | null;
   focusedCompany: string | null;
   showPropagation: boolean;
+  activePropagationLevel?: number;
 }) {
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logs, setLogs] = useState<string[]>(['> NEXUS-ALPHA Terminal v3.0', '> Waiting for propagation data...', '']);
   const terminalRef = useRef<HTMLDivElement>(null);
+  const prevLevelRef = useRef<number>(-1);
 
-  // Generate terminal output from propagation state
+  // Initialize terminal when propagation starts
   useEffect(() => {
-    if (!propagationState) {
-      setLogs(['> NEXUS-ALPHA Terminal v3.0', '> Waiting for propagation data...', '']);
-      return;
+    if (activePropagationLevel === 0 || (activePropagationLevel === 1 && prevLevelRef.current === -1)) {
+      setLogs([
+        '> NEXUS-ALPHA Terminal v3.0',
+        '> ========================================',
+        '> System: Propagation Engine Active',
+        `> Timestamp: ${new Date().toISOString()}`,
+        '> ========================================',
+        ''
+      ]);
+      prevLevelRef.current = 0;
+    }
+  }, [activePropagationLevel]);
+
+  // Add logs sequentially as each level activates
+  useEffect(() => {
+    if (!propagationState || activePropagationLevel === undefined || activePropagationLevel < 0) return;
+    if (activePropagationLevel === prevLevelRef.current) return; // Don't re-add same level
+
+    prevLevelRef.current = activePropagationLevel;
+
+    const newLevelLogs: string[] = [];
+
+    // Add logs for current level
+    switch (activePropagationLevel) {
+      case 1:
+        newLevelLogs.push('> [LEVEL 1] MACRO VARIABLES');
+        newLevelLogs.push(`  fed_funds_rate     = ${((propagationState.level1.fed_funds_rate || 0) * 100).toFixed(3)}%`);
+        newLevelLogs.push(`  us_gdp_growth      = ${((propagationState.level1.us_gdp_growth || 0) * 100).toFixed(3)}%`);
+        newLevelLogs.push(`  us_cpi             = ${((propagationState.level1.us_cpi || 0) * 100).toFixed(3)}%`);
+        newLevelLogs.push('');
+        break;
+
+      case 2:
+        newLevelLogs.push('> [LEVEL 2] SECTOR IMPACT');
+        Array.from(propagationState.level2.entries()).slice(0, 5).forEach(([sector, state]) => {
+          const impact = state.revenue_impact >= 0 ? `+${state.revenue_impact.toFixed(3)}` : state.revenue_impact.toFixed(3);
+          const color = state.revenue_impact >= 0 ? '↑' : '↓';
+          newLevelLogs.push(`  ${sector.padEnd(20)} ${color} revenue_impact = ${impact}%`);
+        });
+        newLevelLogs.push('');
+        break;
+
+      case 3:
+        newLevelLogs.push('> [LEVEL 3] COMPANY METRICS');
+        Array.from(propagationState.level3.entries()).slice(0, 5).forEach(([ticker, state]) => {
+          const marketCap = (state.market_cap / 1000000000).toFixed(2);
+          newLevelLogs.push(`  ${ticker.padEnd(20)} market_cap = $${marketCap}B`);
+        });
+        newLevelLogs.push('');
+        break;
+
+      case 4:
+        newLevelLogs.push('> [LEVEL 4] PRODUCT DEMAND');
+        Array.from(propagationState.level4.entries()).slice(0, 4).forEach(([product, state]) => {
+          newLevelLogs.push(`  ${product.padEnd(20)} demand_index = ${state.demand_index.toFixed(3)}`);
+        });
+        newLevelLogs.push('');
+        break;
+
+      case 5:
+        newLevelLogs.push('> [LEVEL 5] COMPONENT SUPPLY');
+        Array.from(propagationState.level5.entries()).slice(0, 4).forEach(([component, state]) => {
+          const status = state.bottleneck ? '[BOTTLENECK]' : '[OK]';
+          const statusColor = state.bottleneck ? '⚠' : '✓';
+          newLevelLogs.push(`  ${component.padEnd(20)} ${statusColor} ${status} qty=${state.required_quantity.toFixed(0)}`);
+        });
+        newLevelLogs.push('');
+        break;
+
+      case 9:
+        newLevelLogs.push('> [LEVEL 9] FACILITY OPERATIONS');
+        Array.from(propagationState.level9.entries()).slice(0, 3).forEach(([facility, state]) => {
+          newLevelLogs.push(`  ${facility.padEnd(20)} utilization = ${state.utilization_pct.toFixed(1)}%`);
+        });
+        newLevelLogs.push('');
+        newLevelLogs.push('> ========================================');
+        newLevelLogs.push('> Propagation cycle complete');
+        if (focusedCompany) {
+          newLevelLogs.push(`> Focused entity: ${focusedCompany}`);
+        }
+        newLevelLogs.push('> Ready for next update...');
+        newLevelLogs.push('');
+        break;
     }
 
-    const newLogs: string[] = [
-      '> NEXUS-ALPHA Terminal v3.0',
-      '> ========================================',
-      '> System: Propagation Engine Active',
-      `> Timestamp: ${new Date().toISOString()}`,
-      '> ========================================',
-      '',
-      '> [LEVEL 1] MACRO VARIABLES',
-      `  fed_funds_rate     = ${((propagationState.level1.fed_funds_rate || 0) * 100).toFixed(3)}%`,
-      `  us_gdp_growth      = ${((propagationState.level1.us_gdp_growth || 0) * 100).toFixed(3)}%`,
-      `  us_cpi             = ${((propagationState.level1.us_cpi || 0) * 100).toFixed(3)}%`,
-      '',
-      '> [LEVEL 2] SECTOR IMPACT',
-    ];
-
-    // Add Level 2 (Sectors)
-    Array.from(propagationState.level2.entries()).slice(0, 5).forEach(([sector, state]) => {
-      const impact = state.revenue_impact >= 0 ? `+${state.revenue_impact.toFixed(3)}` : state.revenue_impact.toFixed(3);
-      const color = state.revenue_impact >= 0 ? '↑' : '↓';
-      newLogs.push(`  ${sector.padEnd(20)} ${color} revenue_impact = ${impact}%`);
-    });
-
-    newLogs.push('', '> [LEVEL 3] COMPANY METRICS');
-
-    // Add Level 3 (Companies)
-    Array.from(propagationState.level3.entries()).slice(0, 5).forEach(([ticker, state]) => {
-      const marketCap = (state.market_cap / 1000000000).toFixed(2);
-      newLogs.push(`  ${ticker.padEnd(20)} market_cap = $${marketCap}B`);
-    });
-
-    newLogs.push('', '> [LEVEL 4] PRODUCT DEMAND');
-
-    // Add Level 4 (Products)
-    Array.from(propagationState.level4.entries()).slice(0, 4).forEach(([product, state]) => {
-      newLogs.push(`  ${product.padEnd(20)} demand_index = ${state.demand_index.toFixed(3)}`);
-    });
-
-    newLogs.push('', '> [LEVEL 5] COMPONENT SUPPLY');
-
-    // Add Level 5 (Components)
-    Array.from(propagationState.level5.entries()).slice(0, 4).forEach(([component, state]) => {
-      const status = state.bottleneck ? '[BOTTLENECK]' : '[OK]';
-      const statusColor = state.bottleneck ? '⚠' : '✓';
-      newLogs.push(`  ${component.padEnd(20)} ${statusColor} ${status} qty=${state.required_quantity.toFixed(0)}`);
-    });
-
-    newLogs.push('', '> [LEVEL 9] FACILITY OPERATIONS');
-
-    // Add Level 9 (Facilities)
-    Array.from(propagationState.level9.entries()).slice(0, 3).forEach(([facility, state]) => {
-      newLogs.push(`  ${facility.padEnd(20)} utilization = ${state.utilization_pct.toFixed(1)}%`);
-    });
-
-    newLogs.push('', '> ========================================');
-    newLogs.push('> Propagation cycle complete');
-
-    if (focusedCompany) {
-      newLogs.push(`> Focused entity: ${focusedCompany}`);
-    }
-
-    newLogs.push('> Ready for next update...');
-    newLogs.push('');
-
-    setLogs(newLogs);
+    // Append new logs
+    setLogs(prev => [...prev, ...newLevelLogs]);
 
     // Auto-scroll to bottom
     setTimeout(() => {
@@ -205,7 +229,7 @@ function TerminalTab({
         terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
       }
     }, 50);
-  }, [propagationState, focusedCompany]);
+  }, [activePropagationLevel, propagationState, focusedCompany]);
 
   return (
     <div className="h-full flex flex-col bg-black">

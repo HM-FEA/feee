@@ -8,6 +8,7 @@ import { useSupplyChainVoteStore } from '@/lib/store/supplyChainVoteStore';
 interface ScenarioSelectorProps {
   onScenarioSelect: (scenarioId: string) => void;
   selectedScenarioId: string | null;
+  onRunSimulation?: (scenarioId: string) => void; // NEW: Trigger propagation animation
 }
 
 /**
@@ -21,7 +22,7 @@ interface ScenarioSelectorProps {
  * - Run simulation button
  */
 
-export default function ScenarioSelector({ onScenarioSelect, selectedScenarioId }: ScenarioSelectorProps) {
+export default function ScenarioSelector({ onScenarioSelect, selectedScenarioId, onRunSimulation }: ScenarioSelectorProps) {
   const getVoteSummary = useSupplyChainVoteStore(state => state.getVoteSummary);
   const upvote = useSupplyChainVoteStore(state => state.upvote);
   const downvote = useSupplyChainVoteStore(state => state.downvote);
@@ -134,8 +135,9 @@ export default function ScenarioSelector({ onScenarioSelect, selectedScenarioId 
                     className="px-3 py-1.5 bg-accent-cyan text-black rounded font-medium hover:bg-accent-cyan/80 transition-colors flex items-center gap-1 text-xs"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // TODO: Trigger propagation animation
-                      console.log('Run simulation for:', scenario.id);
+                      if (onRunSimulation) {
+                        onRunSimulation(scenario.id);
+                      }
                     }}
                   >
                     <Play size={12} />
