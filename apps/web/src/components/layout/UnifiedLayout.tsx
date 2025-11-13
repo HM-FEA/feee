@@ -35,7 +35,7 @@ export default function UnifiedLayout({ children }: UnifiedLayoutProps) {
         {/* Dashboard Content */}
         <main
           className={`flex-1 overflow-y-auto transition-all duration-300 ${
-            sidebarCollapsed ? 'ml-0' : 'ml-0'
+            sidebarCollapsed ? 'ml-16' : 'ml-60'
           }`}
         >
           {children}
