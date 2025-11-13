@@ -304,35 +304,7 @@ export default function StudioCenterStage({
         </div>
       )}
 
-      {/* Propagation Stats Overlay */}
-      {showPropagation && propagationState && viewMode !== 'propagation-flow' && (
-        <div className="absolute top-20 right-4 w-72 max-h-80 overflow-y-auto bg-black/90 backdrop-blur-md border border-gray-700 rounded-lg p-3 z-20">
-          <h3 className="text-xs font-bold text-accent-cyan mb-2 flex items-center gap-2">
-            <GitBranch size={14} />
-            Live Propagation
-          </h3>
-          <div className="space-y-2 text-[10px]">
-            {/* Level 2 */}
-            {Array.from(propagationState.level2.entries()).slice(0, 2).map(([sector, state]) => (
-              <div key={sector} className="bg-gray-900/50 rounded p-2">
-                <div className="text-gray-400 font-medium">L2: {sector}</div>
-                <div className={state.revenue_impact >= 0 ? 'text-green-400' : 'text-red-400'}>
-                  Revenue: {state.revenue_impact >= 0 ? '+' : ''}{state.revenue_impact.toFixed(2)}%
-                </div>
-              </div>
-            ))}
-            {/* Level 3 */}
-            {Array.from(propagationState.level3.entries()).slice(0, 2).map(([ticker, state]) => (
-              <div key={ticker} className="bg-gray-900/50 rounded p-2">
-                <div className="text-gray-400 font-medium">L3: {ticker}</div>
-                <div className="text-gray-500">
-                  Market Cap: ${(state.market_cap / 1000).toFixed(0)}B
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Propagation Stats Overlay - Removed: Now shown in Terminal tab on right panel */}
     </div>
   );
 }

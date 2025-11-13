@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Newspaper, TrendingUp, GitBranch, Database, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Newspaper, TrendingUp, GitBranch, Database, ExternalLink, Terminal as TerminalIcon } from 'lucide-react';
 import { PropagationState } from '@/lib/finance/nineLevelPropagation';
 
 interface StudioRightPanelProps {
@@ -10,12 +10,13 @@ interface StudioRightPanelProps {
   showPropagation: boolean;
 }
 
-type TabMode = 'news' | 'charts' | 'knowledge-graph' | 'er-diagram';
+type TabMode = 'terminal' | 'news' | 'charts' | 'knowledge-graph' | 'er-diagram';
 
 /**
- * StudioRightPanel - News, Charts, Knowledge Graph, ER Diagram
+ * StudioRightPanel - Terminal, News, Charts, Knowledge Graph, ER Diagram
  *
  * Features:
+ * - Bloomberg-style Terminal (command-line output)
  * - Real-time news (placeholder for now)
  * - Price charts
  * - Obsidian-style Knowledge Graph (DB links, propagation effects)
@@ -27,12 +28,18 @@ export default function StudioRightPanel({
   propagationState,
   showPropagation
 }: StudioRightPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabMode>('knowledge-graph');
+  const [activeTab, setActiveTab] = useState<TabMode>('terminal');
 
   return (
     <div className="h-full flex flex-col">
       {/* Tab Selector */}
       <div className="flex border-b border-gray-800">
+        <TabButton
+          active={activeTab === 'terminal'}
+          onClick={() => setActiveTab('terminal')}
+          icon={<TerminalIcon size={16} />}
+          label="Terminal"
+        />
         <TabButton
           active={activeTab === 'news'}
           onClick={() => setActiveTab('news')}
@@ -61,6 +68,13 @@ export default function StudioRightPanel({
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto">
+        {activeTab === 'terminal' && (
+          <TerminalTab
+            propagationState={propagationState}
+            focusedCompany={focusedCompany}
+            showPropagation={showPropagation}
+          />
+        )}
         {activeTab === 'news' && <NewsTab focusedCompany={focusedCompany} />}
         {activeTab === 'charts' && <ChartsTab focusedCompany={focusedCompany} />}
         {activeTab === 'knowledge-graph' && (
@@ -95,6 +109,161 @@ function TabButton({
       {icon}
       <span className="text-xs font-medium">{label}</span>
     </button>
+  );
+}
+
+/**
+ * Terminal Tab - Bloomberg/cmd style command-line output
+ */
+function TerminalTab({
+  propagationState,
+  focusedCompany,
+  showPropagation
+}: {
+  propagationState: PropagationState | null;
+  focusedCompany: string | null;
+  showPropagation: boolean;
+}) {
+  const [logs, setLogs] = useState<string[]>([]);
+  const terminalRef = useRef<HTMLDivElement>(null);
+
+  // Generate terminal output from propagation state
+  useEffect(() => {
+    if (!propagationState) {
+      setLogs(['> NEXUS-ALPHA Terminal v3.0', '> Waiting for propagation data...', '']);
+      return;
+    }
+
+    const newLogs: string[] = [
+      '> NEXUS-ALPHA Terminal v3.0',
+      '> ========================================',
+      '> System: Propagation Engine Active',
+      `> Timestamp: ${new Date().toISOString()}`,
+      '> ========================================',
+      '',
+      '> [LEVEL 1] MACRO VARIABLES',
+      `  fed_funds_rate     = ${((propagationState.level1.fed_funds_rate || 0) * 100).toFixed(3)}%`,
+      `  us_gdp_growth      = ${((propagationState.level1.us_gdp_growth || 0) * 100).toFixed(3)}%`,
+      `  us_cpi             = ${((propagationState.level1.us_cpi || 0) * 100).toFixed(3)}%`,
+      '',
+      '> [LEVEL 2] SECTOR IMPACT',
+    ];
+
+    // Add Level 2 (Sectors)
+    Array.from(propagationState.level2.entries()).slice(0, 5).forEach(([sector, state]) => {
+      const impact = state.revenue_impact >= 0 ? `+${state.revenue_impact.toFixed(3)}` : state.revenue_impact.toFixed(3);
+      const color = state.revenue_impact >= 0 ? '↑' : '↓';
+      newLogs.push(`  ${sector.padEnd(20)} ${color} revenue_impact = ${impact}%`);
+    });
+
+    newLogs.push('', '> [LEVEL 3] COMPANY METRICS');
+
+    // Add Level 3 (Companies)
+    Array.from(propagationState.level3.entries()).slice(0, 5).forEach(([ticker, state]) => {
+      const marketCap = (state.market_cap / 1000000000).toFixed(2);
+      newLogs.push(`  ${ticker.padEnd(20)} market_cap = $${marketCap}B`);
+    });
+
+    newLogs.push('', '> [LEVEL 4] PRODUCT DEMAND');
+
+    // Add Level 4 (Products)
+    Array.from(propagationState.level4.entries()).slice(0, 4).forEach(([product, state]) => {
+      newLogs.push(`  ${product.padEnd(20)} demand_index = ${state.demand_index.toFixed(3)}`);
+    });
+
+    newLogs.push('', '> [LEVEL 5] COMPONENT SUPPLY');
+
+    // Add Level 5 (Components)
+    Array.from(propagationState.level5.entries()).slice(0, 4).forEach(([component, state]) => {
+      const status = state.bottleneck ? '[BOTTLENECK]' : '[OK]';
+      const statusColor = state.bottleneck ? '⚠' : '✓';
+      newLogs.push(`  ${component.padEnd(20)} ${statusColor} ${status} qty=${state.required_quantity.toFixed(0)}`);
+    });
+
+    newLogs.push('', '> [LEVEL 9] FACILITY OPERATIONS');
+
+    // Add Level 9 (Facilities)
+    Array.from(propagationState.level9.entries()).slice(0, 3).forEach(([facility, state]) => {
+      newLogs.push(`  ${facility.padEnd(20)} utilization = ${state.utilization_pct.toFixed(1)}%`);
+    });
+
+    newLogs.push('', '> ========================================');
+    newLogs.push('> Propagation cycle complete');
+
+    if (focusedCompany) {
+      newLogs.push(`> Focused entity: ${focusedCompany}`);
+    }
+
+    newLogs.push('> Ready for next update...');
+    newLogs.push('');
+
+    setLogs(newLogs);
+
+    // Auto-scroll to bottom
+    setTimeout(() => {
+      if (terminalRef.current) {
+        terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+      }
+    }, 50);
+  }, [propagationState, focusedCompany]);
+
+  return (
+    <div className="h-full flex flex-col bg-black">
+      {/* Terminal Header */}
+      <div className="px-4 py-2 bg-[#0a0a0a] border-b border-gray-800 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+          </div>
+          <span className="text-xs text-gray-500 font-mono ml-2">bash — nexus-alpha</span>
+        </div>
+        <div className="text-[10px] text-gray-600 font-mono">
+          {showPropagation && <span className="text-green-400">● LIVE</span>}
+        </div>
+      </div>
+
+      {/* Terminal Content */}
+      <div
+        ref={terminalRef}
+        className="flex-1 overflow-y-auto p-4 font-mono text-xs leading-relaxed"
+        style={{
+          background: 'linear-gradient(180deg, #000000 0%, #0a0a0a 100%)',
+          textShadow: '0 0 2px rgba(0, 229, 255, 0.3)',
+        }}
+      >
+        {logs.map((log, idx) => {
+          // Color coding
+          let textColor = 'text-green-400';
+
+          if (log.startsWith('>')) {
+            textColor = 'text-cyan-400';
+          } else if (log.includes('LEVEL')) {
+            textColor = 'text-yellow-400 font-bold';
+          } else if (log.includes('↑')) {
+            textColor = 'text-green-300';
+          } else if (log.includes('↓')) {
+            textColor = 'text-red-400';
+          } else if (log.includes('⚠') || log.includes('BOTTLENECK')) {
+            textColor = 'text-red-400';
+          } else if (log.includes('✓')) {
+            textColor = 'text-green-400';
+          } else if (log === '') {
+            return <div key={idx} className="h-3"></div>;
+          }
+
+          return (
+            <div key={idx} className={`${textColor}`}>
+              {log || '\u00A0'}
+            </div>
+          );
+        })}
+
+        {/* Blinking cursor */}
+        <div className="inline-block w-2 h-4 bg-green-400 animate-pulse mt-1"></div>
+      </div>
+    </div>
   );
 }
 
