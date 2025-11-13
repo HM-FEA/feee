@@ -1,12 +1,23 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Network, GitBranch, Activity, Maximize2, Minimize2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Network, GitBranch, Activity, Maximize2, Minimize2, Globe } from 'lucide-react';
 import { PropagationState } from '@/lib/finance/nineLevelPropagation';
 import { TimeState } from './StudioLayout_v3';
 import NetworkGraph2D, { generateSampleNetwork, GraphNode } from '@/components/visualization/NetworkGraph2D';
-import SupplyChainDiagram from '@/components/visualization/SupplyChainDiagram';
+import SupplyChainFlow, { H100_SUPPLY_CHAIN_DATA } from '@/components/visualization/SupplyChainFlow';
 import { SUPPLY_CHAIN_SCENARIOS } from '@/data/supplyChainScenarios';
+
+// Dynamic import for Globe3D (client-side only)
+const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full flex items-center justify-center">
+      <div className="text-gray-400">Loading Globe...</div>
+    </div>
+  )
+});
 
 interface StudioCenterStageProps {
   focusedCompany: string | null;
@@ -16,19 +27,22 @@ interface StudioCenterStageProps {
   activePropagationLevel?: number; // From animation
 }
 
-type ViewMode = 'network' | 'supply-chain' | 'propagation-flow';
+type ViewMode = 'globe' | 'network' | 'supply-chain' | 'propagation-flow';
 
 /**
- * StudioCenterStage - Main visualization area (2D ONLY)
+ * StudioCenterStage - Main visualization area
  *
  * Features:
+ * - Globe3D with propagation (restored!)
  * - 2D Network Graph with propagation highlighting
- * - Supply Chain Diagram (2D SVG)
+ * - Supply Chain Flow (React Flow - 2D interactive)
+ * - 9-Level Propagation Flow
  * - Small inset graph in corner
  * - Synced with propagation animation
- *
- * Removed: All 3D graphs (Globe3D, ForceNetworkGraph3D)
  */
+
+// Generate static network data once (prevents re-rendering on variable change)
+const STATIC_NETWORK = generateSampleNetwork();
 
 export default function StudioCenterStage({
   focusedCompany,
@@ -37,37 +51,70 @@ export default function StudioCenterStage({
   showPropagation,
   activePropagationLevel
 }: StudioCenterStageProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('network');
+  const [viewMode, setViewMode] = useState<ViewMode>('globe');
   const [showInsetGraph, setShowInsetGraph] = useState(true);
 
-  // Generate network data with highlighted nodes based on propagation
-  const { networkData, highlightedNodes } = useMemo(() => {
-    const { nodes, edges } = generateSampleNetwork();
-
-    // Highlight nodes affected by current propagation level
+  // Only calculate highlighted nodes (don't regenerate entire network)
+  const highlightedNodes = useMemo(() => {
     const highlighted = new Set<string>();
     if (activePropagationLevel !== undefined && propagationState) {
       // Highlight nodes at the active level
-      nodes.forEach(node => {
+      STATIC_NETWORK.nodes.forEach(node => {
         if (node.level === activePropagationLevel) {
           highlighted.add(node.id);
         }
       });
     }
-
-    return {
-      networkData: { nodes, edges },
-      highlightedNodes: highlighted
-    };
+    return highlighted;
   }, [activePropagationLevel, propagationState]);
 
-  // Get supply chain for focused scenario
-  const supplyChainScenario = SUPPLY_CHAIN_SCENARIOS[0]; // Default to H100
+  // Convert supplyChainScenarios data to SupplyChainFlow format
+  const supplyChainFlowData = useMemo(() => {
+    const scenario = SUPPLY_CHAIN_SCENARIOS[0]; // H100 default
+
+    // Map to SupplyChainFlow format
+    const nodes = scenario.nodes.map(node => ({
+      id: node.id,
+      name: node.name,
+      category: node.type as 'supplier' | 'manufacturer' | 'component' | 'customer' | 'equipment',
+      details: {
+        role: node.description || node.name,
+        risk: (node.bottleneckStatus === 'CRITICAL' ? 'critical' :
+               node.bottleneckStatus === 'HIGH' ? 'high' :
+               node.bottleneckStatus === 'MEDIUM' ? 'medium' : 'low') as 'low' | 'medium' | 'high' | 'critical',
+        marketShare: node.marketShare,
+        leadTime: node.leadTime,
+        capacity: node.capacity?.toString(),
+      },
+      position: { x: node.x || 0, y: node.y || 0 }
+    }));
+
+    const links = scenario.links.map(link => ({
+      source: link.source,
+      target: link.target,
+      label: link.label || '',
+      volume: link.volume,
+      bottleneck: link.bottleneck || false
+    }));
+
+    return { nodes, links };
+  }, []);
 
   return (
     <div className="h-full relative bg-[#0a0a0a]">
       {/* View Mode Selector (Top-left overlay) */}
       <div className="absolute top-4 left-4 z-10 flex gap-2">
+        <button
+          onClick={() => setViewMode('globe')}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all backdrop-blur-md ${
+            viewMode === 'globe'
+              ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/50'
+              : 'bg-black/40 text-gray-400 border border-gray-700/50 hover:border-gray-600'
+          }`}
+        >
+          <Globe size={18} />
+          <span className="text-sm font-medium">Globe</span>
+        </button>
         <button
           onClick={() => setViewMode('network')}
           className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all backdrop-blur-md ${
@@ -164,10 +211,17 @@ export default function StudioCenterStage({
 
       {/* Main Visualization */}
       <div className="h-full">
+        {viewMode === 'globe' && (
+          <Globe3D
+            highlightedNodes={Array.from(highlightedNodes)}
+            activeLevel={activePropagationLevel}
+          />
+        )}
+
         {viewMode === 'network' && (
           <NetworkGraph2D
-            nodes={networkData.nodes}
-            edges={networkData.edges}
+            nodes={STATIC_NETWORK.nodes}
+            edges={STATIC_NETWORK.edges}
             activeLevel={activePropagationLevel}
             highlightedNodes={highlightedNodes}
             onNodeClick={(nodeId) => console.log('Node clicked:', nodeId)}
@@ -175,12 +229,12 @@ export default function StudioCenterStage({
         )}
 
         {viewMode === 'supply-chain' && (
-          <div className="h-full overflow-auto p-4">
-            <SupplyChainDiagram
-              nodes={supplyChainScenario.nodes}
-              links={supplyChainScenario.links}
-              title={supplyChainScenario.name}
-              description={supplyChainScenario.description}
+          <div className="h-full">
+            <SupplyChainFlow
+              nodes={supplyChainFlowData.nodes}
+              links={supplyChainFlowData.links}
+              title="H100 GPU Supply Chain"
+              description="Critical supply chain bottlenecks and dependencies"
             />
           </div>
         )}
@@ -190,15 +244,15 @@ export default function StudioCenterStage({
         )}
       </div>
 
-      {/* Small Inset Graph (Bottom-right) */}
+      {/* Small Inset Graph (Bottom-right) - Show network when viewing other modes */}
       {showInsetGraph && viewMode !== 'network' && (
         <div className="absolute bottom-20 right-4 w-80 h-52 z-10 bg-black/90 backdrop-blur-md border border-gray-700 rounded-lg overflow-hidden">
           <div className="absolute top-2 left-2 z-20">
             <div className="text-[10px] font-bold text-gray-400 uppercase">Network View</div>
           </div>
           <NetworkGraph2D
-            nodes={networkData.nodes}
-            edges={networkData.edges}
+            nodes={STATIC_NETWORK.nodes}
+            edges={STATIC_NETWORK.edges}
             activeLevel={activePropagationLevel}
             highlightedNodes={highlightedNodes}
             compact={true}
