@@ -21,6 +21,8 @@ import {
   blackScholes,
   OptionPriceResult,
 } from '@/lib/financial/blackScholes';
+import PersonalAnalyst from './PersonalAnalyst';
+import { useMacroStore } from '@/lib/store/macroStore';
 
 /**
  * Hedge Fund Strategies
@@ -95,8 +97,10 @@ export default function HedgeFundSimulator({
   const [managementFee, setManagementFee] = useState(0.02); // 2%
   const [performanceFee, setPerformanceFee] = useState(0.20); // 20%
   const [isRunning, setIsRunning] = useState(false);
+  const [showAnalyst, setShowAnalyst] = useState(true);
 
   const strategy = HEDGE_FUND_STRATEGIES[selectedStrategy];
+  const macroState = useMacroStore(state => state.macroState);
 
   // Generate synthetic returns for selected strategy
   const syntheticReturns = useMemo(() => {
@@ -175,11 +179,37 @@ export default function HedgeFundSimulator({
             Simulate institutional-grade hedge fund strategies with leverage and risk management
           </p>
         </div>
-        <Button onClick={runSimulation} disabled={isRunning}>
-          <Zap size={16} className="mr-1" />
-          {isRunning ? 'Running...' : 'Run 1Y Simulation'}
-        </Button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowAnalyst(!showAnalyst)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              showAnalyst
+                ? 'bg-purple-500 text-white'
+                : 'bg-background-secondary text-text-secondary border border-border-primary'
+            }`}
+          >
+            {showAnalyst ? 'Hide' : 'Show'} Analyst
+          </button>
+          <Button onClick={runSimulation} disabled={isRunning}>
+            <Zap size={16} className="mr-1" />
+            {isRunning ? 'Running...' : 'Run 1Y Simulation'}
+          </Button>
+        </div>
       </div>
+
+      {/* Personal Analyst Section */}
+      {showAnalyst && (
+        <PersonalAnalyst
+          strategyName={strategy.name}
+          aum={aum}
+          portfolioMetrics={portfolioMetrics}
+          macroState={macroState}
+          onApplyRecommendation={(rec) => {
+            console.log('Applying recommendation:', rec);
+            // Here you can implement logic to apply recommendations
+          }}
+        />
+      )}
 
       {/* AUM Card */}
       <Card className="bg-gradient-to-r from-accent-magenta/20 to-accent-cyan/20 border-2 border-accent-magenta/40">
