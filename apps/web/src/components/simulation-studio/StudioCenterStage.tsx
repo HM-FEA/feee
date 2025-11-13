@@ -248,25 +248,13 @@ export default function StudioCenterStage({
         </div>
       </div>
 
-      {/* Active Propagation Level Indicator (Bottom-center) */}
-      {activePropagationLevel !== undefined && activePropagationLevel >= 0 && viewMode !== 'globe' && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
-          <div className="px-3 py-2 bg-accent-cyan/20 backdrop-blur-md border border-accent-cyan/50 rounded-lg">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
-              <span className="text-xs font-bold text-accent-cyan">
-                Level {activePropagationLevel} Propagating
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Active Propagation Level Indicator - REMOVED per user request */}
 
       {/* Main Visualization */}
       <div className="h-full w-full">
         {viewMode === 'globe' && (
           <Globe3D
-            viewMode="companies"
+            viewMode="flows"
             showControls={true}
             highlightedNodes={Array.from(highlightedNodes)}
             activeLevel={activePropagationLevel}

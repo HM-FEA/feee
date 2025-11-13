@@ -68,7 +68,7 @@ const NetworkGraph2D = memo(function NetworkGraph2D({
     if (compact) {
       return { width: 300, height: 200, nodeRadius: 8, fontSize: 10 };
     }
-    return { width: 1000, height: 600, nodeRadius: 20, fontSize: 12 };
+    return { width: 1400, height: 800, nodeRadius: 24, fontSize: 14 };
   }, [compact]);
 
   // Find connected nodes for highlighting
@@ -299,25 +299,25 @@ export default NetworkGraph2D;
  */
 export function generateSampleNetwork(): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodes: GraphNode[] = [
-    // Level 1: Macro
-    { id: 'fed', name: 'Fed Rate', level: 1, type: 'macro', position: { x: 500, y: 50 } },
-    { id: 'gdp', name: 'GDP', level: 1, type: 'macro', position: { x: 400, y: 50 } },
-    { id: 'm2', name: 'M2', level: 1, type: 'macro', position: { x: 600, y: 50 } },
+    // Level 1: Macro (top row - spread wider)
+    { id: 'fed', name: 'Fed Rate', level: 1, type: 'macro', position: { x: 700, y: 100 } },
+    { id: 'gdp', name: 'GDP', level: 1, type: 'macro', position: { x: 500, y: 100 } },
+    { id: 'm2', name: 'M2', level: 1, type: 'macro', position: { x: 900, y: 100 } },
 
-    // Level 2: Sectors
-    { id: 'banking', name: 'Banking', level: 2, type: 'sector', position: { x: 300, y: 150 } },
-    { id: 'semiconductor', name: 'Semiconductor', level: 2, type: 'sector', position: { x: 500, y: 150 } },
-    { id: 'realestate', name: 'Real Estate', level: 2, type: 'sector', position: { x: 700, y: 150 } },
+    // Level 2: Sectors (spread wider)
+    { id: 'banking', name: 'Banking', level: 2, type: 'sector', position: { x: 350, y: 250 } },
+    { id: 'semiconductor', name: 'Semiconductor', level: 2, type: 'sector', position: { x: 700, y: 250 } },
+    { id: 'realestate', name: 'Real Estate', level: 2, type: 'sector', position: { x: 1050, y: 250 } },
 
-    // Level 3: Companies
-    { id: 'jpm', name: 'JPM', level: 3, type: 'company', position: { x: 250, y: 270 } },
-    { id: 'nvda', name: 'NVIDIA', level: 3, type: 'company', position: { x: 450, y: 270 } },
-    { id: 'tsmc', name: 'TSMC', level: 3, type: 'company', position: { x: 550, y: 270 } },
-    { id: 'sk', name: 'SK Hynix', level: 3, type: 'company', position: { x: 650, y: 270 } },
+    // Level 3: Companies (spread wider)
+    { id: 'jpm', name: 'JPM', level: 3, type: 'company', position: { x: 300, y: 420 } },
+    { id: 'nvda', name: 'NVIDIA', level: 3, type: 'company', position: { x: 600, y: 420 } },
+    { id: 'tsmc', name: 'TSMC', level: 3, type: 'company', position: { x: 800, y: 420 } },
+    { id: 'sk', name: 'SK Hynix', level: 3, type: 'company', position: { x: 1000, y: 420 } },
 
     // Level 4: Products
-    { id: 'h100', name: 'H100 GPU', level: 4, type: 'product', position: { x: 450, y: 390 } },
-    { id: 'hbm', name: 'HBM3E', level: 5, type: 'component', position: { x: 550, y: 510 } },
+    { id: 'h100', name: 'H100 GPU', level: 4, type: 'product', position: { x: 600, y: 580 } },
+    { id: 'hbm', name: 'HBM3E', level: 5, type: 'component', position: { x: 800, y: 700 } },
   ];
 
   const edges: GraphEdge[] = [
