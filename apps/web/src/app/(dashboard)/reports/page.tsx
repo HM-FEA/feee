@@ -99,15 +99,15 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-background-primary via-background-secondary to-background-primary p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <FileText className="w-8 h-8 text-blue-400" />
-            <h1 className="text-3xl font-bold text-white">Analyst Reports</h1>
+            <FileText className="w-8 h-8 text-accent-cyan" />
+            <h1 className="text-3xl font-bold text-text-primary">Analyst Reports</h1>
           </div>
-          <p className="text-slate-400">
+          <p className="text-text-secondary">
             Community-driven research and analysis on companies, products, and supply chains
           </p>
         </div>
@@ -127,10 +127,10 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between mb-4">
               <button
                 onClick={handleBackToList}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-background-secondary hover:bg-background-tertiary border border-border-primary rounded transition-colors"
               >
-                <ArrowLeft className="w-4 h-4 text-slate-300" />
-                <span className="text-sm text-slate-300">Back to Reports</span>
+                <ArrowLeft className="w-4 h-4 text-text-secondary" />
+                <span className="text-sm text-text-secondary">Back to Reports</span>
               </button>
 
               <div className="flex items-center gap-2">
@@ -138,14 +138,14 @@ export default function ReportsPage() {
                   <>
                     <button
                       onClick={handleEdit}
-                      className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                      className="flex items-center gap-2 px-3 py-2 bg-accent-cyan hover:bg-accent-cyan/80 text-white rounded transition-colors"
                     >
                       <Edit className="w-4 h-4" />
                       <span className="text-sm">Edit</span>
                     </button>
                     <button
                       onClick={handleDelete}
-                      className="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                      className="flex items-center gap-2 px-3 py-2 bg-accent-magenta hover:bg-accent-magenta/80 text-white rounded transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                       <span className="text-sm">Delete</span>
@@ -168,10 +168,10 @@ export default function ReportsPage() {
             {/* Navigation */}
             <button
               onClick={handleBackToList}
-              className="flex items-center gap-2 px-3 py-2 mb-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded transition-colors"
+              className="flex items-center gap-2 px-3 py-2 mb-4 bg-background-secondary hover:bg-background-tertiary border border-border-primary rounded transition-colors"
             >
-              <ArrowLeft className="w-4 h-4 text-slate-300" />
-              <span className="text-sm text-slate-300">Back to Reports</span>
+              <ArrowLeft className="w-4 h-4 text-text-secondary" />
+              <span className="text-sm text-text-secondary">Back to Reports</span>
             </button>
 
             <ReportEditor
