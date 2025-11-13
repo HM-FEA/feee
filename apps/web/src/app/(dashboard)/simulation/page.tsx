@@ -16,9 +16,11 @@ import SimulationTimeline from '@/components/simulation/SimulationTimeline';
 import DateSimulator from '@/components/simulation/DateSimulator';
 import EconomicFlowDashboard from '@/components/simulation/EconomicFlowDashboard';
 import HedgeFundSimulator from '@/components/simulation/HedgeFundSimulator';
+import TournamentWidget from '@/components/arena/TournamentWidget';
 import { DateSnapshot } from '@/lib/utils/dateBasedSimulation';
 import { SUPPLY_CHAIN_SCENARIOS, voteOnScenario } from '@/data/supplyChainScenarios';
 import { calculateEconomicFlows, EconomicFlow } from '@/lib/utils/economicFlows';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Dynamic imports
 const Globe3D = dynamic(() => import('@/components/visualization/Globe3D'), { ssr: false });
@@ -318,7 +320,12 @@ export default function SimulationPage() {
 
       <div className="flex h-[calc(100vh-80px)]">
         {/* Left Sidebar - Sector Focus */}
-        <div className="w-64 border-r border-border-primary bg-black/50 backdrop-blur p-4 overflow-y-auto">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-64 border-r border-border-primary bg-black/50 backdrop-blur p-4 overflow-y-auto"
+        >
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Zap size={16} className="text-accent-cyan" />
@@ -329,8 +336,10 @@ export default function SimulationPage() {
             </p>
 
             <div className="space-y-2">
-              <button
+              <motion.button
                 onClick={() => setSelectedSector(null)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 className={`w-full px-3 py-2.5 rounded-lg text-left transition-all ${
                   selectedSector === null
                     ? 'bg-accent-cyan text-black font-semibold shadow-lg shadow-accent-cyan/50'
@@ -341,11 +350,16 @@ export default function SimulationPage() {
                   <span className="text-base">🌍</span>
                   <span className="text-sm">All Sectors (Overall)</span>
                 </div>
-              </button>
+              </motion.button>
 
-              {sectors.map(sector => (
-                <button
+              {sectors.map((sector, idx) => (
+                <motion.button
                   key={sector.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setSelectedSector(sector.id as Sector)}
                   className={`w-full px-3 py-2.5 rounded-lg text-left transition-all border ${
                     selectedSector === sector.id
@@ -361,15 +375,18 @@ export default function SimulationPage() {
                       <span className="text-base">{sector.icon}</span>
                       <span className="text-sm font-medium text-text-primary">{sector.label}</span>
                     </div>
-                    <div
+                    <motion.div
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 200 }}
                       className={`text-xs font-bold px-2 py-1 rounded ${
                         sector.impact >= 0 ? 'bg-status-safe/20 text-status-safe' : 'bg-status-danger/20 text-status-danger'
                       }`}
                     >
                       {sector.impact >= 0 ? '+' : ''}{sector.impact.toFixed(1)}%
-                    </div>
+                    </motion.div>
                   </div>
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
@@ -385,17 +402,29 @@ export default function SimulationPage() {
             </p>
 
             <div className="space-y-4">
-              {macroControls.map(control => (
-                <div key={control.id} className="space-y-1">
+              {macroControls.map((control, idx) => (
+                <motion.div
+                  key={control.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="space-y-1"
+                >
                   <div className="flex justify-between items-center">
                     <label className="text-xs text-text-secondary">{control.label}</label>
-                    <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
-                      changedMacroId === control.id && macroChanging
-                        ? 'bg-accent-cyan text-black animate-pulse'
-                        : 'bg-background-tertiary text-accent-cyan'
-                    }`}>
+                    <motion.span
+                      animate={{
+                        scale: changedMacroId === control.id && macroChanging ? [1, 1.1, 1] : 1,
+                      }}
+                      transition={{ duration: 0.3 }}
+                      className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
+                        changedMacroId === control.id && macroChanging
+                          ? 'bg-accent-cyan text-black animate-pulse'
+                          : 'bg-background-tertiary text-accent-cyan'
+                      }`}
+                    >
                       {control.value.toFixed(2)}{control.unit}
-                    </span>
+                    </motion.span>
                   </div>
                   <input
                     type="range"
@@ -404,14 +433,14 @@ export default function SimulationPage() {
                     step={control.step}
                     value={control.value}
                     onChange={(e) => handleMacroChange(control.id, parseFloat(e.target.value))}
-                    className="w-full h-1.5 bg-background-tertiary rounded-lg appearance-none cursor-pointer accent-accent-cyan"
+                    className="w-full h-1.5 bg-background-tertiary rounded-lg appearance-none cursor-pointer accent-accent-cyan transition-all"
                     style={{
                       background: changedMacroId === control.id && macroChanging
                         ? 'linear-gradient(90deg, #00E5FF 0%, #E6007A 100%)'
                         : undefined
                     }}
                   />
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -686,7 +715,7 @@ export default function SimulationPage() {
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Center - Visualization */}
         <div className="flex-1 relative">
@@ -1093,8 +1122,22 @@ export default function SimulationPage() {
         {/* Right Sidebar - Stats & Activity */}
         <div className="w-80 border-l border-border-primary bg-black/50 backdrop-blur overflow-y-auto">
           <div className="p-4 space-y-4">
+            {/* Tournament Widget */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <TournamentWidget maxItems={2} compact={true} />
+            </motion.div>
+
             {/* Stats Panel */}
-            <div className="bg-gradient-to-br from-accent-emerald/10 to-accent-cyan/10 border border-accent-emerald/30 rounded-lg p-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="bg-gradient-to-br from-accent-emerald/10 to-accent-cyan/10 border border-accent-emerald/30 rounded-lg p-4"
+            >
               <div className="flex items-center gap-2 mb-4">
                 <Activity size={18} className="text-accent-emerald" />
                 <h3 className="text-sm font-bold text-text-primary">Live Stats</h3>
@@ -1156,7 +1199,12 @@ export default function SimulationPage() {
             </div>
 
             {/* Activity Feed */}
-            <div className="bg-gradient-to-br from-accent-magenta/10 to-accent-cyan/10 border border-accent-magenta/30 rounded-lg p-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="bg-gradient-to-br from-accent-magenta/10 to-accent-cyan/10 border border-accent-magenta/30 rounded-lg p-4"
+            >
               <div className="flex items-center gap-2 mb-4">
                 <Zap size={18} className="text-accent-magenta" />
                 <h3 className="text-sm font-bold text-text-primary">Activity Feed</h3>
@@ -1222,7 +1270,7 @@ export default function SimulationPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
 
 
             {/* Scenario Management */}
