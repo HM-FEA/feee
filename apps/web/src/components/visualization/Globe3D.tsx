@@ -242,6 +242,20 @@ export default function Globe3D({
     return impacts;
   }, [macroState]);
 
+  // Prepare wave indicators for propagating companies
+  const waveIndicators = useMemo(() => {
+    if (activeLevel === undefined || activeLevel < 0) return [];
+
+    return companies
+      .filter(c => c.location && highlightedNodes.includes(c.ticker || ''))
+      .map(company => ({
+        lat: company.location!.lat,
+        lng: company.location!.lng,
+        ticker: company.ticker,
+        name: company.name_en || company.name,
+      }));
+  }, [highlightedNodes, activeLevel]);
+
   // Prepare company points for Globe (must come before dynamicImpactArcs)
   const companyPoints = useMemo(() => {
     return companies
@@ -298,22 +312,28 @@ export default function Globe3D({
           });
         }
 
+        // Check if this company is highlighted by propagation (wave effect)
+        const isHighlighted = highlightedNodes.includes(company.ticker || '');
+        const isPropagating = activeLevel !== undefined && activeLevel >= 0;
+
         return {
           lat: company.location!.lat,
           lng: company.location!.lng,
           name: company.name_en || company.name,
           ticker: company.ticker,
           sector: company.sector,
-          size: finalSize,
-          color: pointColor,
+          size: isHighlighted && isPropagating ? finalSize * 3 : finalSize, // 3x larger for wave effect
+          altitude: isHighlighted && isPropagating ? 0.08 : 0.01, // Elevated cylindrical marker
+          color: isHighlighted && isPropagating ? '#00E5FF' : pointColor, // Bright cyan wave
           impact: totalImpact,
           company: company,
           levelImpact: levelImpact, // Include for tooltip
           isAffected, // NEW: flag for visual indicator
           affectedByEvent, // NEW: event details
+          isPropagating: isHighlighted && isPropagating, // Flag for pulsing animation
         };
       });
-  }, [selectedSector, calculatedImpacts, entityImpacts, getEntityImpact, snapshot]);
+  }, [selectedSector, calculatedImpacts, entityImpacts, getEntityImpact, snapshot, highlightedNodes, activeLevel]);
 
   // Helper to get RGB values from sector color (must come before dynamicImpactArcs)
   const getSectorRGB = (sector: string): string => {
@@ -558,6 +578,24 @@ export default function Globe3D({
 
   return (
     <div ref={containerRef} className="w-full h-full relative bg-black">
+      {/* Wave Animation CSS */}
+      <style jsx global>{`
+        @keyframes wave-pulse {
+          0% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.5);
+            opacity: 0.5;
+          }
+          100% {
+            transform: scale(2);
+            opacity: 0;
+          }
+        }
+      `}</style>
+
       {/* Sector Focus Indicator */}
       {selectedSector && (
         <div className="absolute top-2 right-2 z-10 bg-accent-cyan/20 backdrop-blur border border-accent-cyan rounded-lg px-3 py-1.5">
@@ -970,8 +1008,17 @@ export default function Globe3D({
         }
         pointLat="lat"
         pointLng="lng"
-        pointAltitude={(d: any) => d.size * 0.01}
-        pointRadius={(d: any) => viewMode === 'companies' ? d.size * 0.4 : d.size * 0.5}
+        pointAltitude={(d: any) => d.altitude !== undefined ? d.altitude : d.size * 0.01}
+        pointRadius={(d: any) => {
+          if (viewMode === 'companies') {
+            // Pulsing animation for propagating nodes
+            if (d.isPropagating) {
+              return d.size * 0.6; // Larger radius for wave effect
+            }
+            return d.size * 0.4;
+          }
+          return d.size * 0.5;
+        }}
         pointColor={(d: any) => d.color}
         pointLabel={(d: any) => {
           if (viewMode === 'companies') {
@@ -1000,6 +1047,26 @@ export default function Globe3D({
           } else {
             handleCountryClick(point as Country);
           }
+        }}
+
+        // Wave Indicators (HTML elements for expanding rings)
+        htmlElementsData={waveIndicators}
+        htmlLat="lat"
+        htmlLng="lng"
+        htmlAltitude={0.08}
+        htmlElement={(d: any) => {
+          const el = document.createElement('div');
+          el.style.cssText = `
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid rgba(0, 229, 255, 0.8);
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.3) 0%, transparent 70%);
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.8), inset 0 0 10px rgba(0, 229, 255, 0.4);
+            animation: wave-pulse 1.5s ease-out infinite;
+            pointer-events: none;
+          `;
+          return el;
         }}
 
         // Arcs (Capital Flows + Dynamic Macro Impacts + Economic Flows)

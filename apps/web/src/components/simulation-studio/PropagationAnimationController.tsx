@@ -108,71 +108,12 @@ export function usePropagationAnimation() {
 }
 
 /**
- * PropagationWave - Visual indicator of propagation wave
+ * PropagationWave - Removed per user request
+ * Wave indicators are now displayed directly on Globe3D at company locations
  */
 export function PropagationWave({ animationState }: { animationState: PropagationAnimationState }) {
-  if (!animationState.isAnimating) return null;
-
-  const currentStep = animationState.steps.find(s => s.level === animationState.currentLevel);
-
-  return (
-    <div className="fixed inset-0 pointer-events-none z-50">
-      {/* Ripple Effect */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div
-          className="w-64 h-64 rounded-full border-4 border-accent-cyan animate-ping"
-          style={{
-            animationDuration: '0.5s',
-            opacity: 0.5
-          }}
-        />
-      </div>
-
-      {/* Current Level Indicator */}
-      {currentStep && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/90 border-2 border-accent-cyan rounded-lg p-6 backdrop-blur-md shadow-2xl shadow-accent-cyan/50">
-          <div className="flex items-center gap-3 mb-2">
-            <Zap size={24} className="text-accent-cyan animate-pulse" />
-            <div>
-              <div className="text-sm font-bold text-accent-cyan">
-                Level {currentStep.level}
-              </div>
-              <div className="text-xs text-gray-400">
-                {currentStep.label}
-              </div>
-            </div>
-          </div>
-          <div className="text-lg font-bold text-white">
-            {currentStep.impact}
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mt-3 h-1 bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-accent-cyan to-accent-magenta transition-all duration-500"
-              style={{ width: `${animationState.progress}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Particle Effects */}
-      <div className="absolute inset-0">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-2 h-2 bg-accent-cyan rounded-full animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 2}s`,
-              animationDuration: `${1 + Math.random()}s`
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  );
+  // Removed: Center popup, ripple effects, and particles are now on Globe
+  return null;
 }
 
 /**
