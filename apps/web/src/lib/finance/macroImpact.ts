@@ -1,12 +1,16 @@
 /**
  * Advanced Macro Impact on Company Financials
  * Uses financial theory to model how macro variables affect company metrics
+ *
+ * NOW USES: sectorCoefficients.ts for all calibrated parameters
  */
 
 import { Company } from '@/data/companies';
 import { MacroState } from '@/lib/store/macroStore';
 import { calculateCostOfEquity, calculateSectorBeta } from './capm';
 import { calculateDCF, calculateFreeCashFlow, DCFParams } from './dcf';
+import { getSectorCoefficient, SECTOR_COEFFICIENTS } from '@/lib/config/sectorCoefficients';
+import { MACRO_DEFAULTS } from '@/lib/config/macroDefaults';
 
 export interface MacroImpactFactors {
   // Revenue factors
@@ -29,7 +33,16 @@ export interface MacroImpactFactors {
 }
 
 /**
+ * Get coefficient from config file, with fallback
+ */
+function getCoefficient(sector: string, type: string, fallback: number): number {
+  const coef = getSectorCoefficient(sector, type);
+  return coef?.value ?? fallback;
+}
+
+/**
  * Calculate how macro environment affects a company
+ * ✅ NOW USES sectorCoefficients.ts instead of hardcoded values
  */
 export function calculateMacroImpactFactors(
   company: Company,
@@ -37,95 +50,60 @@ export function calculateMacroImpactFactors(
 ): MacroImpactFactors {
   const sector = company.sector;
 
-  // Extract key macro variables
-  const fedRate = macroState['fed_funds_rate'] || 0.0525;
-  const gdpGrowth = macroState['us_gdp_growth'] || 0.025;
-  const inflation = macroState['us_cpi'] || 0.037;
-  const oilPrice = macroState['wti_oil'] || 78;
-  const vix = macroState['vix'] || 15;
-  const usdIndex = macroState['usd_index'] || 104.5;
-  const unemployment = macroState['us_unemployment'] || 3.8;
-  const m2Growth = macroState['us_m2_money_supply'] || 21000;
+  // Extract key macro variables (with defaults from MACRO_DEFAULTS)
+  const fedRate = macroState['fed_funds_rate'] || MACRO_DEFAULTS.fed_funds_rate;
+  const gdpGrowth = macroState['us_gdp_growth'] || MACRO_DEFAULTS.us_gdp_growth;
+  const inflation = macroState['us_cpi'] || MACRO_DEFAULTS.us_cpi;
+  const oilPrice = macroState['wti_oil'] || MACRO_DEFAULTS.wti_oil;
+  const vix = macroState['vix'] || MACRO_DEFAULTS.vix;
+  const usdIndex = macroState['usd_index'] || MACRO_DEFAULTS.usd_index;
+  const unemployment = macroState['us_unemployment'] || MACRO_DEFAULTS.us_unemployment;
+  const m2Growth = macroState['us_m2_money_supply'] || MACRO_DEFAULTS.us_m2_money_supply;
 
-  // DEMAND IMPACT (GDP-driven)
-  // Revenue sensitivity to GDP varies by sector
-  const gdpElasticity: Record<string, number> = {
-    BANKING: 1.5,         // Highly cyclical
-    REALESTATE: 2.0,      // Very cyclical
-    MANUFACTURING: 1.2,   // Moderately cyclical
-    SEMICONDUCTOR: 1.8,   // Tech cycle amplifies GDP
-    CRYPTO: 0.5,          // Less GDP-dependent
-  };
+  // ✅ DEMAND IMPACT - Now uses sectorCoefficients.ts
+  const gdpElasticity = getCoefficient(sector, 'gdp_elasticity', 1.0);
+  const demandImpact = (gdpGrowth - MACRO_DEFAULTS.us_gdp_growth) * gdpElasticity * 100;
 
-  const demandImpact = (gdpGrowth - 0.025) * (gdpElasticity[sector] || 1.0) * 100;
-
-  // PRICE IMPACT (Inflation pass-through)
-  // Companies' ability to pass costs to customers
-  const pricingPower: Record<string, number> = {
-    BANKING: 0.7,         // Moderate pricing power
-    REALESTATE: 0.9,      // High pricing power (rents)
-    MANUFACTURING: 0.5,   // Low (competitive)
-    SEMICONDUCTOR: 0.8,   // High (oligopoly)
-    CRYPTO: 0.3,          // Price takers
-  };
-
-  const priceImpact = (inflation - 0.037) * (pricingPower[sector] || 0.5) * 100;
+  // ✅ PRICE IMPACT - Now uses sectorCoefficients.ts
+  const pricingPower = getCoefficient(sector, 'pricing_power', 0.5);
+  const priceImpact = (inflation - MACRO_DEFAULTS.us_cpi) * pricingPower * 100;
 
   // VOLUME IMPACT (Market dynamics)
   const volumeImpact = demandImpact * 0.6; // Volume typically 60% of demand change
 
-  // COGS PRESSURE (Commodity & Input Costs)
-  const commoditySensitivity: Record<string, number> = {
-    BANKING: 0.1,         // Low commodity exposure
-    REALESTATE: 0.3,      // Energy costs
-    MANUFACTURING: 0.8,   // High commodity exposure
-    SEMICONDUCTOR: 0.6,   // Energy-intensive
-    CRYPTO: 0.9,          // Very energy-intensive (mining)
-  };
-
-  const oilImpact = ((oilPrice - 78) / 78) * (commoditySensitivity[sector] || 0.5) * 100;
-  const cogsPressure = oilImpact + (inflation - 0.037) * 50;
+  // ✅ COGS PRESSURE - Now uses sectorCoefficients.ts
+  const commoditySensitivity = getCoefficient(sector, 'commodity_sensitivity', 0.5);
+  const oilImpact = ((oilPrice - MACRO_DEFAULTS.wti_oil) / MACRO_DEFAULTS.wti_oil) * commoditySensitivity * 100;
+  const cogsPressure = oilImpact + (inflation - MACRO_DEFAULTS.us_cpi) * 50;
 
   // LABOR COST IMPACT
-  const laborIntensity: Record<string, number> = {
-    BANKING: 0.6,         // People-intensive
-    REALESTATE: 0.3,      // Asset-intensive
-    MANUFACTURING: 0.7,   // Labor-intensive
-    SEMICONDUCTOR: 0.5,   // Capital-intensive
-    CRYPTO: 0.2,          // Tech-intensive
-  };
-
+  const laborIntensity = getCoefficient(sector, 'labor_intensity', 0.5);
   const wageInflation = Math.max(0, 5 - unemployment); // Tight labor → wage pressure
-  const laborCostImpact = wageInflation * (laborIntensity[sector] || 0.5);
+  const laborCostImpact = wageInflation * laborIntensity;
 
-  // FINANCING COST IMPACT
-  const debtRatio = company.financials.total_debt / company.financials.total_assets;
-  const rateSensitivity = debtRatio * 100; // Higher debt → more rate sensitivity
-  const financingCostImpact = (fedRate - 0.0525) * rateSensitivity * 100;
+  // ✅ FINANCING COST IMPACT - Now uses sectorCoefficients.ts
+  const rateSensitivity = getCoefficient(sector, 'rate_sensitivity', 0.0);
+  const rateChange = fedRate - MACRO_DEFAULTS.fed_funds_rate;
+  const financingCostImpact = rateChange * Math.abs(rateSensitivity) * 100;
 
-  // CAPEX IMPACT (Investment decisions)
-  const capexElasticity: Record<string, number> = {
-    BANKING: -0.5,        // Rates ↑ → CapEx ↓
-    REALESTATE: -1.5,     // Very rate-sensitive
-    MANUFACTURING: -0.8,  // Moderately sensitive
-    SEMICONDUCTOR: -1.2,  // High CapEx sensitivity
-    CRYPTO: -0.3,         // Less traditional CapEx
-  };
+  // CAPEX IMPACT (higher rates → lower capex)
+  const capexSensitivity = getCoefficient(sector, 'capex_sensitivity', 0.5);
+  const capexImpact = -rateChange * capexSensitivity * 100;
 
-  const capexImpact = (fedRate - 0.0525) * (capexElasticity[sector] || -0.8) * 100;
+  // R&D INVESTMENT (Tech-specific)
+  const aiDemandGrowth = getCoefficient(sector, 'ai_demand_growth', 0.0);
+  const rdInvestment = (sector === 'SEMICONDUCTOR' || sector === 'TECHNOLOGY')
+    ? gdpGrowth * aiDemandGrowth * 100
+    : 0;
 
-  // R&D INVESTMENT (Tech sectors)
-  const rdSensitivity = sector === 'SEMICONDUCTOR' ? 1.5 : sector === 'MANUFACTURING' ? 0.5 : 0;
-  const rdInvestment = gdpGrowth * rdSensitivity * 100;
+  // DISCOUNT RATE IMPACT (CAPM-based)
+  const discountRateImpact = rateChange * 100; // 1% rate → 1% discount rate
 
-  // DISCOUNT RATE IMPACT (Valuation)
-  const riskPremiumAdjustment = (vix - 15) / 15; // VIX above 15 → higher risk premium
-  const discountRateImpact = (fedRate - 0.0525) * 100 + riskPremiumAdjustment * 50;
-
-  // MULTIPLE EXPANSION (Market sentiment)
-  const liquidityImpact = ((m2Growth - 21000) / 21000) * 100;
-  const sentimentImpact = -(vix - 15) / 15 * 50; // Low VIX → multiple expansion
-  const multipleExpansion = liquidityImpact + sentimentImpact;
+  // MULTIPLE EXPANSION/CONTRACTION
+  // Lower rates + lower VIX → multiple expansion
+  const vixChange = (vix - MACRO_DEFAULTS.vix) / MACRO_DEFAULTS.vix;
+  const liquidityChange = (m2Growth - MACRO_DEFAULTS.us_m2_money_supply) / MACRO_DEFAULTS.us_m2_money_supply;
+  const multipleExpansion = (-rateChange * 5) + (-vixChange * 3) + (liquidityChange * 2);
 
   return {
     demandImpact,
@@ -143,122 +121,112 @@ export function calculateMacroImpactFactors(
 
 /**
  * Apply macro impacts to company financials
+ * ✅ Formula now uses sectorCoefficients.ts
  */
-export function calculateAdjustedFinancials(
+export function applyMacroImpacts(
   company: Company,
-  macroState: MacroState,
-  sectorImpact: number
-): {
-  revenue: number;
-  cogs: number;
-  operatingIncome: number;
-  netIncome: number;
-  ebitda: number;
-  fcf: number;
-  costOfEquity: number;
-  fairValue: number;
-} {
-  const base = company.financials;
+  macroState: MacroState
+): Company {
   const impacts = calculateMacroImpactFactors(company, macroState);
 
-  // REVENUE = Base × (1 + Demand + Price impacts)
-  const revenueGrowth = (impacts.demandImpact + impacts.priceImpact) / 100;
-  const adjustedRevenue = base.revenue * (1 + revenueGrowth);
+  // Revenue impact
+  const revenueMultiplier = 1 + (impacts.demandImpact + impacts.priceImpact + impacts.volumeImpact) / 100;
+  const newRevenue = company.financials.revenue * revenueMultiplier;
 
-  // COGS = Revenue × COGS Margin × (1 + Cost pressures)
-  const baseCogsMargin = 0.65; // Assume 65% COGS/Revenue
-  const cogsPressureFactor = impacts.cogsPressure / 100;
-  const adjustedCogs = adjustedRevenue * baseCogsMargin * (1 + cogsPressureFactor);
+  // COGS impact
+  const cogsMultiplier = 1 + (impacts.cogsPressure + impacts.laborCostImpact) / 100;
+  const currentCogs = company.financials.revenue * 0.65; // Assume 65% COGS
+  const newCogs = currentCogs * cogsMultiplier;
 
-  // OPERATING INCOME = Revenue - COGS - OpEx
-  const grossProfit = adjustedRevenue - adjustedCogs;
-  const opexRatio = 0.20; // Assume 20% OpEx/Revenue
-  const opex = adjustedRevenue * opexRatio * (1 + impacts.laborCostImpact / 100);
-  const operatingIncome = grossProfit - opex;
+  // Operating expenses (includes labor)
+  const opexMultiplier = 1 + impacts.laborCostImpact / 100;
+  const currentOpex = company.financials.revenue * 0.20; // Assume 20% OpEx
+  const newOpex = currentOpex * opexMultiplier;
 
-  // EBITDA (add back D&A)
-  const depreciation = base.revenue * 0.05; // 5% of revenue
-  const ebitda = operatingIncome + depreciation;
+  // Interest expense (debt × rate)
+  const fedRate = macroState['fed_funds_rate'] || MACRO_DEFAULTS.fed_funds_rate;
+  const debtCost = fedRate + 0.02; // Corp spread ~200bps
+  const newInterestExpense = company.financials.total_debt * debtCost;
 
-  // NET INCOME = Operating Income × (1 - Tax Rate) - Interest
-  const taxRate = 0.21;
-  const interestExpense = base.total_debt * (macroState['fed_funds_rate'] || 0.0525);
-  const netIncome = operatingIncome * (1 - taxRate) - interestExpense;
+  // Net Income calculation
+  const ebitda = newRevenue - newCogs - newOpex;
+  const ebit = ebitda - (company.financials.revenue * 0.05); // 5% depreciation
+  const ebt = ebit - newInterestExpense;
+  const newNetIncome = ebt * (1 - 0.21); // 21% tax rate
 
-  // FREE CASH FLOW
-  const capex = base.revenue * 0.08 * (1 + impacts.capexImpact / 100);
-  const changeInNWC = base.revenue * 0.02; // 2% revenue growth → 2% NWC increase
-  const fcf = calculateFreeCashFlow(operatingIncome, taxRate, depreciation, changeInNWC, capex);
+  // Market cap impact (P/E adjustment)
+  const multipleChange = impacts.multipleExpansion;
+  const newMarketCap = company.financials.market_cap * (1 + multipleChange / 100);
 
-  // COST OF EQUITY (CAPM)
-  const riskFreeRate = macroState['us_10y_yield'] || 0.045;
-  const marketReturn = 0.10; // Assume 10% market return
-  const beta = calculateSectorBeta(company.sector, macroState);
-  const costOfEquity = calculateCostOfEquity(riskFreeRate, beta, marketReturn);
-
-  // DCF VALUATION
-  const dcfParams: DCFParams = {
-    currentFCF: fcf,
-    fcfGrowthRate: (impacts.demandImpact / 100) * 0.5, // Half of revenue growth
-    projectionYears: 10,
-    costOfEquity,
-    costOfDebt: riskFreeRate + 0.02, // Credit spread
-    debtToEquityRatio: company.ratios.de_ratio,
-    terminalGrowthRate: 0.025,
-    sharesOutstanding: 1000, // Placeholder
-    netDebt: base.total_debt,
-  };
-
-  const dcfResult = calculateDCF(dcfParams);
-  const fairValue = dcfResult.equityValue;
-
+  // Updated company
   return {
-    revenue: adjustedRevenue,
-    cogs: adjustedCogs,
-    operatingIncome,
-    netIncome,
-    ebitda,
-    fcf,
-    costOfEquity,
-    fairValue,
+    ...company,
+    financials: {
+      ...company.financials,
+      revenue: newRevenue,
+      net_income: newNetIncome,
+      ebitda: ebitda,
+      market_cap: newMarketCap,
+    },
+    ratios: {
+      ...company.ratios,
+      icr: ebit / Math.max(newInterestExpense, 1), // Avoid division by zero
+      de_ratio: company.financials.total_debt / company.financials.equity,
+      roe: newNetIncome / company.financials.equity,
+    },
   };
 }
 
 /**
- * Calculate implied market cap based on multiples
+ * Calculate sector-level aggregate impact
+ * ✅ Uses sectorCoefficients.ts for all calculations
  */
-export function calculateImpliedValuation(
-  company: Company,
-  adjustedMetrics: ReturnType<typeof calculateAdjustedFinancials>,
+export function calculateSectorImpact(
+  sector: string,
   macroState: MacroState
 ): {
-  evToEbitda: number;
-  peRatio: number;
-  impliedMarketCap: number;
+  revenueChange: number;
+  marginChange: number;
+  valuationChange: number;
 } {
-  // Sector-specific multiples (baseline)
-  const baseMultiples: Record<string, { ev_ebitda: number; pe: number }> = {
-    BANKING: { ev_ebitda: 8, pe: 12 },
-    REALESTATE: { ev_ebitda: 15, pe: 20 },
-    MANUFACTURING: { ev_ebitda: 10, pe: 15 },
-    SEMICONDUCTOR: { ev_ebitda: 12, pe: 25 },
-    CRYPTO: { ev_ebitda: 20, pe: 40 },
-  };
+  const fedRate = macroState['fed_funds_rate'] || MACRO_DEFAULTS.fed_funds_rate;
+  const gdpGrowth = macroState['us_gdp_growth'] || MACRO_DEFAULTS.us_gdp_growth;
+  const inflation = macroState['us_cpi'] || MACRO_DEFAULTS.us_cpi;
 
-  const base = baseMultiples[company.sector] || { ev_ebitda: 10, pe: 15 };
+  // ✅ Get coefficients from config
+  const gdpElasticity = getCoefficient(sector, 'gdp_elasticity', 1.0);
+  const rateSensitivity = getCoefficient(sector, 'rate_sensitivity', 0.0);
+  const pricingPower = getCoefficient(sector, 'pricing_power', 0.5);
 
-  // Adjust multiples based on macro environment
-  const impacts = calculateMacroImpactFactors(company, macroState);
-  const multipleAdjustment = 1 + impacts.multipleExpansion / 100;
+  // Revenue change
+  const revenueChange = (gdpGrowth - MACRO_DEFAULTS.us_gdp_growth) * gdpElasticity * 100;
 
-  const evToEbitda = base.ev_ebitda * multipleAdjustment;
-  const peRatio = base.pe * multipleAdjustment;
+  // Margin change (rate + cost pressure)
+  const rateChange = fedRate - MACRO_DEFAULTS.fed_funds_rate;
+  const inflationPressure = (inflation - MACRO_DEFAULTS.us_cpi) * (1 - pricingPower);
+  const marginChange = (rateChange * rateSensitivity) - (inflationPressure * 100);
 
-  const impliedMarketCap = adjustedMetrics.netIncome * peRatio;
+  // Valuation change (multiple impact)
+  const valuationChange = -rateChange * 5; // 1% rate → -5% valuation
 
   return {
-    evToEbitda,
-    peRatio,
-    impliedMarketCap,
+    revenueChange,
+    marginChange,
+    valuationChange,
   };
+}
+
+/**
+ * Get human-readable impact summary
+ */
+export function getMacroImpactSummary(
+  company: Company,
+  macroState: MacroState
+): string {
+  const impacts = calculateMacroImpactFactors(company, macroState);
+
+  const netRevenueImpact = impacts.demandImpact + impacts.priceImpact;
+  const netMarginImpact = -impacts.cogsPressure - impacts.laborCostImpact + impacts.priceImpact;
+
+  return `Revenue ${netRevenueImpact >= 0 ? '+' : ''}${netRevenueImpact.toFixed(1)}%, Margin ${netMarginImpact >= 0 ? '+' : ''}${netMarginImpact.toFixed(1)}%`;
 }
