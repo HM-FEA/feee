@@ -268,6 +268,8 @@ export default function StudioCenterStage({
           <Globe3D
             viewMode="companies"
             showControls={true}
+            highlightedNodes={Array.from(highlightedNodes)}
+            activeLevel={activePropagationLevel}
           />
         )}
 
@@ -288,6 +290,7 @@ export default function StudioCenterStage({
               links={supplyChainFlowData.links}
               title={selectedScenario.name}
               description={selectedScenario.description}
+              activeLevel={activePropagationLevel}
             />
           </div>
         )}

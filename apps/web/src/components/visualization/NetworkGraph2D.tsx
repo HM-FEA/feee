@@ -121,11 +121,25 @@ const NetworkGraph2D = memo(function NetworkGraph2D({
         className="w-full h-full"
       >
         <defs>
-          {/* Glow filter for propagation animation */}
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+          {/* Enhanced Glow filter for propagation animation */}
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
             <feMerge>
               <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+
+          {/* Strong glow for nodes */}
+          <filter id="node-glow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="8" result="blur1"/>
+            <feGaussianBlur stdDeviation="12" result="blur2"/>
+            <feMerge>
+              <feMergeNode in="blur2"/>
+              <feMergeNode in="blur1"/>
+              <feMergeNode in="blur1"/>
               <feMergeNode in="SourceGraphic"/>
             </feMerge>
           </filter>
@@ -216,15 +230,16 @@ const NetworkGraph2D = memo(function NetworkGraph2D({
                 onMouseLeave={() => setHoveredNode(null)}
                 onClick={() => handleNodeClick(node.id)}
                 className="cursor-pointer"
-                filter={isPropagating || isActive ? 'url(#glow)' : undefined}
+                filter={isPropagating || isActive ? 'url(#node-glow)' : undefined}
               >
                 {/* Node circle */}
                 <circle
                   r={nodeRadius}
                   fill={color}
                   stroke={isPropagating || isActive ? color : '#1a1a1a'}
-                  strokeWidth={isPropagating || isActive ? 3 : 2}
+                  strokeWidth={isPropagating || isActive ? 4 : 2}
                   className={isPropagating ? 'animate-pulse' : ''}
+                  opacity={isPropagating || isActive ? 1 : 0.9}
                 />
 
                 {/* Node label */}

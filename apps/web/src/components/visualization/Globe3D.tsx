@@ -121,6 +121,8 @@ interface Globe3DProps {
   viewMode?: 'm2' | 'flows' | 'companies';
   snapshot?: DateSnapshot | null;
   economicFlows?: EconomicFlow[];
+  highlightedNodes?: string[]; // For propagation visualization
+  activeLevel?: number; // Current propagation level
 }
 
 export default function Globe3D({
@@ -128,7 +130,9 @@ export default function Globe3D({
   showControls = true,
   viewMode: externalViewMode,
   snapshot = null,
-  economicFlows = []
+  economicFlows = [],
+  highlightedNodes = [],
+  activeLevel
 }: Globe3DProps) {
   const globeRef = useRef<any>();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1004,21 +1008,30 @@ export default function Globe3D({
         arcStartLng="startLng"
         arcEndLat="endLat"
         arcEndLng="endLng"
-        arcColor={(d: any) => d.color}
+        arcColor={(d: any) => {
+          // If propagation is active, brighten all arcs
+          if (activeLevel !== undefined && activeLevel >= 0) {
+            return 'rgba(0, 229, 255, 0.9)'; // Bright cyan for propagation
+          }
+          return d.color;
+        }}
         arcStroke={(d: any) => {
           // Economic flows (from calculateEconomicFlows) have magnitude property
           const isEconomicFlow = d.label && (d.label.includes('→') && d.label.includes('×'));
           const isDynamic = d.label && d.label.includes('Impact');
 
+          // Propagation effect: thicker arcs during active propagation
+          const propagationMultiplier = (activeLevel !== undefined && activeLevel >= 0) ? 2.5 : 1;
+
           if (isEconomicFlow) {
             // Attention-score-like thickness based on magnitude
             // magnitude 0-200 → stroke 0.1-1.5
             const magnitude = d.amount || 0;
-            return Math.min(0.1 + (magnitude / 100) * 1.4, 1.5);
+            return Math.min(0.1 + (magnitude / 100) * 1.4, 1.5) * propagationMultiplier;
           } else if (isDynamic) {
-            return Math.sqrt(d.amount) * 0.04;
+            return Math.sqrt(d.amount) * 0.04 * propagationMultiplier;
           } else {
-            return Math.sqrt(d.amount) * 0.02;
+            return Math.sqrt(d.amount) * 0.02 * propagationMultiplier;
           }
         }}
         arcAltitude={(d: any) => {
@@ -1038,10 +1051,13 @@ export default function Globe3D({
           const isEconomicFlow = d.label && (d.label.includes('→') && d.label.includes('×'));
           const isDynamic = d.label && d.label.includes('Impact');
 
+          // Propagation effect: much faster animation during active propagation
+          const propagationSpeedMultiplier = (activeLevel !== undefined && activeLevel >= 0) ? 0.4 : 1;
+
           if (isEconomicFlow) {
             // Faster animation for active economic flows (500-800ms)
             const magnitude = d.amount || 0;
-            return Math.max(500, 1000 - magnitude * 3);
+            return Math.max(500, 1000 - magnitude * 3) * propagationSpeedMultiplier;
           } else if (isDynamic) {
             return 800; // Fast for macro impacts
           } else {

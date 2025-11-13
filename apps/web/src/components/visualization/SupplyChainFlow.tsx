@@ -108,6 +108,7 @@ interface SupplyChainFlowProps {
   links: SupplyChainLink[];
   title?: string;
   description?: string;
+  activeLevel?: number; // For propagation visualization
 }
 
 export default function SupplyChainFlow({
@@ -115,6 +116,7 @@ export default function SupplyChainFlow({
   links,
   title = 'Supply Chain Network',
   description,
+  activeLevel,
 }: SupplyChainFlowProps) {
   // Auto-layout nodes if positions not provided
   const initialNodes: Node[] = useMemo(() => {
@@ -137,18 +139,28 @@ export default function SupplyChainFlow({
   }, [supplychainNodes]);
 
   const initialEdges: Edge[] = useMemo(() => {
+    // Propagation effect: all edges animate and brighten during active propagation
+    const isPropagating = activeLevel !== undefined && activeLevel >= 0;
+
     return links.map((link, index) => ({
       id: `e${index}`,
       source: link.source,
       target: link.target,
       label: link.label,
-      animated: link.bottleneck,
+      animated: isPropagating || link.bottleneck, // Animate all edges during propagation
       style: {
-        stroke: link.bottleneck ? '#EF4444' : '#00E5FF',
-        strokeWidth: link.bottleneck ? 3 : 2,
+        stroke: isPropagating
+          ? '#00E5FF' // Bright cyan during propagation
+          : link.bottleneck ? '#EF4444' : '#00E5FF',
+        strokeWidth: isPropagating
+          ? 4 // Thicker during propagation
+          : link.bottleneck ? 3 : 2,
+        filter: isPropagating ? 'drop-shadow(0 0 6px rgba(0, 229, 255, 0.8))' : undefined, // Glow effect
       },
       labelStyle: {
-        fill: link.bottleneck ? '#EF4444' : '#00E5FF',
+        fill: isPropagating
+          ? '#00E5FF'
+          : link.bottleneck ? '#EF4444' : '#00E5FF',
         fontSize: 12,
         fontWeight: 600,
       },
@@ -158,15 +170,22 @@ export default function SupplyChainFlow({
       },
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: link.bottleneck ? '#EF4444' : '#00E5FF',
-        width: 20,
-        height: 20,
+        color: isPropagating
+          ? '#00E5FF'
+          : link.bottleneck ? '#EF4444' : '#00E5FF',
+        width: isPropagating ? 24 : 20, // Larger arrow during propagation
+        height: isPropagating ? 24 : 20,
       },
     }));
-  }, [links]);
+  }, [links, activeLevel]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Update edges when activeLevel changes (for propagation animation)
+  React.useEffect(() => {
+    setEdges(initialEdges);
+  }, [activeLevel, setEdges, initialEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
