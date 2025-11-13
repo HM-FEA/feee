@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { BookOpen, Video, Code, BarChart3, ChevronRight, Search, Lock, Book, Globe, Banknote, Home, TrendingUp, Target, RefreshCw, Settings, Check, Clock, GraduationCap, Lightbulb, X, ChevronLeft, PlayCircle } from 'lucide-react';
-import { GlobalTopNav } from '@/components/layout/GlobalTopNav';
 
 // Types
 interface Quiz {
@@ -486,7 +485,6 @@ export default function LearnPage() {
 
     return (
       <div className="relative min-h-screen bg-black text-text-primary">
-        <GlobalTopNav />
         {selectedLesson && (
           <LessonDetailView
             lesson={selectedLesson}

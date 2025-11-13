@@ -248,6 +248,7 @@ export default function StudioLayout_v3() {
             timeState={timeState}
             propagationState={propagationState}
             showPropagation={showPropagation}
+            activePropagationLevel={animationState.currentLevel}
           />
         </div>
 

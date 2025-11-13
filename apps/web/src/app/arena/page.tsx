@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Trophy, Zap, Code, Target, TrendingUp, Users, Calendar, Award, Plus, Search, Filter, Swords, Bot, Crown, Rocket, Check } from 'lucide-react';
-import { GlobalTopNav } from '@/components/layout/GlobalTopNav';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { useBotStore, STRATEGY_PRESETS, SAMPLE_TOURNAMENTS } from '@/lib/store/botStore';
 import type { TradingBot, Tournament } from '@/lib/store/botStore';
@@ -310,7 +309,6 @@ export default function ArenaPage() {
 
   return (
     <div className="relative min-h-screen bg-black text-text-primary">
-      <GlobalTopNav />
       <div className="relative z-10">
         <div className="border-b border-border-primary px-6 py-4 bg-black/50 backdrop-blur">
           <div className="flex items-center justify-between mb-4">
