@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { ThumbsUp, ThumbsDown, TrendingUp, Users, Play, Check } from 'lucide-react';
-import { SUPPLY_CHAIN_SCENARIOS, voteOnScenario } from '@/data/supplyChainScenarios';
+import { SUPPLY_CHAIN_SCENARIOS } from '@/data/supplyChainScenarios';
+import { useSupplyChainVoteStore } from '@/lib/store/supplyChainVoteStore';
 
 interface ScenarioSelectorProps {
   onScenarioSelect: (scenarioId: string) => void;
@@ -14,18 +15,26 @@ interface ScenarioSelectorProps {
  *
  * Features:
  * - Probability display (%)
- * - Vote counts
+ * - Vote counts from DB (Zustand store → PostgreSQL)
  * - Upvote/Downvote buttons
  * - Active scenario highlighting
  * - Run simulation button
  */
 
 export default function ScenarioSelector({ onScenarioSelect, selectedScenarioId }: ScenarioSelectorProps) {
-  const [scenarios, setScenarios] = useState(SUPPLY_CHAIN_SCENARIOS);
+  const getVoteSummary = useSupplyChainVoteStore(state => state.getVoteSummary);
+  const upvote = useSupplyChainVoteStore(state => state.upvote);
+  const downvote = useSupplyChainVoteStore(state => state.downvote);
+
+  // Mock current user - in production, get from auth context
+  const currentUserId = 'current-user';
 
   const handleVote = (scenarioId: string, voteType: 'up' | 'down') => {
-    const updated = voteOnScenario(scenarioId, voteType);
-    setScenarios(updated);
+    if (voteType === 'up') {
+      upvote(scenarioId, currentUserId);
+    } else {
+      downvote(scenarioId, currentUserId);
+    }
   };
 
   const handleScenarioClick = (scenarioId: string) => {
@@ -47,10 +56,11 @@ export default function ScenarioSelector({ onScenarioSelect, selectedScenarioId 
 
       {/* Scenario List */}
       <div className="space-y-3">
-        {scenarios.map((scenario) => {
+        {SUPPLY_CHAIN_SCENARIOS.map((scenario) => {
           const isSelected = selectedScenarioId === scenario.id;
-          const upvotePercent = (scenario.votes.up / scenario.votes.total) * 100;
-          const downvotePercent = (scenario.votes.down / scenario.votes.total) * 100;
+          const votes = getVoteSummary(scenario.id);
+          const upvotePercent = votes.total > 0 ? (votes.up / votes.total) * 100 : 50;
+          const downvotePercent = votes.total > 0 ? (votes.down / votes.total) * 100 : 50;
 
           return (
             <div
@@ -85,7 +95,7 @@ export default function ScenarioSelector({ onScenarioSelect, selectedScenarioId 
                     {upvotePercent.toFixed(0)}%
                   </span>
                   <span className="text-gray-600">
-                    {scenario.votes.total} votes
+                    {votes.total} votes
                   </span>
                   <span className="text-red-400 font-bold">
                     {downvotePercent.toFixed(0)}%
@@ -116,7 +126,7 @@ export default function ScenarioSelector({ onScenarioSelect, selectedScenarioId 
                   className="flex-1 px-2 py-1.5 bg-green-500/20 border border-green-500/50 rounded text-green-400 hover:bg-green-500/30 transition-colors flex items-center justify-center gap-1 text-xs"
                 >
                   <ThumbsUp size={12} />
-                  <span>{scenario.votes.up}</span>
+                  <span>{votes.up}</span>
                 </button>
 
                 <button
@@ -127,7 +137,7 @@ export default function ScenarioSelector({ onScenarioSelect, selectedScenarioId 
                   className="flex-1 px-2 py-1.5 bg-red-500/20 border border-red-500/50 rounded text-red-400 hover:bg-red-500/30 transition-colors flex items-center justify-center gap-1 text-xs"
                 >
                   <ThumbsDown size={12} />
-                  <span>{scenario.votes.down}</span>
+                  <span>{votes.down}</span>
                 </button>
 
                 {isSelected && (
@@ -161,7 +171,7 @@ export default function ScenarioSelector({ onScenarioSelect, selectedScenarioId 
               <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-600">
                 <span className="flex items-center gap-1">
                   <Users size={10} />
-                  {scenario.votes.total} participants
+                  {votes.total} participants
                 </span>
                 <span>Updated {scenario.lastUpdated}</span>
               </div>
