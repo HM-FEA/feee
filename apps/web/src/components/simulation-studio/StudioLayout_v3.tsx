@@ -68,16 +68,21 @@ export default function StudioLayout_v3() {
   const { animationState, startPropagation, stopPropagation } = usePropagationAnimation();
 
   // Calculate propagation whenever macro or level 0 changes
-  useEffect(() => {
-    const level0 = {
-      container_rate_us_china: levelState['container_rate_us_china'] || 3500,
-      semiconductor_tariff: levelState['semiconductor_tariff'] || 0,
-      energy_cost_index: levelState['energy_cost_index'] || 100,
-    };
+  // Memoize level0 to prevent unnecessary re-renders
+  const level0Values = React.useMemo(() => ({
+    container_rate_us_china: levelState['container_rate_us_china'] || 3500,
+    semiconductor_tariff: levelState['semiconductor_tariff'] || 0,
+    energy_cost_index: levelState['energy_cost_index'] || 100,
+  }), [
+    levelState['container_rate_us_china'],
+    levelState['semiconductor_tariff'],
+    levelState['energy_cost_index']
+  ]);
 
-    const state = propagateAllLevels(level0, macroState, companies);
+  useEffect(() => {
+    const state = propagateAllLevels(level0Values, macroState, companies);
     setPropagationState(state);
-  }, [macroState, levelState]);
+  }, [macroState, level0Values]);
 
   // Time-based simulation
   useEffect(() => {
@@ -207,24 +212,32 @@ export default function StudioLayout_v3() {
 
       {/* Main Studio Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Controls + Scenarios (320px) */}
-        <div className="w-[320px] bg-[#0f0f0f] border-r border-gray-800 overflow-y-auto flex flex-col">
-          {/* Level Controls */}
-          <div className="flex-1 overflow-y-auto">
-            <StudioLeftPanel
-              macroState={macroState}
-              updateMacroVariable={updateMacroVariable}
-              onLevelChange={handleLevelChange}
-              activePropagationLevel={animationState.currentLevel}
-            />
-          </div>
+        {/* Left Panel - Controls (320px) - Full height scrollable */}
+        <div className="w-[320px] bg-[#0f0f0f] border-r border-gray-800 overflow-y-auto">
+          {/* Level Controls - Takes up space */}
+          <StudioLeftPanel
+            macroState={macroState}
+            updateMacroVariable={updateMacroVariable}
+            onLevelChange={handleLevelChange}
+            activePropagationLevel={animationState.currentLevel}
+          />
 
-          {/* Scenario Selector */}
-          <div className="border-t border-gray-800 p-4">
-            <ScenarioSelector
-              onScenarioSelect={handleScenarioSelect}
-              selectedScenarioId={selectedScenarioId}
-            />
+          {/* Scenario Selector - Collapsible Section */}
+          <div className="border-t border-gray-800 mt-4">
+            <details open className="group">
+              <summary className="px-4 py-3 cursor-pointer hover:bg-[#1a1a1a] transition-colors flex items-center justify-between">
+                <span className="text-sm font-bold text-white">Supply Chain Scenarios</span>
+                <svg className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div className="p-4 pt-0">
+                <ScenarioSelector
+                  onScenarioSelect={handleScenarioSelect}
+                  selectedScenarioId={selectedScenarioId}
+                />
+              </div>
+            </details>
           </div>
         </div>
 

@@ -42,18 +42,7 @@ export default function ScenarioSelector({ onScenarioSelect, selectedScenarioId 
   };
 
   return (
-    <div className="bg-[#0f0f0f] border border-gray-800 rounded-lg p-4">
-      {/* Header */}
-      <div className="mb-4">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <TrendingUp size={16} className="text-accent-cyan" />
-          Supply Chain Scenarios
-        </h3>
-        <p className="text-xs text-gray-500 mt-1">
-          Polymarket-style prediction scenarios
-        </p>
-      </div>
-
+    <div className="bg-[#0f0f0f] rounded-lg">
       {/* Scenario List */}
       <div className="space-y-3">
         {SUPPLY_CHAIN_SCENARIOS.map((scenario) => {
