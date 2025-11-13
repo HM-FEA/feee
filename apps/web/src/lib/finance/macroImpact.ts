@@ -230,3 +230,121 @@ export function getMacroImpactSummary(
 
   return `Revenue ${netRevenueImpact >= 0 ? '+' : ''}${netRevenueImpact.toFixed(1)}%, Margin ${netMarginImpact >= 0 ? '+' : ''}${netMarginImpact.toFixed(1)}%`;
 }
+
+/**
+ * Calculate adjusted financials with all advanced metrics
+ * Returns detailed financial metrics including CAPM cost of equity and DCF fair value
+ */
+export interface AdvancedFinancialMetrics {
+  revenue: number;
+  operatingIncome: number;
+  netIncome: number;
+  ebitda: number;
+  fcf: number;
+  costOfEquity: number;
+  fairValue: number;
+}
+
+export function calculateAdjustedFinancials(
+  company: Company,
+  macroState: MacroState,
+  sectorImpact: number
+): AdvancedFinancialMetrics {
+  const impacts = calculateMacroImpactFactors(company, macroState);
+
+  // Revenue impact
+  const revenueMultiplier = 1 + (impacts.demandImpact + impacts.priceImpact + impacts.volumeImpact) / 100;
+  const revenue = company.financials.revenue * revenueMultiplier;
+
+  // COGS and OpEx
+  const cogsMultiplier = 1 + (impacts.cogsPressure + impacts.laborCostImpact) / 100;
+  const cogs = revenue * 0.65 * cogsMultiplier; // 65% base COGS
+
+  const opexMultiplier = 1 + impacts.laborCostImpact / 100;
+  const opex = revenue * 0.20 * opexMultiplier; // 20% base OpEx
+
+  // EBITDA and Operating Income
+  const ebitda = revenue - cogs - opex;
+  const depreciation = revenue * 0.05; // 5% depreciation
+  const operatingIncome = ebitda - depreciation;
+
+  // Interest expense
+  const fedRate = macroState['fed_funds_rate'] || MACRO_DEFAULTS.fed_funds_rate;
+  const debtCost = fedRate + 0.02; // 200bps corporate spread
+  const interestExpense = company.financials.total_debt * debtCost;
+
+  // Net Income
+  const ebt = operatingIncome - interestExpense;
+  const netIncome = ebt * (1 - 0.21); // 21% tax rate
+
+  // Free Cash Flow
+  const capex = revenue * 0.08; // 8% of revenue
+  const fcf = calculateFreeCashFlow({
+    operatingCashFlow: ebitda * 0.85, // 85% cash conversion
+    capitalExpenditures: capex,
+    workingCapitalChange: revenue * 0.02 // 2% working capital
+  });
+
+  // Cost of Equity (CAPM)
+  const riskFreeRate = fedRate;
+  const marketReturn = 0.10; // 10% historical market return
+  const beta = calculateSectorBeta(company.sector);
+  const costOfEquity = calculateCostOfEquity(riskFreeRate, beta, marketReturn);
+
+  // DCF Fair Value
+  const dcfParams: DCFParams = {
+    initialFCF: fcf,
+    growthRate: (macroState['us_gdp_growth'] || MACRO_DEFAULTS.us_gdp_growth) / 100,
+    discountRate: costOfEquity,
+    terminalGrowthRate: 0.025, // 2.5% terminal growth
+    projectionYears: 5
+  };
+  const fairValue = calculateDCF(dcfParams);
+
+  return {
+    revenue,
+    operatingIncome,
+    netIncome,
+    ebitda,
+    fcf,
+    costOfEquity,
+    fairValue
+  };
+}
+
+/**
+ * Calculate implied valuation metrics
+ */
+export interface ValuationMetrics {
+  impliedMarketCap: number;
+  evToEbitda: number;
+  peRatio: number;
+}
+
+export function calculateImpliedValuation(
+  company: Company,
+  advancedMetrics: AdvancedFinancialMetrics,
+  macroState: MacroState
+): ValuationMetrics {
+  const impacts = calculateMacroImpactFactors(company, macroState);
+
+  // Base valuation from DCF
+  const fairValue = advancedMetrics.fairValue;
+
+  // Apply multiple expansion/contraction
+  const multipleChange = impacts.multipleExpansion;
+  const impliedMarketCap = fairValue * (1 + multipleChange / 100);
+
+  // EV/EBITDA multiple
+  const enterpriseValue = impliedMarketCap + company.financials.total_debt;
+  const evToEbitda = enterpriseValue / advancedMetrics.ebitda;
+
+  // P/E ratio
+  const peRatio = impliedMarketCap / Math.max(advancedMetrics.netIncome, 1);
+
+  return {
+    impliedMarketCap,
+    evToEbitda,
+    peRatio
+  };
+}

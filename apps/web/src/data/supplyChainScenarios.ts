@@ -12,11 +12,13 @@ export interface SupplyChainScenario {
   icon: string;
   description: string;
   category: 'semiconductor' | 'automotive' | 'energy' | 'consumer-electronics' | 'pharmaceutical';
-  votes: number;
-  upvotes: number;
-  downvotes: number;
+  votes: {
+    up: number;
+    down: number;
+    total: number;
+  };
   createdBy: string;
-  createdAt: string;
+  lastUpdated: string;
   tags: string[];
   nodes: any[];
   links: any[];
@@ -32,11 +34,13 @@ export const SUPPLY_CHAIN_SCENARIOS: SupplyChainScenario[] = [
     icon: '🔥',
     description: 'Critical AI accelerator supply chain analysis - HBM memory bottleneck, CoWoS packaging constraints, geopolitical Taiwan risk',
     category: 'semiconductor',
-    votes: 342,
-    upvotes: 298,
-    downvotes: 44,
+    votes: {
+      up: 298,
+      down: 44,
+      total: 342
+    },
     createdBy: 'Alex Chen',
-    createdAt: '2024-01-15',
+    lastUpdated: '2h ago',
     tags: ['AI', 'GPU', 'HBM', 'TSMC', 'Taiwan-Risk'],
     criticality: 'critical',
     keyInsights: [
@@ -147,11 +151,13 @@ export const SUPPLY_CHAIN_SCENARIOS: SupplyChainScenario[] = [
     icon: '🔋',
     description: 'Revolutionary battery cell production - Nickel dependency, dry electrode technology, Gigafactory Texas ramp-up',
     category: 'automotive',
-    votes: 287,
-    upvotes: 251,
-    downvotes: 36,
+    votes: {
+      up: 251,
+      down: 36,
+      total: 287
+    },
     createdBy: 'Sarah Kumar',
-    createdAt: '2024-02-20',
+    lastUpdated: '1d ago',
     tags: ['EV', 'Battery', 'Tesla', 'Lithium', 'Nickel'],
     criticality: 'high',
     keyInsights: [
@@ -184,11 +190,13 @@ export const SUPPLY_CHAIN_SCENARIOS: SupplyChainScenario[] = [
     icon: '📱',
     description: 'A17 Pro chip manufacturing, camera module assembly, Foxconn production, global distribution network',
     category: 'consumer-electronics',
-    votes: 198,
-    upvotes: 172,
-    downvotes: 26,
+    votes: {
+      up: 172,
+      down: 26,
+      total: 198
+    },
     createdBy: 'David Park',
-    createdAt: '2024-03-10',
+    lastUpdated: '3d ago',
     tags: ['Apple', 'iPhone', 'TSMC', 'Foxconn', 'Camera'],
     criticality: 'medium',
     keyInsights: [
@@ -219,11 +227,13 @@ export const SUPPLY_CHAIN_SCENARIOS: SupplyChainScenario[] = [
     icon: '💉',
     description: 'Ultra-cold storage requirements, lipid nanoparticle production, global distribution, mRNA synthesis',
     category: 'pharmaceutical',
-    votes: 156,
-    upvotes: 142,
-    downvotes: 14,
+    votes: {
+      up: 142,
+      down: 14,
+      total: 156
+    },
     createdBy: 'Dr. Emily Zhang',
-    createdAt: '2024-01-25',
+    lastUpdated: '5d ago',
     tags: ['Vaccine', 'mRNA', 'Cold-Chain', 'Logistics', 'Lipid'],
     criticality: 'high',
     keyInsights: [
@@ -254,11 +264,13 @@ export const SUPPLY_CHAIN_SCENARIOS: SupplyChainScenario[] = [
     icon: '☀️',
     description: 'Polysilicon production, wafer manufacturing, cell assembly, global module distribution - 80% China control',
     category: 'energy',
-    votes: 134,
-    upvotes: 115,
-    downvotes: 19,
+    votes: {
+      up: 115,
+      down: 19,
+      total: 134
+    },
     createdBy: 'Michael Brown',
-    createdAt: '2024-02-05',
+    lastUpdated: '1w ago',
     tags: ['Solar', 'Renewable', 'China', 'Polysilicon', 'Energy'],
     criticality: 'medium',
     keyInsights: [
@@ -286,18 +298,20 @@ export const SUPPLY_CHAIN_SCENARIOS: SupplyChainScenario[] = [
 /**
  * Vote on a supply chain scenario
  */
-export function voteOnScenario(scenarioId: string, isUpvote: boolean): SupplyChainScenario | null {
-  const scenario = SUPPLY_CHAIN_SCENARIOS.find(s => s.id === scenarioId);
-  if (!scenario) return null;
+export function voteOnScenario(scenarioId: string, voteType: 'up' | 'down'): SupplyChainScenario[] {
+  const scenarioIndex = SUPPLY_CHAIN_SCENARIOS.findIndex(s => s.id === scenarioId);
+  if (scenarioIndex === -1) return SUPPLY_CHAIN_SCENARIOS;
 
-  if (isUpvote) {
-    scenario.upvotes++;
+  const scenario = SUPPLY_CHAIN_SCENARIOS[scenarioIndex];
+
+  if (voteType === 'up') {
+    scenario.votes.up++;
   } else {
-    scenario.downvotes++;
+    scenario.votes.down++;
   }
-  scenario.votes = scenario.upvotes - scenario.downvotes;
+  scenario.votes.total = scenario.votes.up + scenario.votes.down;
 
-  return scenario;
+  return [...SUPPLY_CHAIN_SCENARIOS];
 }
 
 /**
@@ -305,7 +319,7 @@ export function voteOnScenario(scenarioId: string, isUpvote: boolean): SupplyCha
  */
 export function getTopScenarios(limit: number = 5): SupplyChainScenario[] {
   return [...SUPPLY_CHAIN_SCENARIOS]
-    .sort((a, b) => b.votes - a.votes)
+    .sort((a, b) => b.votes.total - a.votes.total)
     .slice(0, limit);
 }
 
